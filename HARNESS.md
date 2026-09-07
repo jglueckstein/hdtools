@@ -64,8 +64,8 @@
 ### Tests must pass
 
 - **Rule**: `go test ./...` must pass with zero failures before any code is merged
-- **Enforcement**: unverified
-- **Tool**: none yet
+- **Enforcement**: deterministic
+- **Tool**: go test ./...
 - **Scope**: pr
 
 ### Idiomatic Go naming
