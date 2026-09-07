@@ -23,8 +23,8 @@
 - **Build system**: Go modules (`go build ./...`)
 - **Test framework**: `go test`
 - **Container strategy**: none
-- **TUI**: Bubble Tea or similar (intended; not yet in the tree)
-- **Persistence**: `database/sql` + SQLite locally by default; optional remote database (intended; not yet in the tree)
+- **TUI**: Bubble Tea (`github.com/charmbracelet/bubbletea`); `cmd/hdtools` opens the store and runs `internal/tui`
+- **Persistence**: `database/sql` + `modernc.org/sqlite`. Default file is `~/.hdtools/hdtools.db` (`-db` or `$HDTOOLS_DB` override). Remote database is not implemented.
 - **Product notes**: `idea.md` — Hacker's Diet TUI (daily/monthly weight logs, trend, meal planning, PDF charts)
 
 ### Conventions
@@ -269,5 +269,5 @@ Run /reservoir for an on-demand read, or /reservoir tune to edit this block.
 Last audit: 2026-09-07
 Constraints enforced: 7/7
 Garbage collection active: 5/5
-Drift detected: yes
+Drift detected: no
 <!-- 4 agent PR constraints have no CI dispatch path (harness.yml does not run harness-enforcer). -->
