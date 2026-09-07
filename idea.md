@@ -7,6 +7,17 @@ Inspired by [The Hacker's Diet](https://www.fourmilab.ch/hackdiet/e4/welcome.htm
 The project should use a modern tui framework. The original Hacker's
 Diet tools were excel spreadsheets or hacker's diet online.
 
+The TUI should look good, not like a dump of aligned columns. It should
+use color so the eye can tell structure and meaning at a glance: chrome
+(titles, help) vs data, the selected cell or row, and the trend line
+versus noisy daily weights. Color should still work on a 16-color
+terminal and must not be the only way to read a value (no
+color-only encoding).
+
+[charmbracelet/lipgloss](https://github.com/charmbracelet/lipgloss) is
+one way to do that, since the app already uses Bubble Tea. Another
+styling library is fine if it fits the same stack.
+
 ## Database
 
 The data should be stored in a database. The database may be local
