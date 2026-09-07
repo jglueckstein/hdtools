@@ -42,17 +42,20 @@ type DailyLog struct {
 	SleepHours float64
 	Steps      int
 	Workout    bool
+	Note       string
 }
 
 // New builds a validated DailyLog for the calendar day of day (UTC date).
-// weight may be nil when the scale was not used that day.
-func New(day time.Time, weight *float64, sleepHours float64, steps int, workout bool) (DailyLog, error) {
+// weight may be nil when the scale was not used that day. note is optional
+// on any day (travel, a skipped weigh-in, or a comment beside a weight).
+func New(day time.Time, weight *float64, sleepHours float64, steps int, workout bool, note string) (DailyLog, error) {
 	log := DailyLog{
 		Day:        calendarDay(day),
 		Weight:     weight,
 		SleepHours: sleepHours,
 		Steps:      steps,
 		Workout:    workout,
+		Note:       note,
 	}
 	if err := log.Validate(); err != nil {
 		return DailyLog{}, fmt.Errorf("new daily log: %w", err)

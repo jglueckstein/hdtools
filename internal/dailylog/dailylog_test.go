@@ -27,7 +27,7 @@ func TestNewRejectsInvalidFields(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := New(tc.day, tc.w, tc.sleep, tc.steps, false)
+			_, err := New(tc.day, tc.w, tc.sleep, tc.steps, false, "")
 			if !errors.Is(err, tc.want) {
 				t.Fatalf("New() error = %v, want %v", err, tc.want)
 			}
@@ -38,7 +38,7 @@ func TestNewRejectsInvalidFields(t *testing.T) {
 func TestNewNormalizesToUTCDate(t *testing.T) {
 	t.Parallel()
 	loc := time.FixedZone("west", -8*3600)
-	got, err := New(time.Date(1990, 11, 4, 23, 30, 0, 0, loc), ptr(171.5), 7.5, 8000, true)
+	got, err := New(time.Date(1990, 11, 4, 23, 30, 0, 0, loc), ptr(171.5), 7.5, 8000, true, "felt light")
 	if err != nil {
 		t.Fatalf("New() unexpected error: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestNewNormalizesToUTCDate(t *testing.T) {
 	if !got.Day.Equal(want) {
 		t.Fatalf("Day = %v, want %v", got.Day, want)
 	}
-	if !got.Workout || got.SleepHours != 7.5 || got.Steps != 8000 {
+	if !got.Workout || got.SleepHours != 7.5 || got.Steps != 8000 || got.Note != "felt light" {
 		t.Fatalf("habit fields = %+v", got)
 	}
 }

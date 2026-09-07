@@ -5,27 +5,43 @@
 // can inject a memory-backed store and so a later remote database can reuse
 // the same Model.
 //
-// Editing a day, monthly charts, and meal planning are out of scope here.
+// The list is the home screen. A single-day form creates and edits rows.
+// Monthly grids, charts, and meal planning are out of scope here.
 package tui
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/jglueckstein/hdtools/internal/config"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
+	"github.com/jglueckstein/hdtools/internal/units"
 )
 
-// App is the root Bubble Tea model: a read-only list of daily logs plus the
-// path of the database they came from.
+type screen int
+
+const (
+	screenList screen = iota
+	screenForm
+)
+
+// App is the root Bubble Tea model: a log list, a day form, and the
+// display unit from config.toml.
 type App struct {
 	store  *dailylog.Store
+	cfg    config.Config
 	dbPath string
 	logs   []dailylog.DailyLog
+	cursor int
+	screen screen
+	form   formModel
 	err    error
+	status string
 }
 
 type loadedMsg struct {
@@ -36,20 +52,21 @@ type loadErrMsg struct {
 	err error
 }
 
-// New returns an App that will load logs from store on Init.
-func New(store *dailylog.Store, dbPath string) *App {
-	return &App{store: store, dbPath: dbPath}
+type savedMsg struct{}
+
+// DefaultDBPath is ~/.hdtools/hdtools.db.
+func DefaultDBPath() (string, error) {
+	return config.DefaultDBPath()
 }
 
-// DefaultDBPath is the local SQLite file when the user has not chosen a path.
-// $HOME/.hdtools/hdtools.db keeps the database out of the working directory
-// so running the TUI from a source checkout cannot drop a db next to go.mod.
-func DefaultDBPath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("home directory: %w", err)
+// New returns an App that will load logs from store on Init.
+func New(store *dailylog.Store, dbPath string, cfg config.Config) *App {
+	return &App{
+		store:  store,
+		cfg:    cfg,
+		dbPath: dbPath,
+		form:   newForm(cfg.DisplayUnit),
 	}
-	return filepath.Join(home, ".hdtools", "hdtools.db"), nil
 }
 
 // Init loads the log series from the store.
@@ -62,6 +79,9 @@ func (a *App) load() tea.Msg {
 	if err != nil {
 		return loadErrMsg{err: err}
 	}
+	if len(logs) == 0 {
+		return loadedMsg{logs: logs}
+	}
 	trended, err := dailylog.ApplyTrend(logs, nil)
 	if err != nil {
 		return loadErrMsg{err: err}
@@ -69,55 +89,163 @@ func (a *App) load() tea.Msg {
 	return loadedMsg{logs: trended}
 }
 
-// Update handles quit keys and the initial load result.
+func (a *App) saveForm() tea.Msg {
+	log, err := a.form.parse()
+	if err != nil {
+		return loadErrMsg{err: err}
+	}
+	if err := a.store.Upsert(context.Background(), log); err != nil {
+		return loadErrMsg{err: err}
+	}
+	return savedMsg{}
+}
+
+// Update handles list navigation, the day form, and load/save results.
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case loadedMsg:
 		a.logs = msg.logs
 		a.err = nil
+		if a.cursor >= len(a.logs) {
+			a.cursor = 0
+		}
+		return a, nil
+	case savedMsg:
+		a.screen = screenList
+		a.status = "saved"
+		a.err = nil
+		return a, a.load
 	case loadErrMsg:
+		if a.screen == screenForm {
+			a.form.err = msg.err.Error()
+			a.err = nil
+			return a, nil
+		}
 		a.err = msg.err
+		return a, nil
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "ctrl+c":
-			return a, tea.Quit
+		if a.screen == screenForm {
+			return a.updateForm(msg)
+		}
+		return a.updateList(msg)
+	}
+	return a, nil
+}
+
+func (a *App) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "q", "ctrl+c":
+		return a, tea.Quit
+	case "n":
+		a.openForm(localToday())
+		return a, nil
+	case "enter":
+		if len(a.logs) == 0 {
+			return a, nil
+		}
+		a.openForm(a.logs[a.cursor].Day)
+		return a, nil
+	case "up", "k":
+		if a.cursor > 0 {
+			a.cursor--
+		}
+	case "down", "j":
+		if a.cursor < len(a.logs)-1 {
+			a.cursor++
 		}
 	}
 	return a, nil
 }
 
-// View renders the database path and the daily log table.
+func (a *App) updateForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		a.screen = screenList
+		a.form.err = ""
+		return a, nil
+	case "ctrl+c":
+		return a, tea.Quit
+	case "enter":
+		a.form.err = ""
+		return a, a.saveForm
+	}
+	cmd := a.form.update(msg)
+	return a, cmd
+}
+
+func (a *App) openForm(day time.Time) {
+	a.form = newForm(a.cfg.DisplayUnit)
+	log, err := a.store.Get(context.Background(), day)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			a.form.loadNew(day)
+		} else {
+			a.err = err
+			return
+		}
+	} else {
+		a.form.load(log)
+	}
+	a.screen = screenForm
+	a.status = ""
+	a.err = nil
+}
+
+// View renders the list or the day form.
 func (a *App) View() string {
+	if a.screen == screenForm {
+		return a.form.view()
+	}
+	return a.listView()
+}
+
+func (a *App) listView() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "hdtools — daily log\n")
+	fmt.Fprintf(&b, "hdtools — daily log  (weight %s)\n", a.cfg.DisplayUnit)
 	fmt.Fprintf(&b, "db: %s\n\n", a.dbPath)
 	if a.err != nil {
 		fmt.Fprintf(&b, "error: %v\n\nq quit\n", a.err)
 		return b.String()
 	}
 	if len(a.logs) == 0 {
-		fmt.Fprintf(&b, "(no entries yet)\n\nq quit\n")
+		fmt.Fprintf(&b, "(no entries yet)\n\nn new day   q quit\n")
 		return b.String()
 	}
-	fmt.Fprintf(&b, "  date        weight   trend   sleep  steps  workout\n")
-	for _, log := range a.logs {
+	fmt.Fprintf(&b, "    date        weight   trend   sleep  steps  workout  note\n")
+	for i, log := range a.logs {
+		mark := "  "
+		if i == a.cursor {
+			mark = "> "
+		}
 		weight := "—"
+		trend := "—"
 		if log.Weight != nil {
-			weight = fmt.Sprintf("%6.1f", *log.Weight)
+			w, err := units.FromKG(*log.Weight, a.cfg.DisplayUnit)
+			if err == nil {
+				weight = fmt.Sprintf("%6.1f", w)
+			}
+		}
+		if t, err := units.FromKG(log.Trend, a.cfg.DisplayUnit); err == nil && (log.Weight != nil || log.Trend != 0) {
+			trend = fmt.Sprintf("%5.1f", t)
 		}
 		workout := "no"
 		if log.Workout {
 			workout = "yes"
 		}
-		fmt.Fprintf(&b, "  %s  %7s  %5.1f  %5.1f  %5d  %s\n",
+		fmt.Fprintf(&b, "%s%s  %7s  %5s  %5.1f  %5d  %-7s  %s\n",
+			mark,
 			log.Day.Format("2006-01-02"),
 			weight,
-			log.Trend,
+			trend,
 			log.SleepHours,
 			log.Steps,
 			workout,
+			log.Note,
 		)
 	}
-	fmt.Fprintf(&b, "\nq quit\n")
+	if a.status != "" {
+		fmt.Fprintf(&b, "\n%s\n", a.status)
+	}
+	fmt.Fprintf(&b, "\nn new   enter edit   q quit\n")
 	return b.String()
 }

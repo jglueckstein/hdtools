@@ -46,10 +46,41 @@ CREATE TABLE IF NOT EXISTS daily_log (
 	weight REAL,
 	sleep_hours REAL NOT NULL DEFAULT 0,
 	steps INTEGER NOT NULL DEFAULT 0,
-	workout INTEGER NOT NULL DEFAULT 0
+	workout INTEGER NOT NULL DEFAULT 0,
+	note TEXT NOT NULL DEFAULT ''
 );`
 	if _, err := s.db.Exec(q); err != nil {
 		return fmt.Errorf("migrate daily log store: %w", err)
+	}
+	if err := s.ensureNoteColumn(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Store) ensureNoteColumn() error {
+	rows, err := s.db.Query(`PRAGMA table_info(daily_log)`)
+	if err != nil {
+		return fmt.Errorf("inspect daily log columns: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return fmt.Errorf("inspect daily log columns: %w", err)
+		}
+		if name == "note" {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("inspect daily log columns: %w", err)
+	}
+	if _, err := s.db.Exec(`ALTER TABLE daily_log ADD COLUMN note TEXT NOT NULL DEFAULT ''`); err != nil {
+		return fmt.Errorf("add daily log note column: %w", err)
 	}
 	return nil
 }
@@ -69,14 +100,15 @@ func (s *Store) Upsert(ctx context.Context, d DailyLog) error {
 		weight = *d.Weight
 	}
 	_, err := s.db.ExecContext(ctx, `
-INSERT INTO daily_log (day, weight, sleep_hours, steps, workout)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO daily_log (day, weight, sleep_hours, steps, workout, note)
+VALUES (?, ?, ?, ?, ?, ?)
 ON CONFLICT(day) DO UPDATE SET
 	weight = excluded.weight,
 	sleep_hours = excluded.sleep_hours,
 	steps = excluded.steps,
-	workout = excluded.workout;
-`, d.Day.Format(time.DateOnly), weight, d.SleepHours, d.Steps, workout)
+	workout = excluded.workout,
+	note = excluded.note;
+`, d.Day.Format(time.DateOnly), weight, d.SleepHours, d.Steps, workout, d.Note)
 	if err != nil {
 		return fmt.Errorf("upsert daily log %s: %w", d.Day.Format(time.DateOnly), err)
 	}
@@ -87,7 +119,7 @@ ON CONFLICT(day) DO UPDATE SET
 func (s *Store) Get(ctx context.Context, day time.Time) (DailyLog, error) {
 	day = calendarDay(day)
 	row := s.db.QueryRowContext(ctx, `
-SELECT day, weight, sleep_hours, steps, workout
+SELECT day, weight, sleep_hours, steps, workout, note
 FROM daily_log WHERE day = ?`, day.Format(time.DateOnly))
 	d, err := scanLog(row)
 	if err != nil {
@@ -101,7 +133,7 @@ func (s *Store) Range(ctx context.Context, fromDay, toDay time.Time) ([]DailyLog
 	fromDay = calendarDay(fromDay)
 	toDay = calendarDay(toDay)
 	rows, err := s.db.QueryContext(ctx, `
-SELECT day, weight, sleep_hours, steps, workout
+SELECT day, weight, sleep_hours, steps, workout, note
 FROM daily_log
 WHERE day >= ? AND day <= ?
 ORDER BY day ASC`, fromDay.Format(time.DateOnly), toDay.Format(time.DateOnly))
@@ -127,7 +159,7 @@ ORDER BY day ASC`, fromDay.Format(time.DateOnly), toDay.Format(time.DateOnly))
 // All returns every stored log, oldest first. Trend is not computed.
 func (s *Store) All(ctx context.Context) ([]DailyLog, error) {
 	rows, err := s.db.QueryContext(ctx, `
-SELECT day, weight, sleep_hours, steps, workout
+SELECT day, weight, sleep_hours, steps, workout, note
 FROM daily_log
 ORDER BY day ASC`)
 	if err != nil {
@@ -160,8 +192,9 @@ func scanLog(row scanner) (DailyLog, error) {
 		sleepHours float64
 		steps      int
 		workout    int
+		note       string
 	)
-	if err := row.Scan(&dayStr, &weight, &sleepHours, &steps, &workout); err != nil {
+	if err := row.Scan(&dayStr, &weight, &sleepHours, &steps, &workout, &note); err != nil {
 		return DailyLog{}, err
 	}
 	day, err := time.Parse(time.DateOnly, dayStr)
@@ -173,6 +206,7 @@ func scanLog(row scanner) (DailyLog, error) {
 		SleepHours: sleepHours,
 		Steps:      steps,
 		Workout:    workout != 0,
+		Note:       note,
 	}
 	if weight.Valid {
 		w := weight.Float64

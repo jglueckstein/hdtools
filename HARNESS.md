@@ -24,7 +24,8 @@
 - **Test framework**: `go test`
 - **Container strategy**: none
 - **TUI**: Bubble Tea (`github.com/charmbracelet/bubbletea`); `cmd/hdtools` opens the store and runs `internal/tui`
-- **Persistence**: `database/sql` + `modernc.org/sqlite`. Default file is `~/.hdtools/hdtools.db` (`-db` or `$HDTOOLS_DB` override). Remote database is not implemented.
+- **Persistence**: `database/sql` + `modernc.org/sqlite`. Default file is `~/.hdtools/hdtools.db` (`-db` or `$HDTOOLS_DB` override). Remote database is not implemented. Weight is stored in kilograms.
+- **Config**: `~/.hdtools/config.toml` (`-config` or `$HDTOOLS_CONFIG`). `display_unit` is `kg` (default), `lb`, or `st`.
 - **Product notes**: `idea.md` — Hacker's Diet TUI (daily/monthly weight logs, trend, meal planning, PDF charts)
 
 ### Conventions

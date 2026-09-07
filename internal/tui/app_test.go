@@ -2,13 +2,16 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/jglueckstein/hdtools/internal/config"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
+	"github.com/jglueckstein/hdtools/internal/units"
 )
 
 func TestDefaultDBPathUsesHome(t *testing.T) {
@@ -25,7 +28,7 @@ func TestDefaultDBPathUsesHome(t *testing.T) {
 func TestViewEmptyStore(t *testing.T) {
 	t.Parallel()
 	store := openStore(t)
-	app := New(store, "/tmp/test.db")
+	app := New(store, "/tmp/test.db", config.Default())
 	view := app.View()
 	if !strings.Contains(view, "no entries yet") {
 		t.Fatalf("View = %q", view)
@@ -41,7 +44,7 @@ func TestViewListsTrendedLogs(t *testing.T) {
 	ctx := context.Background()
 	day := time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC)
 	w := 172.5
-	log, err := dailylog.New(day, &w, 8, 1000, true)
+	log, err := dailylog.New(day, &w, 8, 1000, true, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +52,7 @@ func TestViewListsTrendedLogs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	app := New(store, "mem.db")
+	app := New(store, "mem.db", config.Default())
 	msg := app.load()
 	loaded, ok := msg.(loadedMsg)
 	if !ok {
@@ -62,9 +65,51 @@ func TestViewListsTrendedLogs(t *testing.T) {
 	}
 }
 
+func TestNewOpensForm(t *testing.T) {
+	t.Parallel()
+	store := openStore(t)
+	app := New(store, "mem.db", config.Default())
+	model, _ := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	view := model.View()
+	if !strings.Contains(view, "day form") {
+		t.Fatalf("View = %q", view)
+	}
+}
+
+func TestListShowsPoundsWhenConfigured(t *testing.T) {
+	t.Parallel()
+	store := openStore(t)
+	ctx := context.Background()
+	day := time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC)
+	w := 80.0
+	log, err := dailylog.New(day, &w, 0, 0, false, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Upsert(ctx, log); err != nil {
+		t.Fatal(err)
+	}
+	app := New(store, "mem.db", config.Config{DisplayUnit: units.Pound})
+	msg := app.load()
+	loaded, ok := msg.(loadedMsg)
+	if !ok {
+		t.Fatalf("load() = %T", msg)
+	}
+	model, _ := app.Update(loaded)
+	view := model.View()
+	lb, err := units.FromKG(80, units.Pound)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shown := fmt.Sprintf("%.1f", lb)
+	if !strings.Contains(view, shown) {
+		t.Fatalf("View missing %s: %q", shown, view)
+	}
+}
+
 func TestQuitKeys(t *testing.T) {
 	t.Parallel()
-	app := New(nil, "")
+	app := New(nil, "", config.Default())
 	_, cmd := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
 	if cmd == nil {
 		t.Fatal("q should quit")
