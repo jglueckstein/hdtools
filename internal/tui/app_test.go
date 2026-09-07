@@ -20,8 +20,11 @@ func TestDefaultDBPathUsesHome(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultDBPath: %v", err)
 	}
-	if !strings.HasSuffix(got, filepath.Join(".hdtools", "hdtools.db")) {
-		t.Fatalf("path = %q, want .../.hdtools/hdtools.db", got)
+	if filepath.Base(got) != "hdtools.db" {
+		t.Fatalf("path = %q, want .../hdtools.db", got)
+	}
+	if !strings.Contains(got, "hdtools") {
+		t.Fatalf("path = %q, want an hdtools directory", got)
 	}
 }
 

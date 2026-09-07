@@ -54,7 +54,7 @@ type loadErrMsg struct {
 
 type savedMsg struct{}
 
-// DefaultDBPath is ~/.hdtools/hdtools.db.
+// DefaultDBPath is $XDG_DATA_HOME/hdtools/hdtools.db.
 func DefaultDBPath() (string, error) {
 	return config.DefaultDBPath()
 }

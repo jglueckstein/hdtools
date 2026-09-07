@@ -1,9 +1,11 @@
-// Package config loads display preferences from a TOML file next to the
-// default database, not from SQLite. That keeps the log portable and the
+// Package config loads display preferences from a TOML file under the XDG
+// config directory, not from SQLite. That keeps the log portable and the
 // file hand-editable.
 //
-// A missing file is not an error: first run uses kilograms until the user
-// writes display_unit. This package does not open the daily log database.
+// Defaults follow the XDG Base Directory Specification: config lives under
+// $XDG_CONFIG_HOME (or ~/.config), and the SQLite file lives under
+// $XDG_DATA_HOME (or ~/.local/share). A missing config file is not an error:
+// first run uses kilograms until the user writes display_unit.
 package config
 
 import (
@@ -16,7 +18,7 @@ import (
 )
 
 const (
-	dirName    = ".hdtools"
+	appName    = "hdtools"
 	fileName   = "config.toml"
 	dbFileName = "hdtools.db"
 )
@@ -32,27 +34,40 @@ func Default() Config {
 	return Config{DisplayUnit: units.Kilogram}
 }
 
-// Dir is ~/.hdtools, shared by config.toml and the default SQLite file.
-func Dir() (string, error) {
-	home, err := os.UserHomeDir()
+// ConfigDir is $XDG_CONFIG_HOME/hdtools, or ~/.config/hdtools.
+func ConfigDir() (string, error) {
+	base, err := os.UserConfigDir()
 	if err != nil {
-		return "", fmt.Errorf("home directory: %w", err)
+		return "", fmt.Errorf("config directory: %w", err)
 	}
-	return filepath.Join(home, dirName), nil
+	return filepath.Join(base, appName), nil
 }
 
-// DefaultPath is ~/.hdtools/config.toml.
+// DataDir is $XDG_DATA_HOME/hdtools, or ~/.local/share/hdtools.
+func DataDir() (string, error) {
+	base := os.Getenv("XDG_DATA_HOME")
+	if base == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("home directory: %w", err)
+		}
+		base = filepath.Join(home, ".local", "share")
+	}
+	return filepath.Join(base, appName), nil
+}
+
+// DefaultPath is $XDG_CONFIG_HOME/hdtools/config.toml.
 func DefaultPath() (string, error) {
-	dir, err := Dir()
+	dir, err := ConfigDir()
 	if err != nil {
 		return "", err
 	}
 	return filepath.Join(dir, fileName), nil
 }
 
-// DefaultDBPath is ~/.hdtools/hdtools.db.
+// DefaultDBPath is $XDG_DATA_HOME/hdtools/hdtools.db.
 func DefaultDBPath() (string, error) {
-	dir, err := Dir()
+	dir, err := DataDir()
 	if err != nil {
 		return "", err
 	}

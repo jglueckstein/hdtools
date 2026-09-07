@@ -27,8 +27,8 @@ func main() {
 
 func run(args []string) error {
 	fs := flag.NewFlagSet("hdtools", flag.ContinueOnError)
-	dbFlag := fs.String("db", "", "SQLite database path (default $HDTOOLS_DB or ~/.hdtools/hdtools.db)")
-	configFlag := fs.String("config", "", "config file path (default $HDTOOLS_CONFIG or ~/.hdtools/config.toml)")
+	dbFlag := fs.String("db", "", "SQLite database path (default $HDTOOLS_DB or $XDG_DATA_HOME/hdtools/hdtools.db)")
+	configFlag := fs.String("config", "", "config file path (default $HDTOOLS_CONFIG or $XDG_CONFIG_HOME/hdtools/config.toml)")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil

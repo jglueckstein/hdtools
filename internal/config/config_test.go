@@ -45,6 +45,46 @@ func TestLoadRejectsUnknownUnit(t *testing.T) {
 	}
 }
 
+func TestDefaultPathUsesXDGConfigHome(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", root)
+	got, err := DefaultPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(root, "hdtools", "config.toml")
+	if got != want {
+		t.Fatalf("DefaultPath = %q, want %q", got, want)
+	}
+}
+
+func TestDefaultDBPathUsesXDGDataHome(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", root)
+	got, err := DefaultDBPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(root, "hdtools", "hdtools.db")
+	if got != want {
+		t.Fatalf("DefaultDBPath = %q, want %q", got, want)
+	}
+}
+
+func TestDefaultDBPathFallsBackToLocalShare(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_DATA_HOME", "")
+	got, err := DefaultDBPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(home, ".local", "share", "hdtools", "hdtools.db")
+	if got != want {
+		t.Fatalf("DefaultDBPath = %q, want %q", got, want)
+	}
+}
+
 func TestEnsureDoesNotOverwrite(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), "config.toml")
