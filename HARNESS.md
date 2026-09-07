@@ -19,8 +19,8 @@
 
 ### Stack
 
-- **Primary languages**: Go (local toolchain go1.27). A module is not yet initialized.
-- **Build system**: Go modules (`go build ./...`) once `go.mod` exists.
+- **Primary languages**: Go 1.27 (`github.com/jglueckstein/hdtools`)
+- **Build system**: Go modules (`go build ./...`)
 - **Test framework**: `go test`
 - **Container strategy**: none
 - **TUI**: Bubble Tea or similar (intended; not yet in the tree)
