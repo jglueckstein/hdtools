@@ -6,7 +6,8 @@
 // the same Model.
 //
 // The list is the home screen. A single-day form creates and edits rows.
-// Monthly grids, charts, and meal planning are out of scope here.
+// The month sheet is the paper log: every day of the month, cell editing,
+// trend carry-forward. Charts and meal planning are out of scope here.
 package tui
 
 import (
@@ -28,20 +29,23 @@ type screen int
 const (
 	screenList screen = iota
 	screenForm
+	screenMonth
 )
 
 // App is the root Bubble Tea model: a log list, a day form, and the
 // display unit from config.toml.
 type App struct {
-	store  *dailylog.Store
-	cfg    config.Config
-	dbPath string
-	logs   []dailylog.DailyLog
-	cursor int
-	screen screen
-	form   formModel
-	err    error
-	status string
+	store     *dailylog.Store
+	cfg       config.Config
+	dbPath    string
+	logs      []dailylog.DailyLog
+	cursor    int
+	screen    screen
+	form      formModel
+	month     monthModel
+	afterSave screen
+	err       error
+	status    string
 }
 
 type loadedMsg struct {
@@ -62,10 +66,12 @@ func DefaultDBPath() (string, error) {
 // New returns an App that will load logs from store on Init.
 func New(store *dailylog.Store, dbPath string, cfg config.Config) *App {
 	return &App{
-		store:  store,
-		cfg:    cfg,
-		dbPath: dbPath,
-		form:   newForm(cfg.DisplayUnit),
+		store:     store,
+		cfg:       cfg,
+		dbPath:    dbPath,
+		form:      newForm(cfg.DisplayUnit),
+		month:     newMonth(localToday()),
+		afterSave: screenList,
 	}
 }
 
@@ -111,7 +117,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, nil
 	case savedMsg:
-		a.screen = screenList
+		a.month.cancelEdit()
+		a.screen = a.afterSave
 		a.status = "saved"
 		a.err = nil
 		return a, a.load
@@ -121,13 +128,23 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.err = nil
 			return a, nil
 		}
+		if a.screen == screenMonth {
+			a.month.err = msg.err.Error()
+			a.month.editing = false
+			a.err = nil
+			return a, nil
+		}
 		a.err = msg.err
 		return a, nil
 	case tea.KeyMsg:
-		if a.screen == screenForm {
+		switch a.screen {
+		case screenForm:
 			return a.updateForm(msg)
+		case screenMonth:
+			return a.updateMonth(msg)
+		default:
+			return a.updateList(msg)
 		}
-		return a.updateList(msg)
 	}
 	return a, nil
 }
@@ -137,13 +154,16 @@ func (a *App) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "q", "ctrl+c":
 		return a, tea.Quit
 	case "n":
-		a.openForm(localToday())
+		a.openForm(localToday(), screenList)
+		return a, nil
+	case "m":
+		a.openMonth()
 		return a, nil
 	case "enter":
 		if len(a.logs) == 0 {
 			return a, nil
 		}
-		a.openForm(a.logs[a.cursor].Day)
+		a.openForm(a.logs[a.cursor].Day, screenList)
 		return a, nil
 	case "up", "k":
 		if a.cursor > 0 {
@@ -160,7 +180,7 @@ func (a *App) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (a *App) updateForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
-		a.screen = screenList
+		a.screen = a.afterSave
 		a.form.err = ""
 		return a, nil
 	case "ctrl+c":
@@ -173,7 +193,7 @@ func (a *App) updateForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return a, cmd
 }
 
-func (a *App) openForm(day time.Time) {
+func (a *App) openForm(day time.Time, returnTo screen) {
 	a.form = newForm(a.cfg.DisplayUnit)
 	log, err := a.store.Get(context.Background(), day)
 	if err != nil {
@@ -186,17 +206,114 @@ func (a *App) openForm(day time.Time) {
 	} else {
 		a.form.load(log)
 	}
+	a.afterSave = returnTo
 	a.screen = screenForm
 	a.status = ""
 	a.err = nil
 }
 
+func (a *App) openMonth() {
+	if len(a.logs) > 0 && a.cursor >= 0 && a.cursor < len(a.logs) {
+		a.month = newMonth(a.logs[a.cursor].Day)
+	} else {
+		a.month = newMonth(localToday())
+	}
+	a.afterSave = screenMonth
+	a.screen = screenMonth
+	a.status = ""
+	a.err = nil
+}
+
+func (a *App) updateMonth(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if a.month.editing {
+		switch msg.String() {
+		case "esc":
+			a.month.cancelEdit()
+			return a, nil
+		case "enter":
+			return a, a.saveMonthCell
+		case "ctrl+c":
+			return a, tea.Quit
+		}
+		var cmd tea.Cmd
+		a.month.input, cmd = a.month.input.Update(msg)
+		return a, cmd
+	}
+	switch msg.String() {
+	case "esc":
+		a.screen = screenList
+		return a, nil
+	case "q", "ctrl+c":
+		return a, tea.Quit
+	case "left":
+		a.month.col--
+		a.month.clamp()
+	case "right":
+		a.month.col++
+		a.month.clamp()
+	case "up":
+		a.month.day--
+		a.month.clamp()
+	case "down":
+		a.month.day++
+		a.month.clamp()
+	case "[":
+		a.month.prevMonth()
+	case "]":
+		a.month.nextMonth()
+	case "enter":
+		a.openForm(a.month.cursorDay(), screenMonth)
+		return a, nil
+	case "n":
+		a.openForm(a.month.cursorDay(), screenMonth)
+		return a, nil
+	case " ":
+		if a.month.col == colWorkout {
+			return a, a.saveMonthCell
+		}
+	default:
+		if a.month.col != colWorkout && len(msg.Runes) == 1 && msg.Type == tea.KeyRunes {
+			a.month.beginEdit(string(msg.Runes))
+		}
+	}
+	return a, nil
+}
+
+func (a *App) saveMonthCell() tea.Msg {
+	day := a.month.cursorDay()
+	log, err := a.store.Get(context.Background(), day)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return loadErrMsg{err: err}
+		}
+		log = dailylog.DailyLog{Day: day}
+	}
+	if a.month.col == colWorkout {
+		log.Workout = !log.Workout
+		log, err = dailylog.New(log.Day, log.Weight, log.SleepHours, log.Steps, log.Workout, log.Note)
+	} else {
+		log, err = patchCell(log, a.month.col, a.month.input.Value(), a.cfg.DisplayUnit)
+	}
+	if err != nil {
+		return loadErrMsg{err: err}
+	}
+	if err := a.store.Upsert(context.Background(), log); err != nil {
+		return loadErrMsg{err: err}
+	}
+	return savedMsg{}
+}
+
 // View renders the list or the day form.
 func (a *App) View() string {
-	if a.screen == screenForm {
+	switch a.screen {
+	case screenForm:
 		return a.form.view()
+	case screenMonth:
+		sheet := buildMonthSheet(a.logs, a.month.year, a.month.month)
+		return a.month.view(sheet, a.cfg.DisplayUnit, a.dbPath, a.status)
+	default:
+		return a.listView()
 	}
-	return a.listView()
 }
 
 func (a *App) listView() string {
@@ -208,7 +325,7 @@ func (a *App) listView() string {
 		return b.String()
 	}
 	if len(a.logs) == 0 {
-		fmt.Fprintf(&b, "(no entries yet)\n\nn new day   q quit\n")
+		fmt.Fprintf(&b, "(no entries yet)\n\nn new day   m month   q quit\n")
 		return b.String()
 	}
 	fmt.Fprintf(&b, "    date        weight   trend   sleep  steps  workout  note\n")
@@ -246,6 +363,6 @@ func (a *App) listView() string {
 	if a.status != "" {
 		fmt.Fprintf(&b, "\n%s\n", a.status)
 	}
-	fmt.Fprintf(&b, "\nn new   enter edit   q quit\n")
+	fmt.Fprintf(&b, "\nn new   enter edit   m month   q quit\n")
 	return b.String()
 }

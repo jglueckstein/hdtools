@@ -110,6 +110,52 @@ func TestListShowsPoundsWhenConfigured(t *testing.T) {
 	}
 }
 
+func TestMOpensMonthSheet(t *testing.T) {
+	t.Parallel()
+	store := openStore(t)
+	ctx := context.Background()
+	day := time.Date(1990, 11, 4, 0, 0, 0, 0, time.UTC)
+	w := 171.5
+	log, err := dailylog.New(day, &w, 0, 0, false, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Upsert(ctx, log); err != nil {
+		t.Fatal(err)
+	}
+	app := New(store, "mem.db", config.Default())
+	loaded := app.load()
+	app.Update(loaded)
+	model, _ := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}})
+	view := model.View()
+	if !strings.Contains(view, "November 1990") {
+		t.Fatalf("View = %q", view)
+	}
+	if !strings.Contains(view, "30") {
+		t.Fatalf("expected 30 days in November: %q", view)
+	}
+}
+
+func TestMonthCellSaveWritesWeight(t *testing.T) {
+	t.Parallel()
+	store := openStore(t)
+	app := New(store, "mem.db", config.Default())
+	app.month = newMonth(time.Date(1990, 11, 4, 0, 0, 0, 0, time.UTC))
+	app.month.col = colWeight
+	app.month.beginEdit("80.0")
+	msg := app.saveMonthCell()
+	if _, ok := msg.(savedMsg); !ok {
+		t.Fatalf("save = %#v", msg)
+	}
+	got, err := store.Get(context.Background(), time.Date(1990, 11, 4, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Weight == nil || *got.Weight != 80 {
+		t.Fatalf("stored %+v", got)
+	}
+}
+
 func TestQuitKeys(t *testing.T) {
 	t.Parallel()
 	app := New(nil, "", config.Default())
