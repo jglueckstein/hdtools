@@ -47,6 +47,9 @@ jobs:
             exit 1
           fi
 
+      - name: "Constraint: TUI has no SQL imports"
+        run: bash scripts/check-tui-sql-imports.sh
+
       - name: "Constraint: No secrets in source"
         uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e  # v3.0.0
         env:

@@ -1,8 +1,9 @@
 // Package tui is the screen: list, day form, and monthly sheet.
 //
 // It owns Bubble Tea state and talks to dailylog.Store but never opens
-// SQLite, so tests inject a file and a later remote database can reuse
-// the same Model. Charts, meal planning, and PDF are out of scope.
+// SQLite or imports database/sql, so tests inject a file and a later
+// remote database can reuse the same Model. Missing days are
+// dailylog.ErrNotFound. Charts, meal planning, and PDF are out of scope.
 //
 // Color comes from style.go (16-color ANSI). Column geometry lives in
 // layout.go so headers stay over numbers after ANSI codes are applied.
@@ -10,7 +11,6 @@ package tui
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -195,7 +195,7 @@ func (a *App) openForm(day time.Time, returnTo screen) {
 	a.form = newForm(a.cfg.DisplayUnit)
 	log, err := a.store.Get(context.Background(), day)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, dailylog.ErrNotFound) {
 			a.form.loadNew(day)
 		} else {
 			a.err = err
@@ -281,7 +281,7 @@ func (a *App) saveMonthCell() tea.Msg {
 	day := a.month.cursorDay()
 	log, err := a.store.Get(context.Background(), day)
 	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
+		if !errors.Is(err, dailylog.ErrNotFound) {
 			return loadErrMsg{err: err}
 		}
 		log = dailylog.DailyLog{Day: day}

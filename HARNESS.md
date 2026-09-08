@@ -118,8 +118,8 @@
 ### TUI has no SQL imports
 
 - **Rule**: `internal/tui` must not import `database/sql` or a SQLite driver. `cmd/hdtools` and tests open the database and inject a `Store`
-- **Enforcement**: unverified
-- **Tool**: none yet
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-tui-sql-imports.sh
 - **Scope**: pr
 
 ### DB and config files are 0600
@@ -350,7 +350,7 @@ Run /reservoir for an on-demand read, or /reservoir tune to edit this block.
 <!-- Auto-updated by /harness-audit — do not edit manually -->
 
 Last audit: 2026-09-08
-Constraints enforced: 8/14
+Constraints enforced: 9/14
 Garbage collection active: 8/8
 Drift detected: yes
-<!-- 8/14 counts declared enforcement (6 unverified). 5 agent PR constraints have no CI dispatch (harness.yml does not run harness-enforcer). Wrap-errors FAIL: bare return err at internal/config/config.go:68,78 internal/tui/form.go:212 internal/dailylog/store.go:35,208. Unverified currently failing: TUI imports database/sql (internal/tui/app.go); config.Write uses 0o644 not 0600. Cursor/Copilot/Windsurf omit the 6 extracted constraints. -->
+<!-- 9/14 counts declared enforcement (5 unverified). 5 agent PR constraints have no CI dispatch (harness.yml does not run harness-enforcer). Wrap-errors FAIL: bare return err at internal/config/config.go:68,78 internal/tui/form.go:212 internal/dailylog/store.go:35,208. Unverified currently failing: config.Write uses 0o644 not 0600. Cursor/Copilot/Windsurf omit extracted constraints. -->

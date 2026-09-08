@@ -24,6 +24,9 @@ var (
 	ErrUnsortedDays  = errors.New("daily logs must be in chronological order")
 	ErrDuplicateDay  = errors.New("duplicate day in daily log series")
 	ErrNoTrendStart  = errors.New("no weight and no carry-forward to start the trend")
+	// ErrNotFound is Store.Get when that calendar day has no row. The TUI
+	// compares with errors.Is so it never imports database/sql.
+	ErrNotFound = errors.New("daily log not found")
 )
 
 // DailyLog is one calendar day's log line: the paper sheet's Weight column,

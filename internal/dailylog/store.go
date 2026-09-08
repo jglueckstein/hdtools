@@ -9,6 +9,7 @@ package dailylog
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -131,6 +132,9 @@ SELECT day, weight, sleep_hours, steps, workout, note
 FROM daily_log WHERE day = ?`, day.Format(time.DateOnly))
 	d, err := scanLog(row)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return DailyLog{}, fmt.Errorf("get daily log %s: %w", day.Format(time.DateOnly), ErrNotFound)
+		}
 		return DailyLog{}, fmt.Errorf("get daily log %s: %w", day.Format(time.DateOnly), err)
 	}
 	return d, nil
