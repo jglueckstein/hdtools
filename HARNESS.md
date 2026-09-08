@@ -108,6 +108,48 @@
 - **Tool**: harness-enforcer
 - **Scope**: pr
 
+### Prefs out of SQLite
+
+- **Rule**: Display unit and other preferences live only in the XDG config file. The log database must not store preferences
+- **Enforcement**: unverified
+- **Tool**: none yet
+- **Scope**: pr
+
+### TUI has no SQL imports
+
+- **Rule**: `internal/tui` must not import `database/sql` or a SQLite driver. `cmd/hdtools` and tests open the database and inject a `Store`
+- **Enforcement**: unverified
+- **Tool**: none yet
+- **Scope**: pr
+
+### DB and config files are 0600
+
+- **Rule**: New SQLite database files and `config.toml` files are created with permission 0600 (owner read/write only)
+- **Enforcement**: unverified
+- **Tool**: none yet
+- **Scope**: pr
+
+### Default paths are XDG
+
+- **Rule**: Default config is `$XDG_CONFIG_HOME/hdtools/config.toml` and default database is `$XDG_DATA_HOME/hdtools/hdtools.db` (falling back to `~/.config` and `~/.local/share`). `-db`, `-config`, and `$HDTOOLS_DB` / `$HDTOOLS_CONFIG` override only when the user named the path
+- **Enforcement**: unverified
+- **Tool**: none yet
+- **Scope**: pr
+
+### No skip-to-green
+
+- **Rule**: Do not call `t.Skip` or comment out a test to make the suite pass. `testing.Short()` and genuine platform skips are allowed
+- **Enforcement**: unverified
+- **Tool**: none yet
+- **Scope**: pr
+
+### No live log in git
+
+- **Rule**: Do not commit a real log database or a machine `config.toml`. Small fixtures under `testdata/` are allowed
+- **Enforcement**: unverified
+- **Tool**: none yet
+- **Scope**: pr
+
 ---
 
 ## Garbage Collection
@@ -308,7 +350,7 @@ Run /reservoir for an on-demand read, or /reservoir tune to edit this block.
 <!-- Auto-updated by /harness-audit — do not edit manually -->
 
 Last audit: 2026-09-08
-Constraints enforced: 8/8
+Constraints enforced: 8/14
 Garbage collection active: 8/8
-Drift detected: no
-<!-- 5 agent PR constraints have no CI dispatch path (harness.yml does not run harness-enforcer). -->
+Drift detected: yes
+<!-- 8/14 counts declared enforcement (6 unverified). 5 agent PR constraints have no CI dispatch (harness.yml does not run harness-enforcer). Wrap-errors FAIL: bare return err at internal/config/config.go:68,78 internal/tui/form.go:212 internal/dailylog/store.go:35,208. Unverified currently failing: TUI imports database/sql (internal/tui/app.go); config.Write uses 0o644 not 0600. Cursor/Copilot/Windsurf omit the 6 extracted constraints. -->

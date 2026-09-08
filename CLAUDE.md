@@ -110,3 +110,10 @@ the fragment in the same commit.
 1. `/harness-sync` if convention files may have drifted
 2. Scan REFLECTION_LOG.md for entries worth promoting to AGENTS.md
 3. `/harness-audit` when constraints change
+
+## Conventions (extracted 2026-09-08)
+
+- Extract a helper when the same code is already wrong in two places.
+  `internal/tui/layout.go` (`visPad`, shared column widths for list and
+  month) is the model of an extraction that was due. A layout framework
+  (or the same helper for a single screen) is over-engineered.
