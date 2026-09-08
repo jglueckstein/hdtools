@@ -172,6 +172,35 @@
 - **Tool**: gitleaks --version && gitleaks detect --source . --no-banner --exit-code 1
 - **Auto-fix**: false
 
+### Layer boundary compliance
+
+- **What it checks**: Whether import direction still matches the declared
+  layers: `internal/dailylog` and `internal/units` stay TUI-free and do
+  not import `config`; `internal/config` may import `units` but not
+  `tui` or `dailylog`. `cmd/hdtools` and `internal/tui` import downward.
+- **Frequency**: weekly
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-import-direction.sh
+- **Auto-fix**: false
+
+### File size growth
+
+- **What it checks**: Whether any non-test `.go` file has grown past 500
+  lines (split candidate). Current peak is `internal/tui/app.go`.
+- **Frequency**: weekly
+- **Enforcement**: deterministic
+- **Tool**: test -z "$(find . -name '*.go' ! -name '*_test.go' ! -path './.git/*' -exec wc -l {} + | awk '$1 > 500 && $2 != "total"')"
+- **Auto-fix**: false
+
+### Test coverage per package
+
+- **What it checks**: Whether `go test -cover` per package has declined
+  more than 5% since the last GC snapshot, or a package has no tests
+- **Frequency**: weekly
+- **Enforcement**: agent
+- **Tool**: harness-gc agent (go test -coverprofile=cover.out ./... && go tool cover -func=cover.out)
+- **Auto-fix**: false
+
 ---
 
 ## Affordances
@@ -280,6 +309,6 @@ Run /reservoir for an on-demand read, or /reservoir tune to edit this block.
 
 Last audit: 2026-09-08
 Constraints enforced: 8/8
-Garbage collection active: 5/5
+Garbage collection active: 8/8
 Drift detected: no
 <!-- 5 agent PR constraints have no CI dispatch path (harness.yml does not run harness-enforcer). -->
