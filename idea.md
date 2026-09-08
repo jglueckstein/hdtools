@@ -18,6 +18,15 @@ color-only encoding).
 one way to do that, since the app already uses Bubble Tea. Another
 styling library is fine if it fits the same stack.
 
+Color schemes should be user-configurable in the same config file as
+display units. The user names roles (at least: title, muted chrome,
+header, help, daily weight, trend, selection, error, status), not
+raw terminal sequences. A built-in default scheme is the 16-color
+palette that ships with the app (blue daily weight, red trend, matching
+the book's charts). Omitted or invalid colors fall back to that
+default. `NO_COLOR` disables color entirely; structure must remain
+readable. Changing scheme must not require a rebuild.
+
 ## Database
 
 The data should be stored in a database. The database may be local
