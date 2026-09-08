@@ -146,8 +146,8 @@
 ### No live log in git
 
 - **Rule**: Do not commit a real log database or a machine `config.toml`. Small fixtures under `testdata/` are allowed
-- **Enforcement**: unverified
-- **Tool**: none yet
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-no-live-log.sh
 - **Scope**: pr
 
 ---
@@ -350,7 +350,7 @@ Run /reservoir for an on-demand read, or /reservoir tune to edit this block.
 <!-- Auto-updated by /harness-audit — do not edit manually -->
 
 Last audit: 2026-09-08
-Constraints enforced: 9/14
+Constraints enforced: 10/14
 Garbage collection active: 8/8
 Drift detected: yes
-<!-- 9/14 counts declared enforcement (5 unverified). 5 agent PR constraints have no CI dispatch (harness.yml does not run harness-enforcer). Wrap-errors FAIL: bare return err at internal/config/config.go:68,78 internal/tui/form.go:212 internal/dailylog/store.go:35,208. Unverified currently failing: config.Write uses 0o644 not 0600. Cursor/Copilot/Windsurf omit extracted constraints. -->
+<!-- 10/14 counts declared enforcement (4 unverified). 5 agent PR constraints have no CI dispatch (harness.yml does not run harness-enforcer). Wrap-errors FAIL: bare return err at internal/config/config.go:68,78 internal/tui/form.go:212 internal/dailylog/store.go:35,208. Unverified currently failing: config.Write uses 0o644 not 0600. Cursor/Copilot/Windsurf omit extracted constraints. -->
