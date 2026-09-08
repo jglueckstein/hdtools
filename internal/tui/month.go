@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 	"github.com/jglueckstein/hdtools/internal/units"
 )
@@ -129,9 +130,9 @@ func lastTrendOnOrBefore(logs []dailylog.DailyLog, day time.Time) (float64, bool
 
 func (m monthModel) view(sheet []sheetDay, unit units.Unit, dbPath string, status string) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "hdtools — %s %d  (weight %s)\n", m.month.String(), m.year, unit)
-	fmt.Fprintf(&b, "db: %s\n\n", dbPath)
-	fmt.Fprintf(&b, "     date  wd  weight  trend  sleep  steps  workout  note\n")
+	fmt.Fprintf(&b, "%s\n", titleStyle.Render(fmt.Sprintf("hdtools — %s %d  (weight %s)", m.month.String(), m.year, unit)))
+	fmt.Fprintf(&b, "%s\n\n", mutedStyle.Render("db: "+dbPath))
+	fmt.Fprintf(&b, "%s\n", headerStyle.Render(monthHeader()))
 	for _, row := range sheet {
 		mark := "  "
 		onRow := row.Day.Day() == m.day
@@ -139,50 +140,72 @@ func (m monthModel) view(sheet []sheetDay, unit units.Unit, dbPath string, statu
 			mark = "> "
 		}
 		wd := row.Day.Weekday().String()[:2]
-		weight := "     —"
+		weight, trend, sleep, steps, workout, note := "—", "—", "—", "—", "—", ""
 		if row.HasEntry && row.Log.Weight != nil {
 			if w, err := units.FromKG(*row.Log.Weight, unit); err == nil {
-				weight = fmt.Sprintf("%6.1f", w)
+				weight = fmt.Sprintf("%.1f", w)
 			}
 		}
-		trend := "    —"
 		if row.HasTrend {
 			if t, err := units.FromKG(row.Trend, unit); err == nil {
-				trend = fmt.Sprintf("%5.1f", t)
+				trend = fmt.Sprintf("%.1f", t)
 			}
 		}
-		sleep, steps, workout, note := "    —", "    —", "  —", ""
 		if row.HasEntry {
-			sleep = fmt.Sprintf("%5.1f", row.Log.SleepHours)
-			steps = fmt.Sprintf("%5d", row.Log.Steps)
-			workout = "  no"
+			sleep = fmt.Sprintf("%.1f", row.Log.SleepHours)
+			steps = fmt.Sprintf("%d", row.Log.Steps)
+			workout = "no"
 			if row.Log.Workout {
-				workout = " yes"
+				workout = "yes"
 			}
 			note = row.Log.Note
 		}
-		cells := []string{weight, sleep, steps, workout, note}
+		weight = visPad(weightStyle.Render(weight), wWeight, true)
+		trend = visPad(trendStyle.Render(trend), wTrend, true)
+		sleep = visPad(sleep, wSleep, true)
+		steps = visPad(steps, wSteps, true)
+		workout = visPad(workout, wWorkout, false)
 		if onRow {
-			cells[m.col] = highlightCell(cells[m.col], m.editing, m.input)
+			switch m.col {
+			case colWeight:
+				weight = highlightCell(weight, m.editing, m.input, wWeight, true)
+			case colSleep:
+				sleep = highlightCell(sleep, m.editing, m.input, wSleep, true)
+			case colSteps:
+				steps = highlightCell(steps, m.editing, m.input, wSteps, true)
+			case colWorkout:
+				workout = highlightCell(workout, m.editing, m.input, wWorkout, false)
+			case colNote:
+				note = highlightCell(note, m.editing, m.input, lipgloss.Width(note)+2, false)
+			}
 		}
-		fmt.Fprintf(&b, "%s%2d %s %s  %s  %s  %s  %s  %s\n",
-			mark, row.Day.Day(), wd, cells[0], trend, cells[1], cells[2], cells[3], cells[4])
+		fmt.Fprintf(&b, "%s\n", visPad(mark, wMark, false)+joinCols(
+			visPad(fmt.Sprintf("%d", row.Day.Day()), wDay, true),
+			visPad(wd, wWeekday, false),
+			weight,
+			trend,
+			sleep,
+			steps,
+			workout,
+			note,
+		))
 	}
 	if m.err != "" {
-		fmt.Fprintf(&b, "\nerror: %s\n", m.err)
+		fmt.Fprintf(&b, "\n%s\n", errorStyle.Render("error: "+m.err))
 	}
 	if status != "" {
-		fmt.Fprintf(&b, "\n%s\n", status)
+		fmt.Fprintf(&b, "\n%s\n", statusStyle.Render(status))
 	}
-	fmt.Fprintf(&b, "\narrows move   type edit   space workout   enter form   [ ] month   esc list\n")
+	fmt.Fprintf(&b, "\n%s\n", helpStyle.Render("arrows move   type edit   space workout   enter form   [ ] month   esc list"))
 	return b.String()
 }
 
-func highlightCell(value string, editing bool, input textinput.Model) string {
+func highlightCell(value string, editing bool, input textinput.Model, width int, right bool) string {
+	inner := value
 	if editing {
-		return "[" + input.View() + "]"
+		inner = visPad(strings.TrimSpace(input.View()), width, right)
 	}
-	return "[" + strings.TrimSpace(value) + "]"
+	return selectedStyle.Render(inner)
 }
 
 func (m *monthModel) beginEdit(initial string) {

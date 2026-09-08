@@ -144,24 +144,27 @@ func (f formModel) view() string {
 	if f.workout {
 		workout = "yes"
 	}
-	cursor := func(i int) string {
+	label := func(i int, name string) string {
+		mark := " "
+		style := labelStyle
 		if f.focus == i {
-			return ">"
+			mark = ">"
+			style = focusLabelStyle
 		}
-		return " "
+		return mark + " " + style.Render(fmt.Sprintf("%-8s", name))
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "  day form  (weight in %s)\n\n", f.unit)
-	fmt.Fprintf(&b, "%s date     %s\n", cursor(fieldDate), f.inputs[0].View())
-	fmt.Fprintf(&b, "%s weight   %s\n", cursor(fieldWeight), f.inputs[1].View())
-	fmt.Fprintf(&b, "%s sleep    %s\n", cursor(fieldSleep), f.inputs[2].View())
-	fmt.Fprintf(&b, "%s steps    %s\n", cursor(fieldSteps), f.inputs[3].View())
-	fmt.Fprintf(&b, "%s workout  %s  (space to toggle)\n", cursor(fieldWorkout), workout)
-	fmt.Fprintf(&b, "%s note     %s\n", cursor(fieldNote), f.inputs[4].View())
+	fmt.Fprintf(&b, "%s\n\n", titleStyle.Render(fmt.Sprintf("  day form  (weight in %s)", f.unit)))
+	fmt.Fprintf(&b, "%s %s\n", label(fieldDate, "date"), f.inputs[0].View())
+	fmt.Fprintf(&b, "%s %s\n", label(fieldWeight, "weight"), f.inputs[1].View())
+	fmt.Fprintf(&b, "%s %s\n", label(fieldSleep, "sleep"), f.inputs[2].View())
+	fmt.Fprintf(&b, "%s %s\n", label(fieldSteps, "steps"), f.inputs[3].View())
+	fmt.Fprintf(&b, "%s %s  %s\n", label(fieldWorkout, "workout"), workout, mutedStyle.Render("(space to toggle)"))
+	fmt.Fprintf(&b, "%s %s\n", label(fieldNote, "note"), f.inputs[4].View())
 	if f.err != "" {
-		fmt.Fprintf(&b, "\nerror: %s\n", f.err)
+		fmt.Fprintf(&b, "\n%s\n", errorStyle.Render("error: "+f.err))
 	}
-	fmt.Fprintf(&b, "\nenter save   esc cancel   tab next field\n")
+	fmt.Fprintf(&b, "\n%s\n", helpStyle.Render("enter save   esc cancel   tab next field"))
 	return b.String()
 }
 

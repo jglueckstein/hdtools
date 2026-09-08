@@ -318,17 +318,17 @@ func (a *App) View() string {
 
 func (a *App) listView() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "hdtools — daily log  (weight %s)\n", a.cfg.DisplayUnit)
-	fmt.Fprintf(&b, "db: %s\n\n", a.dbPath)
+	fmt.Fprintf(&b, "%s\n", titleStyle.Render(fmt.Sprintf("hdtools — daily log  (weight %s)", a.cfg.DisplayUnit)))
+	fmt.Fprintf(&b, "%s\n\n", mutedStyle.Render("db: "+a.dbPath))
 	if a.err != nil {
-		fmt.Fprintf(&b, "error: %v\n\nq quit\n", a.err)
+		fmt.Fprintf(&b, "%s\n\n%s\n", errorStyle.Render("error: "+a.err.Error()), helpStyle.Render("q quit"))
 		return b.String()
 	}
 	if len(a.logs) == 0 {
-		fmt.Fprintf(&b, "(no entries yet)\n\nn new day   m month   q quit\n")
+		fmt.Fprintf(&b, "%s\n\n%s\n", mutedStyle.Render("(no entries yet)"), helpStyle.Render("n new day   m month   q quit"))
 		return b.String()
 	}
-	fmt.Fprintf(&b, "    date        weight   trend   sleep  steps  workout  note\n")
+	fmt.Fprintf(&b, "%s\n", headerStyle.Render(listHeader()))
 	for i, log := range a.logs {
 		mark := "  "
 		if i == a.cursor {
@@ -339,30 +339,33 @@ func (a *App) listView() string {
 		if log.Weight != nil {
 			w, err := units.FromKG(*log.Weight, a.cfg.DisplayUnit)
 			if err == nil {
-				weight = fmt.Sprintf("%6.1f", w)
+				weight = fmt.Sprintf("%.1f", w)
 			}
 		}
 		if t, err := units.FromKG(log.Trend, a.cfg.DisplayUnit); err == nil && (log.Weight != nil || log.Trend != 0) {
-			trend = fmt.Sprintf("%5.1f", t)
+			trend = fmt.Sprintf("%.1f", t)
 		}
 		workout := "no"
 		if log.Workout {
 			workout = "yes"
 		}
-		fmt.Fprintf(&b, "%s%s  %7s  %5s  %5.1f  %5d  %-7s  %s\n",
-			mark,
-			log.Day.Format("2006-01-02"),
-			weight,
-			trend,
-			log.SleepHours,
-			log.Steps,
-			workout,
+		line := visPad(mark, wMark, false) + joinCols(
+			visPad(log.Day.Format("2006-01-02"), wDate, false),
+			visPad(weightStyle.Render(weight), wWeight, true),
+			visPad(trendStyle.Render(trend), wTrend, true),
+			visPad(fmt.Sprintf("%.1f", log.SleepHours), wSleep, true),
+			visPad(fmt.Sprintf("%d", log.Steps), wSteps, true),
+			visPad(workout, wWorkout, false),
 			log.Note,
 		)
+		if i == a.cursor {
+			line = selectedStyle.Render(line)
+		}
+		fmt.Fprintf(&b, "%s\n", line)
 	}
 	if a.status != "" {
-		fmt.Fprintf(&b, "\n%s\n", a.status)
+		fmt.Fprintf(&b, "\n%s\n", statusStyle.Render(a.status))
 	}
-	fmt.Fprintf(&b, "\nn new   enter edit   m month   q quit\n")
+	fmt.Fprintf(&b, "\n%s\n", helpStyle.Render("n new   enter edit   m month   q quit"))
 	return b.String()
 }
