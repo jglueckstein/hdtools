@@ -14,6 +14,7 @@
 
 - Pin `gitleaks/gitleaks-action` to v3.0.0 so Harness Constraints CI
   can resolve the action (the old v2.3.8 SHA 404s)
+- Checkout with `fetch-depth: 0` so gitleaks can see the PR commit range
 
 ### Changed
 
