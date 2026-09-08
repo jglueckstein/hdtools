@@ -58,3 +58,10 @@ directly — run `/convention-sync` to regenerate.
 - **Enforcement**: agent
 - **Tool**: harness-enforcer
 - **Scope**: pr
+
+## Literate preamble on new files
+
+- **Rule**: Every new or substantially rewritten `.go` source file (except `_test.go`) opens with a narrative preamble that answers why the file exists, the key design decisions, and what it deliberately does not do. Function comments explain the reasoning behind the approach, not the signature. Inline comments that restate the next line of code are prohibited. This is reviewed in code review (agent), not by a linter.
+- **Enforcement**: agent
+- **Tool**: harness-enforcer
+- **Scope**: pr

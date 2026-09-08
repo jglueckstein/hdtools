@@ -37,7 +37,11 @@
 - **Naming**: Exported identifiers use PascalCase; unexported identifiers use camelCase. Initialisms stay all-caps as words: `HTTPServer`, `userID`, `ServeHTTP`. Packages are short, lowercase, and contain no underscores. Files use a single lowercase word (`trend.go`) or `snake_case.go` when the name is a phrase (`daily_log.go`).
 - **File structure**: One module at the repo root. The binary entry point is `cmd/hdtools/main.go` and stays a wiring layer. Application code lives under `internal/` and is not importable from outside the module. One package directory per concern (`internal/config`, `internal/dailylog`, `internal/tui`, `internal/units`, …). Weight trend belongs in `dailylog`, not a separate package. Tests sit next to the code as `<file>_test.go`. If a type is the package's main exported type, its file is named after that type.
 - **Error handling**: Every function that returns an `error` either handles it with a specific recovery action or wraps it with `%w` and a short context string before returning (`fmt.Errorf("load daily log: %w", err)`). Bare `return err` is not permitted. `panic` is only for truly unreachable programmer errors, never for I/O, parse, or database failures. Sentinel errors live in the package that defines them and are compared with `errors.Is` / `errors.As`.
-- **Documentation**: Every exported function, type, and const has a doc comment. The first sentence states what it does or returns, not how. Comments that only restate the signature (e.g. `// Weight returns the weight.`) count as missing. Unexported code gets a comment only when the reason is non-obvious (a constraint, a workaround, or a domain rule from The Hacker's Diet). Each package has a package comment (on one file in the package, or `doc.go`).
+- **Documentation**:
+  - Every new file must open with a narrative preamble answering: why this file exists, key design decisions, and what it deliberately does not do
+  - Function comments must explain the reasoning behind the approach, not restate the signature
+  - Inline comments explain WHY, not WHAT — comments that restate the next line are prohibited
+  - Every exported function, type, and const has a doc comment. The first sentence states what it does or returns, not how. Comments that only restate the signature (e.g. `// Weight returns the weight.`) count as missing. Unexported code gets a comment only when the reason is non-obvious (a constraint, a workaround, or a domain rule from The Hacker's Diet). Each package has a package comment (on one file in the package, or `doc.go`).
 
 ---
 
@@ -93,6 +97,13 @@
 ### Exported API documentation
 
 - **Rule**: Every exported function, type, and const has a doc comment whose first sentence says what it does or returns, not how; signature-restating comments count as missing; unexported code is commented only for non-obvious reasons; each package has a package comment
+- **Enforcement**: agent
+- **Tool**: harness-enforcer
+- **Scope**: pr
+
+### Literate preamble on new files
+
+- **Rule**: Every new or substantially rewritten `.go` source file (except `_test.go`) opens with a narrative preamble that answers why the file exists, the key design decisions, and what it deliberately does not do. Function comments explain the reasoning behind the approach, not the signature. Inline comments that restate the next line of code are prohibited. This is reviewed in code review (agent), not by a linter.
 - **Enforcement**: agent
 - **Tool**: harness-enforcer
 - **Scope**: pr
