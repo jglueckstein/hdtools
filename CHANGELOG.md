@@ -4,6 +4,8 @@
 
 ### Added
 
+- Promote **TUI has no SQL imports** to deterministic PR enforcement
+  (`scripts/check-tui-sql-imports.sh`); missing days are `dailylog.ErrNotFound`
 - Six unverified harness constraints from `/extract-conventions`: prefs
   out of SQLite, TUI has no SQL imports, DB/config `0600`, XDG default
   paths, no skip-to-green, no live log in git
@@ -18,6 +20,6 @@
 
 ### Changed
 
-- Harness Status and README badge 8/8 → 8/14 after `/harness-audit`
-  (drift yes: remaining bare `return err`, TUI `database/sql` import,
+- Harness Status and README badge 8/8 → 9/14 after `/harness-audit`
+  and promoting TUI SQL imports (drift yes: remaining bare `return err`,
   config `0644`, convention-file lag)

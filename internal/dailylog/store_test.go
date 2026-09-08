@@ -6,6 +6,8 @@ import (
 	"errors"
 	"path/filepath"
 	"testing"
+
+	_ "modernc.org/sqlite"
 )
 
 func TestStoreRoundTripAndMissingWeight(t *testing.T) {
@@ -92,8 +94,8 @@ func TestStoreGetMissingDay(t *testing.T) {
 	t.Parallel()
 	s := openTestStore(t)
 	_, err := s.Get(context.Background(), date(1990, 1, 1))
-	if !errors.Is(err, sql.ErrNoRows) {
-		t.Fatalf("error = %v, want sql.ErrNoRows", err)
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("error = %v, want ErrNotFound", err)
 	}
 }
 
