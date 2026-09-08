@@ -1,5 +1,11 @@
 package tui
 
+// The day form is create and edit for a single calendar day. Month-cell
+// edits reuse parseForm/patchCell so a typed weight still converts to kg
+// through the same path. Date is editable: saving a new date upserts that
+// day and leaves the old row in place (the paper log never deletes a line
+// by changing its date).
+
 import (
 	"fmt"
 	"strconv"

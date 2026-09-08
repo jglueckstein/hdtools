@@ -6,6 +6,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// Column geometry is shared by the daily list and the month sheet so a
+// header change cannot drift one view and not the other. Widths are
+// display cells, not byte length: visPad uses lipgloss.Width because
+// colored numbers contain ANSI sequences that would otherwise shove
+// later columns to the right.
+
 const (
 	wMark    = 2
 	wDate    = 10 // 2006-01-02
@@ -19,8 +25,6 @@ const (
 	colGap   = "  "
 )
 
-// visPad pads s to width display cells, ignoring ANSI so colored numbers
-// still sit under the header.
 func visPad(s string, width int, right bool) string {
 	n := width - lipgloss.Width(s)
 	if n <= 0 {

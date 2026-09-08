@@ -1,5 +1,11 @@
 package dailylog
 
+// SQLite is the default local log. Trend is omitted from the schema on
+// purpose: ApplyTrend is the source of truth after every read. We use
+// modernc.org/sqlite (pure Go) so CI and the TUI do not need CGO.
+//
+// Remote servers and schema beyond daily_log are out of scope here.
+
 import (
 	"context"
 	"database/sql"
@@ -31,7 +37,8 @@ func Open(path string) (*Store, error) {
 	return s, nil
 }
 
-// Close releases the database handle.
+// Close is called from main after tea.Program returns so a failed TUI still
+// flushes the file handle.
 func (s *Store) Close() error {
 	if err := s.db.Close(); err != nil {
 		return fmt.Errorf("close daily log store: %w", err)
@@ -115,7 +122,8 @@ ON CONFLICT(day) DO UPDATE SET
 	return nil
 }
 
-// Get loads the log for day. It does not compute Trend.
+// Get returns a single day without running ApplyTrend. The form needs the
+// raw row; trend belongs on a series.
 func (s *Store) Get(ctx context.Context, day time.Time) (DailyLog, error) {
 	day = calendarDay(day)
 	row := s.db.QueryRowContext(ctx, `
@@ -128,7 +136,8 @@ FROM daily_log WHERE day = ?`, day.Format(time.DateOnly))
 	return d, nil
 }
 
-// Range returns logs from fromDay through toDay inclusive, oldest first.
+// Range is inclusive on both ends. The month sheet currently loads All
+// instead, because trend for day 1 needs carry from the previous month.
 func (s *Store) Range(ctx context.Context, fromDay, toDay time.Time) ([]DailyLog, error) {
 	fromDay = calendarDay(fromDay)
 	toDay = calendarDay(toDay)
@@ -156,7 +165,8 @@ ORDER BY day ASC`, fromDay.Format(time.DateOnly), toDay.Format(time.DateOnly))
 	return out, nil
 }
 
-// All returns every stored log, oldest first. Trend is not computed.
+// All is the TUI's load path: ApplyTrend needs the full chronological
+// series, not a month slice.
 func (s *Store) All(ctx context.Context) ([]DailyLog, error) {
 	rows, err := s.db.QueryContext(ctx, `
 SELECT day, weight, sleep_hours, steps, workout, note

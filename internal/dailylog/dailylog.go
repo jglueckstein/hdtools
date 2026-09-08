@@ -45,9 +45,10 @@ type DailyLog struct {
 	Note       string
 }
 
-// New builds a validated DailyLog for the calendar day of day (UTC date).
-// weight may be nil when the scale was not used that day. note is optional
-// on any day (travel, a skipped weigh-in, or a comment beside a weight).
+// New is the only constructor so every write path (form, month cell, tests)
+// shares calendar-day normalisation and validation. Callers must not
+// assemble DailyLog literals and Upsert them without going through New,
+// except the empty-day placeholder the month sheet uses before patchCell.
 func New(day time.Time, weight *float64, sleepHours float64, steps int, workout bool, note string) (DailyLog, error) {
 	log := DailyLog{
 		Day:        calendarDay(day),
@@ -63,7 +64,8 @@ func New(day time.Time, weight *float64, sleepHours float64, steps int, workout 
 	return log, nil
 }
 
-// Validate reports whether the log line could appear on a monthly sheet.
+// Validate is the gate for both New and Upsert so a store write cannot
+// bypass the same rules the form uses.
 func (d DailyLog) Validate() error {
 	if d.Day.IsZero() {
 		return ErrZeroDay

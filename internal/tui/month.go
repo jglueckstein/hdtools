@@ -1,5 +1,11 @@
 package tui
 
+// The month sheet is the paper monthly log: every calendar day, whether or
+// not SQLite has a row, with trend carried onto blank days from earlier
+// weigh-ins. Cell edits patch one field and Upsert; trend is display-only
+// because it is derived. This file does not open a form (app.go does that
+// on enter).
+
 import (
 	"fmt"
 	"strconv"

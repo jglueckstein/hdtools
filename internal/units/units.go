@@ -42,7 +42,9 @@ func Parse(s string) (Unit, error) {
 	}
 }
 
-// ToKG converts a display-unit value to kilograms for storage.
+// ToKG is the only conversion allowed on the save path. Display-unit values
+// must never be written to SQLite, or a later unit change would rewrite
+// history.
 func ToKG(value float64, u Unit) (float64, error) {
 	switch u {
 	case Kilogram:
@@ -56,7 +58,8 @@ func ToKG(value float64, u Unit) (float64, error) {
 	}
 }
 
-// FromKG converts a stored kilogram value to the display unit.
+// FromKG is display-only. Using it before Upsert would store pounds as if
+// they were kilograms.
 func FromKG(kg float64, u Unit) (float64, error) {
 	switch u {
 	case Kilogram:

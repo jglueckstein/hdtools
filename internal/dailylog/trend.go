@@ -1,5 +1,12 @@
 package dailylog
 
+// The trend is derived from the weight series, never stored, so a backdated
+// edit cannot leave a stale moving average. Arithmetic matches the book's
+// pencil procedure (10% smoothing, round the increment to one decimal)
+// rather than a higher-precision EMA that would disagree with a paper log.
+//
+// This file does not persist, chart, or convert units.
+
 import (
 	"fmt"
 	"math"

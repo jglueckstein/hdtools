@@ -1,13 +1,11 @@
-// Package tui is the Bubble Tea interface for hdtools.
+// Package tui is the screen: list, day form, and monthly sheet.
 //
-// The binary stays a thin Open-and-Run loop. This package owns screen state
-// and talks to the daily log store; it does not open SQLite itself, so tests
-// can inject a memory-backed store and so a later remote database can reuse
-// the same Model.
+// It owns Bubble Tea state and talks to dailylog.Store but never opens
+// SQLite, so tests inject a file and a later remote database can reuse
+// the same Model. Charts, meal planning, and PDF are out of scope.
 //
-// The list is the home screen. A single-day form creates and edits rows.
-// The month sheet is the paper log: every day of the month, cell editing,
-// trend carry-forward. Charts and meal planning are out of scope here.
+// Color comes from style.go (16-color ANSI). Column geometry lives in
+// layout.go so headers stay over numbers after ANSI codes are applied.
 package tui
 
 import (

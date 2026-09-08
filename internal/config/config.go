@@ -1,11 +1,14 @@
-// Package config loads display preferences from a TOML file under the XDG
-// config directory, not from SQLite. That keeps the log portable and the
-// file hand-editable.
+// Package config is the hand-editable preference file, kept out of SQLite
+// so a log database can move machines without dragging display choices
+// with it, and so a person can change units with a text editor.
 //
-// Defaults follow the XDG Base Directory Specification: config lives under
-// $XDG_CONFIG_HOME (or ~/.config), and the SQLite file lives under
-// $XDG_DATA_HOME (or ~/.local/share). A missing config file is not an error:
-// first run uses kilograms until the user writes display_unit.
+// Paths follow XDG: config under $XDG_CONFIG_HOME (or ~/.config), the
+// default database path advertised from here under $XDG_DATA_HOME (or
+// ~/.local/share). A missing file is not an error — first run is kilograms.
+// Invalid display_unit is an error so "lbs" cannot be stored as kg.
+//
+// Color schemes and NO_COLOR are specified in idea.md but not parsed here
+// yet. This package does not open the database.
 package config
 
 import (
@@ -34,7 +37,8 @@ func Default() Config {
 	return Config{DisplayUnit: units.Kilogram}
 }
 
-// ConfigDir is $XDG_CONFIG_HOME/hdtools, or ~/.config/hdtools.
+// ConfigDir uses os.UserConfigDir so we inherit the platform XDG/macOS/Windows
+// mapping instead of hard-coding ~/.config.
 func ConfigDir() (string, error) {
 	base, err := os.UserConfigDir()
 	if err != nil {
@@ -43,7 +47,8 @@ func ConfigDir() (string, error) {
 	return filepath.Join(base, appName), nil
 }
 
-// DataDir is $XDG_DATA_HOME/hdtools, or ~/.local/share/hdtools.
+// DataDir reads XDG_DATA_HOME itself because Go has no UserDataDir helper.
+// An empty variable must fall back to ~/.local/share per the spec.
 func DataDir() (string, error) {
 	base := os.Getenv("XDG_DATA_HOME")
 	if base == "" {
@@ -56,7 +61,7 @@ func DataDir() (string, error) {
 	return filepath.Join(base, appName), nil
 }
 
-// DefaultPath is $XDG_CONFIG_HOME/hdtools/config.toml.
+// DefaultPath is the file Ensure will create on first run.
 func DefaultPath() (string, error) {
 	dir, err := ConfigDir()
 	if err != nil {
@@ -65,7 +70,8 @@ func DefaultPath() (string, error) {
 	return filepath.Join(dir, fileName), nil
 }
 
-// DefaultDBPath is $XDG_DATA_HOME/hdtools/hdtools.db.
+// DefaultDBPath lives beside ConfigDir's sibling data dir so -db is optional
+// for the common local-file case.
 func DefaultDBPath() (string, error) {
 	dir, err := DataDir()
 	if err != nil {
@@ -101,7 +107,9 @@ func Load(path string) (Config, error) {
 	return cfg, nil
 }
 
-// Write creates parent directories and saves cfg so the user can edit it.
+// Write creates parent directories because first-run ~/.config/hdtools may
+// not exist yet. Overwriting is intentional: this is the save path for
+// future in-app preference edits.
 func Write(path string, cfg Config) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("create config directory: %w", err)
@@ -116,7 +124,8 @@ func Write(path string, cfg Config) error {
 	return nil
 }
 
-// Ensure writes Default to path only when the file does not exist.
+// Ensure is first-run only: a user who set display_unit = "lb" must not
+// have that file replaced with kilograms on the next launch.
 func Ensure(path string) error {
 	_, err := os.Stat(path)
 	if err == nil {

@@ -2,9 +2,12 @@ package tui
 
 import "github.com/charmbracelet/lipgloss"
 
-// Palette uses the 16 ANSI colors so a basic terminal still gets structure
-// and meaning. Selection also keeps ">" / "[ ]", and trend vs weight stay
-// labeled in the header, so color is never the only cue.
+// Palette is the default 16-color scheme from idea.md: cyan chrome, blue
+// daily weight, red trend (the book's chart colors), reverse for
+// selection. Named ANSI indexes, not truecolor, so a 16-color terminal
+// still works. ">" and column headers remain so color is never the only
+// cue. User-configurable schemes are specified but not loaded yet.
+
 var (
 	titleStyle = lipgloss.NewStyle().
 			Bold(true).

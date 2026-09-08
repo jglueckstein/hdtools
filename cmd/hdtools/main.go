@@ -1,8 +1,10 @@
-// Command hdtools is the Hacker's Diet TUI.
+// Command hdtools is the process that turns flags and XDG paths into a
+// running TUI.
 //
-// main resolves the SQLite path and config.toml, opens the store, and runs
-// Bubble Tea.
-// Screen behaviour lives in internal/tui so the binary stays a wiring layer.
+// Flag, env, and directory creation live here because they are process
+// concerns. The TUI must not import os.Args or open SQLite itself: tests
+// inject a store, and a later remote database should reuse the same Model.
+// This file does not parse keystrokes or SQL.
 package main
 
 import (
