@@ -1,0 +1,104 @@
+# Project Conventions
+
+High-signal rules for agents. Stack, full constraints, and GC live in
+`HARNESS.md` — do not duplicate that file here.
+
+## Literate Programming
+
+All code follows Don Knuth's literate programming principles as declared
+in `HARNESS.md` (Documentation convention and the "Literate preamble on
+new files" constraint).
+
+When creating a new source file or significantly rewriting one:
+
+1. Open with a narrative preamble — why it exists, key design decisions,
+   what it deliberately does NOT do
+2. Function comments explain reasoning, not signatures
+3. Order of presentation follows understanding — orchestration before detail
+4. Each file has one clearly stated concern
+5. Inline comments explain WHY, not WHAT — restating the next line is prohibited
+
+## CUPID Code Review
+
+When reviewing or refactoring, apply CUPID: Composable, Unix philosophy,
+Predictable, Idiomatic, Domain-based.
+
+## Workflow
+
+### Spec-First Change Discipline
+
+Behaviour changes should flow through `idea.md` (and later
+`docs/superpowers/specs/` if that tree exists) before implementation:
+
+1. Update the spec
+2. Write failing tests from the spec — confirm red
+3. Implement until green
+4. Refactor while tests stay green
+
+### Test-Driven Development
+
+Red-green-refactor. No production code without a failing test first,
+except wiring that has no behaviour of its own (`cmd/hdtools` flag
+resolution).
+
+### Branch Discipline
+
+This repository is local `master` with no origin. Until a GitHub remote
+exists, commit on `master`. After a remote exists: do not commit
+directly to the default branch; open an issue, use a hyphenated branch
+name, and merge via PR.
+
+### Commit Messages
+
+Concise: what changed and why. No postamble, no attribution lines.
+
+### CHANGELOG and PR checks
+
+When a GitHub remote and PRs exist: update CHANGELOG.md before the PR,
+and watch `gh pr checks` until green. Do not invent a CHANGELOG for
+local-only commits.
+
+## Build and Test
+
+    # Build
+    go build ./...
+
+    # Test
+    go test ./...
+
+    # Format check (CI treats any listed path as failure; `gofmt -l` itself exits 0)
+    test -z "$(gofmt -l .)"
+
+    # Format
+    gofmt -w .
+
+## Project Constraints
+
+- Weight is stored in kilograms. Display units (kg/lb/st) are config-only.
+- Trend is derived (`ApplyTrend`), never a SQLite column.
+- Config is XDG (`$XDG_CONFIG_HOME/hdtools/config.toml`), not the database.
+- Application code lives under `internal/`. `cmd/hdtools` is wiring only.
+- Errors are wrapped with `%w` and context; no bare `return err`.
+- See `HARNESS.md` for the full constraint list and enforcement.
+
+## Learnings
+
+REFLECTION_LOG.md is a generated aggregate of `reflections/active/`
+fragments. Read recent entries before starting work. Do not edit
+REFLECTION_LOG.md by hand. Humans curate AGENTS.md.
+
+## Reflection Log Curation
+
+Write reflections as fragments under
+`reflections/active/<YYYY-MM-DD>-<slug>.md` via `/reflect`. Regenerate
+the aggregate with `scripts/regenerate-reflection-log.sh` when that
+script is present.
+
+When promoting into AGENTS.md or HARNESS.md, add a `Promoted` line on
+the fragment in the same commit.
+
+## Monthly Operations
+
+1. `/harness-sync` if convention files may have drifted
+2. Scan REFLECTION_LOG.md for entries worth promoting to AGENTS.md
+3. `/harness-audit` when constraints change

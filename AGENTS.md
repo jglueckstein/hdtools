@@ -1,0 +1,53 @@
+# Compound Learning
+
+<!-- This file is the project's persistent memory across AI sessions.
+     Review new entries with the same scepticism you would apply to any
+     generated content. Entries should reflect observed reality. -->
+
+## STYLE
+
+- Co-located `*_test.go` next to the code they cover — that is how
+  `internal/dailylog` and `internal/tui` are already laid out.
+- Table-driven tests for validation and conversion matrices (`units`,
+  `dailylog` constructors).
+- Pad TUI columns with `lipgloss.Width` (`visPad`), never byte length,
+  once ANSI color is in the string.
+
+## GOTCHAS
+
+- `gofmt -l .` exits 0 even when it prints paths. CI and humans must
+  treat non-empty output as failure (`test -z "$(gofmt -l .)"`).
+- `ApplyTrend` needs the full chronological series. Loading only the
+  current month drops carry-forward from the previous month.
+- Display-unit conversion (`units.FromKG`) is for the TUI only. Saving
+  must go through `units.ToKG` so SQLite always stores kilograms.
+
+## ARCH_DECISIONS
+
+- Decision: store body weight in kilograms; kg/lb/st are display-only
+  in `config.toml`. Reason: a unit change must not rewrite history.
+  Alternatives: store pounds (rejected — SI and meal-planning grams);
+  store the display unit in each row (rejected — mixed series).
+- Decision: do not persist trend. Reason: a backdated weight edit would
+  desync a stored moving average. `ApplyTrend` is the source of truth.
+- Decision: config file under XDG, database under XDG data, not
+  `~/.hdtools`. Reason: spec-compliant Unix paths; config is
+  hand-editable and must not live in SQLite.
+
+## TEST_STRATEGY
+
+- Unit tests live beside source as `_test.go`.
+- Use `t.TempDir()` for SQLite; `:memory:` races under `t.Parallel`.
+- Alignment tests strip ANSI and compare header/value column ends
+  (`internal/tui/layout_test.go`).
+- Do not require a real terminal for TUI tests: drive `App.Update` /
+  `View` with messages.
+
+## DESIGN_DECISIONS
+
+- Daily log columns are fixed: weight, sleep, steps, workout, note.
+  No extras bag until `idea.md` says otherwise.
+- Workout is a boolean, not an exercise rung.
+- Default display unit is kg until `config.toml` says otherwise.
+- `NO_COLOR` and user color schemes are specified in `idea.md` but not
+  implemented yet.
