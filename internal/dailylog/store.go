@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS daily_log (
 		return fmt.Errorf("migrate daily log store: %w", err)
 	}
 	if err := s.ensureNoteColumn(); err != nil {
-		return err
+		return fmt.Errorf("migrate daily log store: %w", err)
 	}
 	return nil
 }

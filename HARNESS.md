@@ -278,8 +278,8 @@ Run /reservoir for an on-demand read, or /reservoir tune to edit this block.
 
 <!-- Auto-updated by /harness-audit — do not edit manually -->
 
-Last audit: 2026-09-07
-Constraints enforced: 7/7
+Last audit: 2026-09-08
+Constraints enforced: 8/8
 Garbage collection active: 5/5
 Drift detected: no
-<!-- 4 agent PR constraints have no CI dispatch path (harness.yml does not run harness-enforcer). -->
+<!-- 5 agent PR constraints have no CI dispatch path (harness.yml does not run harness-enforcer). -->

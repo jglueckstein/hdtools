@@ -40,19 +40,19 @@ func run(args []string) error {
 
 	cfgPath, err := resolveConfigPath(*configFlag)
 	if err != nil {
-		return err
+		return fmt.Errorf("config path: %w", err)
 	}
 	if err := config.Ensure(cfgPath); err != nil {
-		return err
+		return fmt.Errorf("ensure config: %w", err)
 	}
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("load config: %w", err)
 	}
 
 	path, err := resolveDBPath(*dbFlag)
 	if err != nil {
-		return err
+		return fmt.Errorf("database path: %w", err)
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("create database directory: %w", err)
@@ -60,7 +60,7 @@ func run(args []string) error {
 
 	store, err := dailylog.Open(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("open store: %w", err)
 	}
 
 	p := tea.NewProgram(tui.New(store, path, cfg))
@@ -70,7 +70,7 @@ func run(args []string) error {
 		return fmt.Errorf("run tui: %w", runErr)
 	}
 	if closeErr != nil {
-		return closeErr
+		return fmt.Errorf("close store: %w", closeErr)
 	}
 	return nil
 }
