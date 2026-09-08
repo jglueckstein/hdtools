@@ -27,19 +27,27 @@ Predictable, Idiomatic, Domain-based.
 
 ### Spec-First Change Discipline
 
-Behaviour changes should flow through `idea.md` (and later
-`docs/superpowers/specs/` if that tree exists) before implementation:
+Behaviour changes update `idea.md` **and** a dated spec at
+`docs/superpowers/specs/YYYY-MM-DD-<slug>.md` before implementation.
+`idea.md` is the product backlog; the dated file is the change record.
 
-1. Update the spec
-2. Write failing tests from the spec — confirm red
-3. Implement until green
-4. Refactor while tests stay green
+1. Update `idea.md` if the product intent changed
+2. Add or revise the dated spec (user stories, acceptance, FRs)
+3. Write failing tests from the spec — confirm red
+4. Implement until green
+5. Refactor while tests stay green
 
 ### Test-Driven Development
 
 Red-green-refactor. No production code without a failing test first,
 except wiring that has no behaviour of its own (`cmd/hdtools` flag
 resolution).
+
+### Session close
+
+After any session that changes behaviour, run `/reflect` before
+stopping so a fragment is written under `reflections/active/`. An
+empty `REFLECTION_LOG.md` is not compound learning.
 
 ### Branch Discipline
 

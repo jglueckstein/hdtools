@@ -1,5 +1,11 @@
 # Harness — {{PROJECT_NAME}}
 
+> **Not canonical.** This file is an unfilled `/superpowers-init`
+> template left in `.claude/` so the plugin scaffold stays intact.
+> The living harness is **root `HARNESS.md`**. Use that file for
+> `/harness-audit`, `/harness-status`, `/assess`, and constraint
+> work. Do not treat this copy as the project's source of truth.
+
 <!-- This file is the source of truth for your project's harness.
      It declares what conventions exist, how they are enforced, and
      what periodic checks fight entropy. Agents, hooks, and CI all
