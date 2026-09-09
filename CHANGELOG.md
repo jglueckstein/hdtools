@@ -4,6 +4,8 @@
 
 ### Added
 
+- Promote **DB and config files are 0600** to deterministic PR enforcement
+  (`go test` private-file tests; covered by existing suite, no extra CI step)
 - Promote **Prefs out of SQLite** to deterministic PR enforcement
   (`scripts/check-prefs-out-of-sqlite.sh`)
 - Promote **No skip-to-green** to deterministic PR enforcement
@@ -22,13 +24,13 @@
 
 ### Fixed
 
+- Create new `config.toml` and SQLite log files as `0600`
 - Pin `gitleaks/gitleaks-action` to v3.0.0 so Harness Constraints CI
   can resolve the action (the old v2.3.8 SHA 404s)
 - Checkout with `fetch-depth: 0` so gitleaks can see the PR commit range
 
 ### Changed
 
-- Harness Status and README badge 8/8 → 13/14 after `/harness-audit`
-  and promoting TUI SQL imports, no-live-log, XDG defaults,
-  no-skip-to-green, and prefs-out-of-SQLite (drift yes: remaining
-  bare `return err`, config `0644`, convention-file lag)
+- Harness Status and README badge 8/8 → 14/14 after `/harness-audit`
+  and promoting the extracted constraints (drift yes: remaining
+  bare `return err`, convention-file lag)

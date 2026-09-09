@@ -109,7 +109,8 @@ func Load(path string) (Config, error) {
 
 // Write creates parent directories because first-run ~/.config/hdtools may
 // not exist yet. Overwriting is intentional: this is the save path for
-// future in-app preference edits.
+// future in-app preference edits. The file is 0600 so display preferences
+// are not world-readable.
 func Write(path string, cfg Config) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("create config directory: %w", err)
@@ -118,8 +119,11 @@ func Write(path string, cfg Config) error {
 	if err != nil {
 		return fmt.Errorf("encode config: %w", err)
 	}
-	if err := os.WriteFile(path, body, 0o644); err != nil {
+	if err := os.WriteFile(path, body, 0o600); err != nil {
 		return fmt.Errorf("write config %s: %w", path, err)
+	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		return fmt.Errorf("chmod config %s: %w", path, err)
 	}
 	return nil
 }

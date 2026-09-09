@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/jglueckstein/hdtools/internal/units"
@@ -82,6 +83,24 @@ func TestDefaultDBPathFallsBackToLocalShare(t *testing.T) {
 	want := filepath.Join(home, ".local", "share", "hdtools", "hdtools.db")
 	if got != want {
 		t.Fatalf("DefaultDBPath = %q, want %q", got, want)
+	}
+}
+
+func TestWriteCreatesPrivateFile(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not POSIX on Windows")
+	}
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := Write(path, Default()); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Fatalf("config mode = %o, want 0600", perm)
 	}
 }
 

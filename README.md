@@ -2,7 +2,7 @@
 
 Hacker's Diet tools: a TUI for weight monitoring and meal planning, inspired by [The Hacker's Diet](https://www.fourmilab.ch/hackdiet/e4/welcome.html).
 
-[![Harness](https://img.shields.io/badge/Harness-13%2F14_enforced-CA8A04?style=flat-square)](HARNESS.md)
+[![Harness](https://img.shields.io/badge/Harness-14%2F14_enforced-CA8A04?style=flat-square)](HARNESS.md)
 [![Agent Harness Enabled](https://img.shields.io/badge/Agent_Harness-Enabled-000000?style=flat-square)](HARNESS.md)
 [![AI Literacy](https://img.shields.io/badge/AI_Literacy-Level_3-20B2AA?style=flat-square)](assessments/2026-09-08-assessment.md)
 

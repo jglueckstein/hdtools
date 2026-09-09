@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -174,6 +176,26 @@ CREATE TABLE daily_log (
 	}
 	if got.Note != "migrated" {
 		t.Fatalf("note = %q", got.Note)
+	}
+}
+
+func TestOpenCreatesPrivateFile(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not POSIX on Windows")
+	}
+	path := filepath.Join(t.TempDir(), "daily.db")
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Fatalf("db mode = %o, want 0600", perm)
 	}
 }
 
