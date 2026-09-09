@@ -11,6 +11,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -24,8 +25,14 @@ type Store struct {
 }
 
 // Open opens (or creates) a SQLite database at path and ensures the daily_log
-// table exists. path may be ":memory:" for tests.
+// table exists. A new file is 0600 so a weight log is not world-readable.
+// path may be ":memory:" for tests.
 func Open(path string) (*Store, error) {
+	if path != ":memory:" {
+		if err := ensureOwnerOnlyFile(path); err != nil {
+			return nil, err
+		}
+	}
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, fmt.Errorf("open daily log store: %w", err)
@@ -36,6 +43,27 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 	return s, nil
+}
+
+func ensureOwnerOnlyFile(path string) error {
+	_, err := os.Stat(path)
+	if err == nil {
+		return nil
+	}
+	if !os.IsNotExist(err) {
+		return fmt.Errorf("stat daily log file: %w", err)
+	}
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600)
+	if err != nil {
+		return fmt.Errorf("create daily log file: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("create daily log file: %w", err)
+	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		return fmt.Errorf("chmod daily log file: %w", err)
+	}
+	return nil
 }
 
 // Close is called from main after tea.Program returns so a failed TUI still
