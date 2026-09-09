@@ -1,0 +1,13 @@
+- **Date**: 2026-09-09
+- **Agent**: Grok 4.6
+- **Task**: Completed the full harness promotion cycle: all 14 constraints promoted to deterministic enforcement, 0600 file modes fixed, error wrapping applied, convention files synced, first snapshot captured, ONBOARDING.md generated and linked, all PRs merged.
+- **Surprise**: The number of small mechanical fixes (bare returns, 0600 chmod, TUI import) that surfaced only after deterministic checks were added.
+- **Proposal**: none
+- **Improvement**: Future agents should know that every new deterministic constraint must be accompanied by a passing check script and a test that exercises the exact failure mode the constraint targets.
+- **Signal**: failure
+- **Constraint**: none
+- **Session metadata**:
+  - Duration: unknown
+  - Model tiers used: unknown
+  - Pipeline stages completed: unknown
+  - Agent delegation: manual
