@@ -209,7 +209,7 @@ func parseForm(date, weight, sleep, steps, note string, workout bool, unit units
 	}
 	log, err := dailylog.New(day, kg, sleepHours, stepCount, workout, note)
 	if err != nil {
-		return dailylog.DailyLog{}, err
+		return dailylog.DailyLog{}, fmt.Errorf("parse form: %w", err)
 	}
 	return log, nil
 }

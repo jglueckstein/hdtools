@@ -24,6 +24,7 @@
 
 ### Fixed
 
+- Wrap remaining bare `return err` in config, form, and store
 - Create new `config.toml` and SQLite log files as `0600`
 - Pin `gitleaks/gitleaks-action` to v3.0.0 so Harness Constraints CI
   can resolve the action (the old v2.3.8 SHA 404s)
@@ -32,5 +33,5 @@
 ### Changed
 
 - Harness Status and README badge 8/8 → 14/14 after `/harness-audit`
-  and promoting the extracted constraints (drift yes: remaining
-  bare `return err`, convention-file lag)
+  and promoting the extracted constraints (drift yes:
+  convention-file lag)
