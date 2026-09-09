@@ -4,6 +4,8 @@
 
 ### Added
 
+- Promote **Default paths are XDG** to deterministic PR enforcement
+  (`go test` path tests; covered by existing suite, no extra CI step)
 - Promote **No live log in git** to deterministic PR enforcement
   (`scripts/check-no-live-log.sh`)
 - Promote **TUI has no SQL imports** to deterministic PR enforcement
@@ -22,6 +24,6 @@
 
 ### Changed
 
-- Harness Status and README badge 8/8 → 10/14 after `/harness-audit`
-  and promoting TUI SQL imports and no-live-log (drift yes: remaining
-  bare `return err`, config `0644`, convention-file lag)
+- Harness Status and README badge 8/8 → 11/14 after `/harness-audit`
+  and promoting TUI SQL imports, no-live-log, and XDG defaults (drift
+  yes: remaining bare `return err`, config `0644`, convention-file lag)

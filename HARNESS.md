@@ -132,8 +132,8 @@
 ### Default paths are XDG
 
 - **Rule**: Default config is `$XDG_CONFIG_HOME/hdtools/config.toml` and default database is `$XDG_DATA_HOME/hdtools/hdtools.db` (falling back to `~/.config` and `~/.local/share`). `-db`, `-config`, and `$HDTOOLS_DB` / `$HDTOOLS_CONFIG` override only when the user named the path
-- **Enforcement**: unverified
-- **Tool**: none yet
+- **Enforcement**: deterministic
+- **Tool**: go test ./internal/config ./cmd/hdtools -count=1 -run 'TestDefaultPath|TestDefaultDBPath|TestResolveDBPath'
 - **Scope**: pr
 
 ### No skip-to-green
@@ -350,7 +350,7 @@ Run /reservoir for an on-demand read, or /reservoir tune to edit this block.
 <!-- Auto-updated by /harness-audit — do not edit manually -->
 
 Last audit: 2026-09-08
-Constraints enforced: 10/14
+Constraints enforced: 11/14
 Garbage collection active: 8/8
 Drift detected: yes
-<!-- 10/14 counts declared enforcement (4 unverified). 5 agent PR constraints have no CI dispatch (harness.yml does not run harness-enforcer). Wrap-errors FAIL: bare return err at internal/config/config.go:68,78 internal/tui/form.go:212 internal/dailylog/store.go:35,208. Unverified currently failing: config.Write uses 0o644 not 0600. Cursor/Copilot/Windsurf omit extracted constraints. -->
+<!-- 11/14 counts declared enforcement (3 unverified). 5 agent PR constraints have no CI dispatch (harness.yml does not run harness-enforcer). Wrap-errors FAIL: bare return err at internal/config/config.go:68,78 internal/tui/form.go:212 internal/dailylog/store.go:35,208. Unverified currently failing: config.Write uses 0o644 not 0600. Cursor/Copilot/Windsurf omit extracted constraints. Default-paths XDG is enforced by existing go test (no extra harness.yml step). -->
