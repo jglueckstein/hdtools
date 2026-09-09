@@ -56,6 +56,9 @@ jobs:
       - name: "Constraint: No skip-to-green"
         run: bash scripts/check-no-skip-to-green.sh
 
+      - name: "Constraint: Prefs out of SQLite"
+        run: bash scripts/check-prefs-out-of-sqlite.sh
+
       - name: "Constraint: No secrets in source"
         uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e  # v3.0.0
         env:
