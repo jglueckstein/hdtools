@@ -6,7 +6,7 @@ Hacker's Diet tools: a TUI for weight monitoring and meal planning, inspired by 
 [![Agent Harness Enabled](https://img.shields.io/badge/Agent_Harness-Enabled-000000?style=flat-square)](HARNESS.md)
 [![AI Literacy](https://img.shields.io/badge/AI_Literacy-Level_3-20B2AA?style=flat-square)](assessments/2026-09-08-assessment.md)
 
-Product notes live in [`idea.md`](idea.md). The living harness is [`HARNESS.md`](HARNESS.md).
+Product notes live in [`idea.md`](idea.md). The living harness is [`HARNESS.md`](HARNESS.md). New to the project? Start with [`ONBOARDING.md`](ONBOARDING.md).
 
 ## How to run
 
