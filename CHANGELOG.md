@@ -4,6 +4,8 @@
 
 ### Added
 
+- Promote **Prefs out of SQLite** to deterministic PR enforcement
+  (`scripts/check-prefs-out-of-sqlite.sh`)
 - Promote **No skip-to-green** to deterministic PR enforcement
   (`scripts/check-no-skip-to-green.sh`)
 - Promote **Default paths are XDG** to deterministic PR enforcement
@@ -26,7 +28,7 @@
 
 ### Changed
 
-- Harness Status and README badge 8/8 → 12/14 after `/harness-audit`
-  and promoting TUI SQL imports, no-live-log, XDG defaults, and
-  no-skip-to-green (drift yes: remaining bare `return err`, config
-  `0644`, convention-file lag)
+- Harness Status and README badge 8/8 → 13/14 after `/harness-audit`
+  and promoting TUI SQL imports, no-live-log, XDG defaults,
+  no-skip-to-green, and prefs-out-of-SQLite (drift yes: remaining
+  bare `return err`, config `0644`, convention-file lag)

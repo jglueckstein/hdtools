@@ -111,8 +111,8 @@
 ### Prefs out of SQLite
 
 - **Rule**: Display unit and other preferences live only in the XDG config file. The log database must not store preferences
-- **Enforcement**: unverified
-- **Tool**: none yet
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-prefs-out-of-sqlite.sh
 - **Scope**: pr
 
 ### TUI has no SQL imports
@@ -350,7 +350,7 @@ Run /reservoir for an on-demand read, or /reservoir tune to edit this block.
 <!-- Auto-updated by /harness-audit — do not edit manually -->
 
 Last audit: 2026-09-08
-Constraints enforced: 12/14
+Constraints enforced: 13/14
 Garbage collection active: 8/8
 Drift detected: yes
-<!-- 12/14 counts declared enforcement (2 unverified). 5 agent PR constraints have no CI dispatch (harness.yml does not run harness-enforcer). Wrap-errors FAIL: bare return err at internal/config/config.go:68,78 internal/tui/form.go:212 internal/dailylog/store.go:35,208. Unverified currently failing: config.Write uses 0o644 not 0600. Cursor/Copilot/Windsurf omit extracted constraints. -->
+<!-- 13/14 counts declared enforcement (1 unverified). 5 agent PR constraints have no CI dispatch (harness.yml does not run harness-enforcer). Wrap-errors FAIL: bare return err at internal/config/config.go:68,78 internal/tui/form.go:212 internal/dailylog/store.go:35,208. Unverified currently failing: config.Write uses 0o644 not 0600. Cursor/Copilot/Windsurf omit extracted constraints. -->
