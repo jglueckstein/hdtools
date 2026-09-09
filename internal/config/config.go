@@ -65,7 +65,7 @@ func DataDir() (string, error) {
 func DefaultPath() (string, error) {
 	dir, err := ConfigDir()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("default config path: %w", err)
 	}
 	return filepath.Join(dir, fileName), nil
 }
@@ -75,7 +75,7 @@ func DefaultPath() (string, error) {
 func DefaultDBPath() (string, error) {
 	dir, err := DataDir()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("default database path: %w", err)
 	}
 	return filepath.Join(dir, dbFileName), nil
 }

@@ -30,7 +30,7 @@ type Store struct {
 func Open(path string) (*Store, error) {
 	if path != ":memory:" {
 		if err := ensureOwnerOnlyFile(path); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("open daily log store: %w", err)
 		}
 	}
 	db, err := sql.Open("sqlite", path)
@@ -40,7 +40,7 @@ func Open(path string) (*Store, error) {
 	s := &Store{db: db}
 	if err := s.migrate(); err != nil {
 		_ = db.Close()
-		return nil, err
+		return nil, fmt.Errorf("open daily log store: %w", err)
 	}
 	return s, nil
 }
@@ -237,7 +237,7 @@ func scanLog(row scanner) (DailyLog, error) {
 		note       string
 	)
 	if err := row.Scan(&dayStr, &weight, &sleepHours, &steps, &workout, &note); err != nil {
-		return DailyLog{}, err
+		return DailyLog{}, fmt.Errorf("scan daily log: %w", err)
 	}
 	day, err := time.Parse(time.DateOnly, dayStr)
 	if err != nil {

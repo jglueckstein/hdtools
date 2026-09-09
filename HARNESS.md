@@ -353,4 +353,4 @@ Last audit: 2026-09-08
 Constraints enforced: 14/14
 Garbage collection active: 8/8
 Drift detected: yes
-<!-- 14/14 counts declared enforcement (0 unverified). 5 agent PR constraints have no CI dispatch (harness.yml does not run harness-enforcer). Wrap-errors FAIL: bare return err at internal/config/config.go:68,78 internal/tui/form.go:212 internal/dailylog/store.go:35,208. Cursor/Copilot/Windsurf omit extracted constraints. DB/config 0600 is enforced by existing go test (no extra harness.yml step). -->
+<!-- 14/14 counts declared enforcement (0 unverified). 5 agent PR constraints have no CI dispatch (harness.yml does not run harness-enforcer). Cursor/Copilot/Windsurf omit extracted constraints. -->
