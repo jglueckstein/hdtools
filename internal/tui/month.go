@@ -89,6 +89,20 @@ func (m *monthModel) nextMonth() {
 	m.clamp()
 }
 
+// nextCell is Tab: next column, then the next day's weight. The last
+// cell of the month stays put so Tab cannot leave the sheet.
+func (m *monthModel) nextCell() {
+	if m.day == daysInMonth(m.year, m.month) && m.col == colCount-1 {
+		return
+	}
+	m.col++
+	if m.col >= colCount {
+		m.col = 0
+		m.day++
+	}
+	m.clamp()
+}
+
 func daysInMonth(year int, month time.Month) int {
 	return time.Date(year, month+1, 0, 0, 0, 0, 0, time.UTC).Day()
 }
@@ -203,7 +217,7 @@ func (m monthModel) view(sheet []sheetDay, unit units.Unit, dbPath string, statu
 	if status != "" {
 		fmt.Fprintf(&b, "\n%s\n", p.status.Render(status))
 	}
-	fmt.Fprintf(&b, "\n%s\n", p.help.Render("arrows move   type edit   space workout   enter form   [ ] month   esc list"))
+	fmt.Fprintf(&b, "\n%s\n", p.help.Render("arrows move   type edit   tab next   space workout   enter form   [ ] month   esc list"))
 	return b.String()
 }
 

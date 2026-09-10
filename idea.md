@@ -67,8 +67,12 @@ The TUI should make it easy to create and edit daily logs.
 
 We should support the printing of blank sheets for recording daily
 numbers. The TUI should make it easy to enter a whole month's data in
-one sitting. The TUI should make a nice display of an entire month's
-data sheet.
+one sitting. Tab accepts the current cell and moves to the next, so a
+row can be filled without Enter plus arrows. The TUI should make a nice
+display of an entire month's data sheet.
+
+Change record:
+[docs/superpowers/specs/2026-09-10-month-tab-next-cell.md](docs/superpowers/specs/2026-09-10-month-tab-next-cell.md).
 
 The tool should be able to generate pdf of the monthly log sheets
 (filled in, not the blank sheets mentioned above), and pdfs of the
