@@ -4,6 +4,8 @@
 
 ### Added
 
+- Shell scripts follow Google's Shell Style Guide (`#!/bin/bash`,
+  2-space indent, `"${var}"`, `[[ ... ]]`)
 - Month sheet Tab accepts the current cell and moves to the next
 - Product docs follow Diátaxis under `docs/` (tutorials, how-to,
   reference, explanation); README is the map

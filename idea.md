@@ -114,3 +114,10 @@ ATX headings with a single H1; fenced code with a language; nested
 lists indented 4 spaces; no trailing whitespace; informative link
 text. GitHub does not honour Gitiles `[TOC]`; `../` links are allowed
 because GitHub has no repo-root Markdown paths.
+
+Shell scripts follow the main points of
+[Google's Shell Style Guide](https://google.github.io/styleguide/shellguide.html):
+`#!/bin/bash` and `set -euo pipefail`; 2-space indent; 80-column wrap;
+quoted `"${var}"`; `$(...)` not backticks; `[[ ... ]]` not `[ ... ]`;
+errors on STDERR; file header comments; `scripts/lib/*.sh` are not
+executable. ShellCheck is recommended.

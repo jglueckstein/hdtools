@@ -5,7 +5,8 @@ High-signal rules for agents. Stack, full constraints, and GC live in
 Diátaxis (`docs/tutorials`, `how-to`, `reference`, `explanation`);
 README is the map. Markdown source follows Google's Markdown Style
 Guide (80-col wrap, ATX headings, one H1, fenced code with a
-language).
+language). Shell scripts follow Google's Shell Style Guide
+(`#!/bin/bash`, 2-space indent, `"${var}"`, `[[ ... ]]`).
 
 ## Literate Programming
 
