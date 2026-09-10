@@ -3,7 +3,7 @@
 
 # Welcome to hdtools
 
-hdtools is a terminal UI for [The Hacker's Diet](https://www.fourmilab.ch/hackdiet/e4/welcome.html): daily and monthly weight logs, a 10% EMA trend, and (later) meal planning and charts. You will work in Go, with Bubble Tea on the screen and SQLite on disk. Product intent lives in `idea.md`; behaviour changes also get a dated spec under `docs/superpowers/specs/`. Expect a living harness: `gofmt`, tests, and gitleaks run on every PR, and new files need a short "why this exists" preamble.
+hdtools is a terminal UI for [The Hacker's Diet](https://www.fourmilab.ch/hackdiet/e4/welcome.html): daily and monthly weight logs, a 10% EMA trend, and (later) meal planning and charts. It is a tracking and analysis tool, not a diagnosis or treatment system. You will work in Go, with Bubble Tea on the screen and SQLite on disk. Product intent lives in `idea.md`; behaviour changes also get a dated spec under `docs/superpowers/specs/`. Expect a living harness: `gofmt`, tests, and gitleaks run on every PR, and new files need a short "why this exists" preamble.
 
 ---
 
@@ -42,18 +42,24 @@ These are fast checks. CI also runs them on the PR.
 
 ### At PR time
 
-GitHub Actions (Harness Constraints + AI Literacy) must be green.
+GitHub Actions (Harness Constraints + AI Literacy) must be green. Those jobs run tests, `gofmt`, gitleaks, and four check scripts. They do **not** run harness-enforcer. Six more PR constraints are still required — an agent or a human reviews them — but a red CI check will not catch them today.
+
+**CI gates (a red check blocks merge):**
 
 - **Tests** — `go test ./...` with zero failures.
-- **Go naming and layout** — reviewed against the conventions above.
-- **Wrapped errors and literate preambles** — same as How We Write Code.
-- **Exported docs** — exported symbols need a real first sentence, not a restatement of the signature.
 - **Prefs stay out of SQLite** — no `display_unit` / colour-scheme fields in `internal/dailylog`.
 - **TUI has no SQL imports** — `internal/tui` must not import `database/sql` or a SQLite driver. Missing days are `dailylog.ErrNotFound`.
 - **New DB and config files are `0600`** — owner read/write only.
 - **Default paths are XDG** — unless the user passed `-db` / `-config` or the env vars.
 - **No skip-to-green** — do not `t.Skip` or comment out a test to make CI pass. `testing.Short()` and real `GOOS`/`GOARCH` skips are fine.
 - **No live log in git** — do not commit a real `.db` or a machine `config.toml`. Tiny fixtures under `testdata/` are allowed.
+
+**Agent-reviewed (declared on the PR, not a CI job):**
+
+- **Go naming and layout** — reviewed against the conventions above.
+- **Wrapped errors and literate preambles** — same as How We Write Code.
+- **Exported docs** — exported symbols need a real first sentence, not a restatement of the signature.
+- **User-facing copy is not medical** — TUI chrome and help, README, this file, and `idea.md` product claims must not present hdtools as diagnosing, treating, prescribing, or giving medical advice. Paraphrase counts. Internal docs (`HARNESS.md`, `CLAUDE.md`, `AGENTS.md`) are out of scope. Trend and meal planning are product features, not a violation.
 
 ### On schedule
 
@@ -99,7 +105,7 @@ TUI tests do not need a real terminal: drive `App.Update` / `View` with messages
 ## How the Harness Works
 
 - **Advisory loop** — we do not have edit-time hooks yet. Format and secrets still run in CI.
-- **Strict loop** — pull requests run `.github/workflows/harness.yml` and `ai-literacy.yml`. A red check blocks merge.
+- **Strict loop** — pull requests run `.github/workflows/harness.yml` and `ai-literacy.yml`. A red check blocks merge. That is the tests / gofmt / gitleaks / script set above, not the six agent constraints.
 - **Investigative loop** — weekly GC rules (docs, deps, import direction, file size, coverage trend). They do not auto-fix architecture.
 
 Observability cadence is **monthly** snapshots (`/harness-health`). Audits and literacy assessments are quarterly. After a behaviour-changing session, run `/reflect`.
@@ -116,8 +122,9 @@ This repo's default branch is `master`. Open a hyphenated branch and a PR; do no
 4. `go test ./...`.
 5. New `.go` files (not tests): narrative preamble; wrap every returned error; no `database/sql` in `internal/tui`.
 6. Do not commit `*.db` or a machine `config.toml`.
-7. Add a line to `CHANGELOG.md` under Unreleased.
-8. Push the branch and open a PR. Wait for Harness Constraints and Habitat checks.
+7. Do not claim diagnosis, treatment, prescription, or medical advice in TUI chrome/help, README, ONBOARDING, or `idea.md`.
+8. Add a line to `CHANGELOG.md` under Unreleased.
+9. Push the branch and open a PR. Wait for Harness Constraints and Habitat checks.
 
 ---
 
