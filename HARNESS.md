@@ -34,7 +34,7 @@
      concrete enough that a reviewer could objectively say whether code
      follows it or not. -->
 
-- **Naming**: Exported identifiers use PascalCase; unexported identifiers use camelCase. Initialisms stay all-caps as words: `HTTPServer`, `userID`, `ServeHTTP`. Packages are short, lowercase, and contain no underscores. Files use a single lowercase word (`trend.go`) or `snake_case.go` when the name is a phrase (`daily_log.go`).
+- **Naming**: Follow the main points of [Google's Go Style Guide](https://google.github.io/styleguide/go/guide). Exported identifiers use MixedCaps; unexported identifiers use mixedCaps. Initialisms stay all-caps as words: `HTTPServer`, `userID`, `ServeHTTP`. Packages are short, lowercase, and contain no underscores. Files are lowercase with no underscores except `_test.go`. There is no fixed line length; `gofmt` is the format, and a long line is refactored rather than wrapped. New APIs avoid a `Get` prefix. `context.Context` is the first parameter when a function needs a context. Tests use package `testing` only (no assertion libraries).
 - **File structure**: One module at the repo root. The binary entry point is `cmd/hdtools/main.go` and stays a wiring layer. Application code lives under `internal/` and is not importable from outside the module. One package directory per concern (`internal/config`, `internal/dailylog`, `internal/tui`, `internal/units`, …). Weight trend belongs in `dailylog`, not a separate package. Tests sit next to the code as `<file>_test.go`. If a type is the package's main exported type, its file is named after that type.
 - **Error handling**: Every function that returns an `error` either handles it with a specific recovery action or wraps it with `%w` and a short context string before returning (`fmt.Errorf("load daily log: %w", err)`). Bare `return err` is not permitted. `panic` is only for truly unreachable programmer errors, never for I/O, parse, or database failures. Sentinel errors live in the package that defines them and are compared with `errors.Is` / `errors.As`.
 - **Documentation**:
@@ -45,6 +45,7 @@
   - User-facing docs follow [Diátaxis](https://diataxis.fr): tutorials, how-to guides, reference, and explanation stay in separate pages under `docs/`. The README is the map. Do not mix a lesson with a key table or a recipe with a design discussion. Habitat files (`HARNESS.md`, `ONBOARDING.md`, `AGENTS.md`, `docs/superpowers/`) are a different audience and stay outside that split.
   - User-facing Markdown follows the main points of [Google's Markdown Style Guide](https://google.github.io/styleguide/docguide/style.html): 80-character wrap (except links, tables, headings, code blocks); ATX headings; one H1; fenced code with a language; 4-space nested list indent; no trailing whitespace; informative link titles; Markdown over HTML. GitHub exceptions: no `[TOC]` (Gitiles-only); `../` links are allowed (GitHub has no Gitiles repo-root paths).
   - Shell scripts follow the main points of [Google's Shell Style Guide](https://google.github.io/styleguide/shellguide.html): `#!/bin/bash` and `set -euo pipefail`; 2-space indent, no tabs, 80-column wrap; `; then` / `; do` on the same line as `if`/`for`/`while`; quoted `"${var}"`; `$(...)` not backticks; `[[ ... ]]` not `[ ... ]`; errors on STDERR; file header comments; libraries under `scripts/lib/` are not executable. ShellCheck is recommended.
+  - Go source follows the main points of [Google's Go Style Guide](https://google.github.io/styleguide/go/guide): `gofmt`; MixedCaps; no fixed line length; package comments; `testing` only; `panic` is not for ordinary errors. The 80-column wrap used for Markdown and shell does not apply to `.go` files.
 
 ---
 
@@ -78,7 +79,7 @@
 
 ### Idiomatic Go naming
 
-- **Rule**: Exported identifiers are PascalCase; unexported identifiers are camelCase; initialisms are all-caps as words (`HTTPServer`, `userID`, `ServeHTTP`); packages are short lowercase with no underscores; files are a single lowercase word or `snake_case.go` for multi-word names
+- **Rule**: Exported identifiers are MixedCaps; unexported identifiers are mixedCaps; initialisms are all-caps as words (`HTTPServer`, `userID`, `ServeHTTP`); packages are short lowercase with no underscores; files are lowercase with no underscores except `_test.go`
 - **Enforcement**: agent
 - **Tool**: harness-enforcer
 - **Scope**: pr

@@ -6,6 +6,9 @@
 
 ## STYLE
 
+- Go follows Google's Go Style Guide: `gofmt`, MixedCaps, no fixed
+  line length, package `testing` only. The 80-column wrap for Markdown
+  and shell does not apply to `.go` files.
 - Co-located `*_test.go` next to the code they cover — that is how
   `internal/dailylog` and `internal/tui` are already laid out.
 - Table-driven tests for validation and conversion matrices (`units`,

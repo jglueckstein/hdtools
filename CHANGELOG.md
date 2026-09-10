@@ -4,6 +4,8 @@
 
 ### Added
 
+- Go source follows Google's Go Style Guide (`gofmt`, MixedCaps, no
+  fixed line length)
 - Shell scripts follow Google's Shell Style Guide (`#!/bin/bash`,
   2-space indent, `"${var}"`, `[[ ... ]]`)
 - Month sheet Tab accepts the current cell and moves to the next
