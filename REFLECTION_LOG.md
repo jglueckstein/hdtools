@@ -52,3 +52,19 @@
   - Model tiers used: unknown
   - Pipeline stages completed: unknown
   - Agent delegation: manual
+
+---
+
+- **Date**: 2026-09-10
+- **Agent**: Grok 4.6
+- **Task**: Habitat loop with origin live: GC (6 findings), governance constraint User-facing copy is not medical, first governance audit and dashboard, observatory-verify, health snapshot with Trends, convention-sync, ONBOARDING regen, harness-sync no-op.
+- **Surprise**: Plugin agent types (`ai-literacy-superpowers:harness-gc`, `governance-auditor`, and the rest) are listed as available but spawn as unknown; we had to use `general-purpose` with the agent brief. Same session: failure action is block merge while `harness.yml` does not run harness-enforcer; Observatory footer says 81 signals / 39 snapshot rows, the tables are 40 + 14.
+- **Proposal**: AGENTS.md GOTCHA: plugin-prefixed spawn_subagent types may fail with "Unknown subagent type" even when advertised. Fall back to general-purpose and paste the agent brief.
+- **Improvement**: Close the enforcer/CI split (dispatch harness-enforcer or retarget failure action). For dated snapshots, pick one clock (UTC vs local) so /harness-health does not fork "today".
+- **Signal**: workflow
+- **Constraint**: none
+- **Session metadata**:
+  - Duration: unknown
+  - Model tiers used: unknown (Grok Build, grok-4.6)
+  - Pipeline stages completed: /harness-gc, /governance-constrain, /governance-audit, /governance-health, /harness-audit, /convention-sync, /harness-onboarding, /observatory-verify, /harness-health, /harness-sync
+  - Agent delegation: partial
