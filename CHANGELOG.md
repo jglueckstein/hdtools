@@ -4,6 +4,7 @@
 
 ### Added
 
+- Month sheet Tab accepts the current cell and moves to the next
 - Product docs follow Diátaxis under `docs/` (tutorials, how-to,
   reference, explanation); README is the map
 - User-facing Markdown follows Google's Markdown Style Guide (80-col

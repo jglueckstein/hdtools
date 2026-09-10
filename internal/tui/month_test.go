@@ -80,6 +80,31 @@ func TestPatchCellClearsWeight(t *testing.T) {
 	}
 }
 
+func TestNextCellWalksColumnsThenNextDay(t *testing.T) {
+	t.Parallel()
+	m := newMonth(dateUTC(1990, 11, 4))
+	m.col = colWeight
+	m.nextCell()
+	if m.day != 4 || m.col != colSleep {
+		t.Fatalf("after weight: day %d col %d", m.day, m.col)
+	}
+	m.col = colNote
+	m.nextCell()
+	if m.day != 5 || m.col != colWeight {
+		t.Fatalf("after note: day %d col %d", m.day, m.col)
+	}
+}
+
+func TestNextCellStaysOnLastCellOfMonth(t *testing.T) {
+	t.Parallel()
+	m := newMonth(dateUTC(1990, 11, 30))
+	m.col = colNote
+	m.nextCell()
+	if m.day != 30 || m.col != colNote {
+		t.Fatalf("got day %d col %d", m.day, m.col)
+	}
+}
+
 func dateUTC(y int, m time.Month, d int) time.Time {
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }

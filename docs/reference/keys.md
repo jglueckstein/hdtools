@@ -10,6 +10,7 @@
 | Enter | form | save |
 | Esc | form or month | cancel / back to list |
 | Arrows | month | move cells |
+| Tab | month | accept cell (if editing) and move to the next |
 | Type | month | edit cell |
 | Space | month | toggle workout |
 | `[` / `]` | month | previous / next month |

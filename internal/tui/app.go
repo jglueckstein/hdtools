@@ -56,7 +56,9 @@ type loadErrMsg struct {
 	err error
 }
 
-type savedMsg struct{}
+type savedMsg struct {
+	advance bool
+}
 
 // DefaultDBPath is $XDG_DATA_HOME/hdtools/hdtools.db.
 func DefaultDBPath() (string, error) {
@@ -119,6 +121,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case savedMsg:
 		a.month.cancelEdit()
+		if msg.advance {
+			a.month.nextCell()
+		}
 		a.screen = a.afterSave
 		a.status = "saved"
 		a.err = nil
@@ -131,7 +136,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if a.screen == screenMonth {
 			a.month.err = msg.err.Error()
-			a.month.editing = false
 			a.err = nil
 			return a, nil
 		}
@@ -233,6 +237,8 @@ func (a *App) updateMonth(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return a, nil
 		case "enter":
 			return a, a.saveMonthCell
+		case "tab":
+			return a, a.saveMonthCellAndAdvance
 		case "ctrl+c":
 			return a, tea.Quit
 		}
@@ -246,6 +252,9 @@ func (a *App) updateMonth(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case "q", "ctrl+c":
 		return a, tea.Quit
+	case "tab":
+		a.month.nextCell()
+		return a, nil
 	case "left":
 		a.month.col--
 		a.month.clamp()
@@ -302,6 +311,15 @@ func (a *App) saveMonthCell() tea.Msg {
 		return loadErrMsg{err: err}
 	}
 	return savedMsg{}
+}
+
+func (a *App) saveMonthCellAndAdvance() tea.Msg {
+	msg := a.saveMonthCell()
+	if saved, ok := msg.(savedMsg); ok {
+		saved.advance = true
+		return saved
+	}
+	return msg
 }
 
 // View renders the list, the day form, or the month sheet.

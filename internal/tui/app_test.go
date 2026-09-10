@@ -156,6 +156,67 @@ func TestMonthCellSaveWritesWeight(t *testing.T) {
 	}
 }
 
+func TestMonthTabWhileEditingSavesAndAdvances(t *testing.T) {
+	t.Parallel()
+	store := openStore(t)
+	app := New(store, "mem.db", config.Default())
+	app.screen = screenMonth
+	app.month = newMonth(time.Date(1990, 11, 4, 0, 0, 0, 0, time.UTC))
+	app.month.col = colWeight
+	app.month.beginEdit("80.0")
+	_, cmd := app.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if cmd == nil {
+		t.Fatal("tab while editing should save")
+	}
+	app.Update(cmd())
+	got, err := store.Get(context.Background(), time.Date(1990, 11, 4, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Weight == nil || *got.Weight != 80 {
+		t.Fatalf("stored %+v", got)
+	}
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colSleep || app.month.day != 4 {
+		t.Fatalf("focus day %d col %d, want sleep on day 4", app.month.day, app.month.col)
+	}
+}
+
+func TestMonthTabInvalidDoesNotAdvance(t *testing.T) {
+	t.Parallel()
+	store := openStore(t)
+	app := New(store, "mem.db", config.Default())
+	app.screen = screenMonth
+	app.month = newMonth(time.Date(1990, 11, 4, 0, 0, 0, 0, time.UTC))
+	app.month.col = colWeight
+	app.month.beginEdit("nope")
+	_, cmd := app.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if cmd == nil {
+		t.Fatal("tab should attempt save")
+	}
+	app.Update(cmd())
+	if !app.month.editing || app.month.col != colWeight {
+		t.Fatalf("editing=%v col=%d", app.month.editing, app.month.col)
+	}
+	if _, err := store.Get(context.Background(), time.Date(1990, 11, 4, 0, 0, 0, 0, time.UTC)); err == nil {
+		t.Fatal("should not have stored a day")
+	}
+}
+
+func TestMonthTabWhenNotEditingMoves(t *testing.T) {
+	t.Parallel()
+	app := New(nil, "mem.db", config.Default())
+	app.screen = screenMonth
+	app.month = newMonth(time.Date(1990, 11, 4, 0, 0, 0, 0, time.UTC))
+	app.month.col = colWeight
+	app.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if app.month.col != colSleep {
+		t.Fatalf("col = %d, want sleep", app.month.col)
+	}
+}
+
 func TestQuitKeys(t *testing.T) {
 	t.Parallel()
 	app := New(nil, "", config.Default())
