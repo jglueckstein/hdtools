@@ -12,7 +12,7 @@ hdtools is a terminal UI for [The Hacker's Diet](https://www.fourmilab.ch/hackdi
 - **Go 1.27** (`github.com/jglueckstein/hdtools`) — one module at the repo root. `go build ./...` and `go test ./...` are the whole toolchain.
 - **Bubble Tea + lipgloss** — the TUI. `cmd/hdtools` opens the store and runs `internal/tui`. Colour is 16-color ANSI so a basic terminal still works.
 - **SQLite via `database/sql` and `modernc.org/sqlite`** — no CGO. Default database is `$XDG_DATA_HOME/hdtools/hdtools.db` (usually `~/.local/share/hdtools/hdtools.db`). Weight is stored in kilograms. There is no remote database yet.
-- **Config in TOML** — `$XDG_CONFIG_HOME/hdtools/config.toml`. `display_unit` is `kg` (first run), `lb`, or `st`. Prefs never go in SQLite.
+- **Config in TOML** — `$XDG_CONFIG_HOME/hdtools/config.toml`. `display_unit` is `kg` (first run), `lb`, or `st`. Optional `[colors]` overlay: 16-color names, `0`–`15`, or `#rrggbb` / `#rgb`. Invalid colors fall back silently; invalid `display_unit` still fails the load. Prefs never go in SQLite.
 - **No containers** — you run the binary (or `go run ./cmd/hdtools`) on your machine.
 
 ---
@@ -86,7 +86,7 @@ The team already decided these — do not reopen them without a dated spec.
 - **Do not persist trend.** A backdated weight edit would desync a stored moving average. `ApplyTrend` is the source of truth after every read.
 - **Config under XDG, database under XDG data**, not `~/.hdtools`. Config is hand-editable and must not live in SQLite. A log file can move machines without dragging prefs.
 
-Related product choices (also in AGENTS.md): daily columns are fixed (weight, sleep, steps, workout, note); workout is a boolean; first-run display is kg; `NO_COLOR` and user colour schemes are specified in `idea.md` but not implemented yet.
+Related product choices (also in AGENTS.md): daily columns are fixed (weight, sleep, steps, workout, note); workout is a boolean; first-run display is kg; `[colors]` is a sparse overlay (hex allowed; 16-color is the floor); `NO_COLOR` strips chroma only.
 
 ---
 

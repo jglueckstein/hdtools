@@ -26,6 +26,8 @@ go run ./cmd/hdtools -config /path/to/config.toml
 
 `$HDTOOLS_DB` and `$HDTOOLS_CONFIG` override the same paths. Weight is stored in kilograms. Display units are `display_unit` in the config file: `kg` (default), `lb`, or `st`.
 
+Optional `[colors]` names TUI roles (`title`, `muted`, `header`, `help`, `weight`, `trend`, `selection`, `error`, `status`). Values are 16-color names (`blue`, `bright-black`, …), `0`–`15`, or hex (`#rrggbb` / `#rgb`) copied from an existing theme. Omitted or invalid colors fall back silently to the built-in palette (blue daily weight, red trend). Hex downshifts to the nearest of those sixteen on a 16-color terminal. A non-empty `NO_COLOR` turns chromatic color off; headers, `>` marks, bold trend, and reverse selection stay.
+
 | Key | Where | Action |
 | --- | --- | --- |
 | `n` | list | new day (form) |

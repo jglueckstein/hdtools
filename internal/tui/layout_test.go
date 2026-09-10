@@ -22,7 +22,7 @@ func visible(s string) string {
 func TestVisPadIgnoresANSI(t *testing.T) {
 	t.Parallel()
 	plain := visPad("172.5", 7, true)
-	styled := visPad(weightStyle.Render("172.5"), 7, true)
+	styled := visPad(newPalette(config.Default()).weight.Render("172.5"), 7, true)
 	if lipgloss.Width(plain) != 7 || lipgloss.Width(styled) != 7 {
 		t.Fatalf("plain %d styled %d", lipgloss.Width(plain), lipgloss.Width(styled))
 	}

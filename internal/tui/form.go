@@ -145,32 +145,32 @@ func (f formModel) parse() (dailylog.DailyLog, error) {
 	)
 }
 
-func (f formModel) view() string {
+func (f formModel) view(p palette) string {
 	workout := "no"
 	if f.workout {
 		workout = "yes"
 	}
 	label := func(i int, name string) string {
 		mark := " "
-		style := labelStyle
+		style := p.label
 		if f.focus == i {
 			mark = ">"
-			style = focusLabelStyle
+			style = p.focusLabel
 		}
 		return mark + " " + style.Render(fmt.Sprintf("%-8s", name))
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s\n\n", titleStyle.Render(fmt.Sprintf("  day form  (weight in %s)", f.unit)))
+	fmt.Fprintf(&b, "%s\n\n", p.title.Render(fmt.Sprintf("  day form  (weight in %s)", f.unit)))
 	fmt.Fprintf(&b, "%s %s\n", label(fieldDate, "date"), f.inputs[0].View())
 	fmt.Fprintf(&b, "%s %s\n", label(fieldWeight, "weight"), f.inputs[1].View())
 	fmt.Fprintf(&b, "%s %s\n", label(fieldSleep, "sleep"), f.inputs[2].View())
 	fmt.Fprintf(&b, "%s %s\n", label(fieldSteps, "steps"), f.inputs[3].View())
-	fmt.Fprintf(&b, "%s %s  %s\n", label(fieldWorkout, "workout"), workout, mutedStyle.Render("(space to toggle)"))
+	fmt.Fprintf(&b, "%s %s  %s\n", label(fieldWorkout, "workout"), workout, p.muted.Render("(space to toggle)"))
 	fmt.Fprintf(&b, "%s %s\n", label(fieldNote, "note"), f.inputs[4].View())
 	if f.err != "" {
-		fmt.Fprintf(&b, "\n%s\n", errorStyle.Render("error: "+f.err))
+		fmt.Fprintf(&b, "\n%s\n", p.error.Render("error: "+f.err))
 	}
-	fmt.Fprintf(&b, "\n%s\n", helpStyle.Render("enter save   esc cancel   tab next field"))
+	fmt.Fprintf(&b, "\n%s\n", p.help.Render("enter save   esc cancel   tab next field"))
 	return b.String()
 }
 

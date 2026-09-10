@@ -21,6 +21,9 @@
   current month drops carry-forward from the previous month.
 - Display-unit conversion (`units.FromKG`) is for the TUI only. Saving
   must go through `units.ToKG` so SQLite always stores kilograms.
+- `View()` emits chroma unless `NO_COLOR` is non-empty; the process does
+  not consult the TTY. Tests that need color must `t.Setenv("NO_COLOR",
+  "")`. Hex is `38;2;` on truecolor and downshifts on a 16-color profile.
 
 ## ARCH_DECISIONS
 
@@ -33,6 +36,10 @@
 - Decision: config file under XDG, database under XDG data, not
   `~/.hdtools`. Reason: spec-compliant Unix paths; config is
   hand-editable and must not live in SQLite.
+- Decision: `[colors]` fail-open, `display_unit` fail-closed. Reason:
+  a bad color cannot corrupt the log series; a bad unit would store
+  pounds as kilograms. Invalid or omitted colors are dropped silently
+  and the TUI uses the built-in default.
 
 ## TEST_STRATEGY
 
@@ -49,5 +56,6 @@
   No extras bag until `idea.md` says otherwise.
 - Workout is a boolean, not an exercise rung.
 - Default display unit is kg until `config.toml` says otherwise.
-- `NO_COLOR` and user color schemes are specified in `idea.md` but not
-  implemented yet.
+- `[colors]` is a sparse overlay of named 16-color or hex values.
+  16-color is the floor and downshift target. `NO_COLOR` strips
+  chromatic color only; bold, reverse, and `>` remain.

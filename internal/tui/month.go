@@ -134,11 +134,11 @@ func lastTrendOnOrBefore(logs []dailylog.DailyLog, day time.Time) (float64, bool
 	return trend, found
 }
 
-func (m monthModel) view(sheet []sheetDay, unit units.Unit, dbPath string, status string) string {
+func (m monthModel) view(sheet []sheetDay, unit units.Unit, dbPath string, status string, p palette) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s\n", titleStyle.Render(fmt.Sprintf("hdtools — %s %d  (weight %s)", m.month.String(), m.year, unit)))
-	fmt.Fprintf(&b, "%s\n\n", mutedStyle.Render("db: "+dbPath))
-	fmt.Fprintf(&b, "%s\n", headerStyle.Render(monthHeader()))
+	fmt.Fprintf(&b, "%s\n", p.title.Render(fmt.Sprintf("hdtools — %s %d  (weight %s)", m.month.String(), m.year, unit)))
+	fmt.Fprintf(&b, "%s\n\n", p.muted.Render("db: "+dbPath))
+	fmt.Fprintf(&b, "%s\n", p.header.Render(monthHeader()))
 	for _, row := range sheet {
 		mark := "  "
 		onRow := row.Day.Day() == m.day
@@ -166,23 +166,24 @@ func (m monthModel) view(sheet []sheetDay, unit units.Unit, dbPath string, statu
 			}
 			note = row.Log.Note
 		}
-		weight = visPad(weightStyle.Render(weight), wWeight, true)
-		trend = visPad(trendStyle.Render(trend), wTrend, true)
+		plainWeight := weight
+		weight = visPad(p.weight.Render(weight), wWeight, true)
+		trend = visPad(p.trend.Render(trend), wTrend, true)
 		sleep = visPad(sleep, wSleep, true)
 		steps = visPad(steps, wSteps, true)
 		workout = visPad(workout, wWorkout, false)
 		if onRow {
 			switch m.col {
 			case colWeight:
-				weight = highlightCell(weight, m.editing, m.input, wWeight, true)
+				weight = highlightCell(plainWeight, m.editing, m.input, wWeight, true, p)
 			case colSleep:
-				sleep = highlightCell(sleep, m.editing, m.input, wSleep, true)
+				sleep = highlightCell(sleep, m.editing, m.input, wSleep, true, p)
 			case colSteps:
-				steps = highlightCell(steps, m.editing, m.input, wSteps, true)
+				steps = highlightCell(steps, m.editing, m.input, wSteps, true, p)
 			case colWorkout:
-				workout = highlightCell(workout, m.editing, m.input, wWorkout, false)
+				workout = highlightCell(workout, m.editing, m.input, wWorkout, false, p)
 			case colNote:
-				note = highlightCell(note, m.editing, m.input, lipgloss.Width(note)+2, false)
+				note = highlightCell(note, m.editing, m.input, lipgloss.Width(note)+2, false, p)
 			}
 		}
 		fmt.Fprintf(&b, "%s\n", visPad(mark, wMark, false)+joinCols(
@@ -197,21 +198,21 @@ func (m monthModel) view(sheet []sheetDay, unit units.Unit, dbPath string, statu
 		))
 	}
 	if m.err != "" {
-		fmt.Fprintf(&b, "\n%s\n", errorStyle.Render("error: "+m.err))
+		fmt.Fprintf(&b, "\n%s\n", p.error.Render("error: "+m.err))
 	}
 	if status != "" {
-		fmt.Fprintf(&b, "\n%s\n", statusStyle.Render(status))
+		fmt.Fprintf(&b, "\n%s\n", p.status.Render(status))
 	}
-	fmt.Fprintf(&b, "\n%s\n", helpStyle.Render("arrows move   type edit   space workout   enter form   [ ] month   esc list"))
+	fmt.Fprintf(&b, "\n%s\n", p.help.Render("arrows move   type edit   space workout   enter form   [ ] month   esc list"))
 	return b.String()
 }
 
-func highlightCell(value string, editing bool, input textinput.Model, width int, right bool) string {
+func highlightCell(value string, editing bool, input textinput.Model, width int, right bool, p palette) string {
 	inner := value
 	if editing {
-		inner = visPad(strings.TrimSpace(input.View()), width, right)
+		inner = strings.TrimSpace(input.View())
 	}
-	return selectedStyle.Render(inner)
+	return visPad(p.selected.Render(inner), width, right)
 }
 
 func (m *monthModel) beginEdit(initial string) {

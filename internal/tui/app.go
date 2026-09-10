@@ -5,8 +5,9 @@
 // remote database can reuse the same Model. Missing days are
 // dailylog.ErrNotFound. Charts, meal planning, and PDF are out of scope.
 //
-// Color comes from style.go (16-color ANSI). Column geometry lives in
-// layout.go so headers stay over numbers after ANSI codes are applied.
+// Color comes from a palette built at New from config.toml and NO_COLOR.
+// Column geometry lives in layout.go so headers stay over numbers after
+// ANSI codes are applied.
 package tui
 
 import (
@@ -44,6 +45,7 @@ type App struct {
 	afterSave screen
 	err       error
 	status    string
+	pal       palette
 }
 
 type loadedMsg struct {
@@ -70,6 +72,7 @@ func New(store *dailylog.Store, dbPath string, cfg config.Config) *App {
 		form:      newForm(cfg.DisplayUnit),
 		month:     newMonth(localToday()),
 		afterSave: screenList,
+		pal:       newPalette(cfg),
 	}
 }
 
@@ -305,28 +308,29 @@ func (a *App) saveMonthCell() tea.Msg {
 func (a *App) View() string {
 	switch a.screen {
 	case screenForm:
-		return a.form.view()
+		return a.form.view(a.pal)
 	case screenMonth:
 		sheet := buildMonthSheet(a.logs, a.month.year, a.month.month)
-		return a.month.view(sheet, a.cfg.DisplayUnit, a.dbPath, a.status)
+		return a.month.view(sheet, a.cfg.DisplayUnit, a.dbPath, a.status, a.pal)
 	default:
 		return a.listView()
 	}
 }
 
 func (a *App) listView() string {
+	p := a.pal
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s\n", titleStyle.Render(fmt.Sprintf("hdtools — daily log  (weight %s)", a.cfg.DisplayUnit)))
-	fmt.Fprintf(&b, "%s\n\n", mutedStyle.Render("db: "+a.dbPath))
+	fmt.Fprintf(&b, "%s\n", p.title.Render(fmt.Sprintf("hdtools — daily log  (weight %s)", a.cfg.DisplayUnit)))
+	fmt.Fprintf(&b, "%s\n\n", p.muted.Render("db: "+a.dbPath))
 	if a.err != nil {
-		fmt.Fprintf(&b, "%s\n\n%s\n", errorStyle.Render("error: "+a.err.Error()), helpStyle.Render("q quit"))
+		fmt.Fprintf(&b, "%s\n\n%s\n", p.error.Render("error: "+a.err.Error()), p.help.Render("q quit"))
 		return b.String()
 	}
 	if len(a.logs) == 0 {
-		fmt.Fprintf(&b, "%s\n\n%s\n", mutedStyle.Render("(no entries yet)"), helpStyle.Render("n new day   m month   q quit"))
+		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(no entries yet)"), p.help.Render("n new day   m month   q quit"))
 		return b.String()
 	}
-	fmt.Fprintf(&b, "%s\n", headerStyle.Render(listHeader()))
+	fmt.Fprintf(&b, "%s\n", p.header.Render(listHeader()))
 	for i, log := range a.logs {
 		mark := "  "
 		if i == a.cursor {
@@ -347,23 +351,32 @@ func (a *App) listView() string {
 		if log.Workout {
 			workout = "yes"
 		}
+		selected := i == a.cursor
+		var weightCell, trendCell string
+		if selected && p.selectionFG {
+			weightCell = visPad(weight, wWeight, true)
+			trendCell = visPad(trend, wTrend, true)
+		} else {
+			weightCell = visPad(p.weight.Render(weight), wWeight, true)
+			trendCell = visPad(p.trend.Render(trend), wTrend, true)
+		}
 		line := visPad(mark, wMark, false) + joinCols(
 			visPad(log.Day.Format("2006-01-02"), wDate, false),
-			visPad(weightStyle.Render(weight), wWeight, true),
-			visPad(trendStyle.Render(trend), wTrend, true),
+			weightCell,
+			trendCell,
 			visPad(fmt.Sprintf("%.1f", log.SleepHours), wSleep, true),
 			visPad(fmt.Sprintf("%d", log.Steps), wSteps, true),
 			visPad(workout, wWorkout, false),
 			log.Note,
 		)
-		if i == a.cursor {
-			line = selectedStyle.Render(line)
+		if selected {
+			line = p.selected.Render(line)
 		}
 		fmt.Fprintf(&b, "%s\n", line)
 	}
 	if a.status != "" {
-		fmt.Fprintf(&b, "\n%s\n", statusStyle.Render(a.status))
+		fmt.Fprintf(&b, "\n%s\n", p.status.Render(a.status))
 	}
-	fmt.Fprintf(&b, "\n%s\n", helpStyle.Render("n new   enter edit   m month   q quit"))
+	fmt.Fprintf(&b, "\n%s\n", p.help.Render("n new   enter edit   m month   q quit"))
 	return b.String()
 }
