@@ -1,16 +1,17 @@
 package tui
 
+// Column geometry is shared by the daily list and the month sheet so a
+// header change cannot drift one view and not the other. Widths are
+// display cells, not byte length: visPad uses lipgloss.Width because
+// colored numbers contain ANSI sequences that would otherwise shove
+// later columns to the right. This file is not a layout framework and
+// does not own colors or decide which columns exist.
+
 import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 )
-
-// Column geometry is shared by the daily list and the month sheet so a
-// header change cannot drift one view and not the other. Widths are
-// display cells, not byte length: visPad uses lipgloss.Width because
-// colored numbers contain ANSI sequences that would otherwise shove
-// later columns to the right.
 
 const (
 	wMark    = 2

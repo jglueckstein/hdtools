@@ -300,9 +300,8 @@ per-read cost flat as the log grows. Defaults:
 
 Readers that need historical patterns (regression detection, governance
 audits, assessor evidence-extraction) opt in explicitly to read the full
-active log plus archive. See the spec
-`docs/superpowers/specs/2026-04-30-reflection-log-archival-design.md` for
-the per-reader policy table.
+active log plus archive. The per-reader policy is the two bounds and the
+inclusive default above.
 
 Project-level overrides go in the GC-rule declarations above; agents
 honour the values declared here when reading.

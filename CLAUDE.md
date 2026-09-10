@@ -51,10 +51,8 @@ empty `REFLECTION_LOG.md` is not compound learning.
 
 ### Branch Discipline
 
-This repository is local `master` with no origin. Until a GitHub remote
-exists, commit on `master`. After a remote exists: do not commit
-directly to the default branch; open an issue, use a hyphenated branch
-name, and merge via PR.
+Do not commit directly to `master`. Open an issue, use a hyphenated
+branch name, and merge via PR. Origin is `git@github.com:jglueckstein/hdtools.git`.
 
 ### Commit Messages
 

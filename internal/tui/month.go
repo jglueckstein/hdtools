@@ -228,37 +228,6 @@ func (m *monthModel) cancelEdit() {
 	m.err = ""
 }
 
-func cellSeed(row sheetDay, col int, unit units.Unit) string {
-	if !row.HasEntry {
-		return ""
-	}
-	switch col {
-	case colWeight:
-		if row.Log.Weight == nil {
-			return ""
-		}
-		w, err := units.FromKG(*row.Log.Weight, unit)
-		if err != nil {
-			return ""
-		}
-		return formatWeight(w)
-	case colSleep:
-		if row.Log.SleepHours == 0 {
-			return ""
-		}
-		return strconv.FormatFloat(row.Log.SleepHours, 'f', -1, 64)
-	case colSteps:
-		if row.Log.Steps == 0 {
-			return ""
-		}
-		return strconv.Itoa(row.Log.Steps)
-	case colNote:
-		return row.Log.Note
-	default:
-		return ""
-	}
-}
-
 func patchCell(log dailylog.DailyLog, col int, raw string, unit units.Unit) (dailylog.DailyLog, error) {
 	raw = strings.TrimSpace(raw)
 	switch col {
