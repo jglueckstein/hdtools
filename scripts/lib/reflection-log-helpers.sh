@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # reflection-log-helpers.sh
 #
 # Shared helpers for reflection-log archival scripts (sourced by
@@ -110,7 +110,7 @@ bounded_entries() {
   # but include any entry whose date is newer than cutoff regardless.
   local tmpfile; tmpfile=$(mktemp)
   while IFS= read -r line; do
-    if [ "$line" = "---ENTRY---" ]; then
+    if [[ "${line}" == "---ENTRY---" ]]; then
       local entry_date entry_epoch
       entry_date=$(extract_field "$entry" "Date")
       entry_epoch=$(date -j -f '%Y-%m-%d' "$entry_date" '+%s' 2>/dev/null \
@@ -150,7 +150,7 @@ bounded_entries() {
 resolve_file() {
   local p
   for p in "$@"; do
-    if [ -f "$p" ]; then
+    if [[ -f "${p}" ]]; then
       printf '%s' "$p"
       return 0
     fi
@@ -172,7 +172,7 @@ verify_rhs() {
   case "$rhs" in
     AGENTS.md*\"*\")
       local quoted; quoted=$(echo "$rhs" | sed -E 's/^.*"(.*)".*$/\1/')
-      [ -f AGENTS.md ] && grep -qF "$quoted" AGENTS.md
+      [[ -f AGENTS.md ]] && grep -qF "${quoted}" AGENTS.md
       ;;
     *CLAUDE.md\ \"*\")
       # CLAUDE_FORM: the path is everything before the quoted excerpt, so a
@@ -180,7 +180,7 @@ verify_rhs() {
       local cpath cquoted
       cpath="${rhs%% \"*}"
       cquoted=$(echo "$rhs" | sed -E 's/^.*"(.*)".*$/\1/')
-      [ -f "$cpath" ] && grep -qF "$cquoted" "$cpath"
+      [[ -f "${cpath}" ]] && grep -qF "${cquoted}" "${cpath}"
       ;;
     HARNESS.md:*|.claude/HARNESS.md:*)
       # HARNESS_FORM: .claude/HARNESS.md is an alias for HARNESS.md; verify
@@ -218,20 +218,20 @@ propose_for_entry() {
   echo ""
 
   # Already has a Promoted line — skip.
-  if [ -n "$(parse_promoted "$entry")" ]; then
+  if [[ -n "$(parse_promoted "${entry}")" ]]; then
     echo "Already promoted; nothing to propose."
     return 0
   fi
 
   # Cross-reference surprise/proposal text against AGENTS.md
   local agents_match=""
-  if [ -f AGENTS.md ] && [ -n "$surprise$proposal" ]; then
+  if [[ -f AGENTS.md && -n "${surprise}${proposal}" ]]; then
     local kw; kw=$(echo "$surprise" | awk '{print $1, $2, $3}')
-    if [ -n "$kw" ] && grep -qF "$kw" AGENTS.md; then
+    if [[ -n "${kw}" ]] && grep -qF "${kw}" AGENTS.md; then
       agents_match="$kw"
     fi
   fi
-  if [ -n "$agents_match" ]; then
+  if [[ -n "${agents_match}" ]]; then
     echo "**Likely-promoted to AGENTS.md** (keyword \"$agents_match\" matches)."
     echo ""
     echo "Proposed line for the entry:"
@@ -245,7 +245,7 @@ propose_for_entry() {
   local constraint hpath
   constraint=$(extract_field "$entry" "Constraint")
   hpath=$(resolve_file HARNESS.md .claude/HARNESS.md || true)
-  if [ -n "$hpath" ] && [ -n "$constraint" ] && [ "$constraint" != "none" ]; then
+  if [[ -n "${hpath}" && -n "${constraint}" && "${constraint}" != "none" ]]; then
     if grep -qF "$constraint" "$hpath"; then
       echo "**Likely-promoted to HARNESS.md** (constraint \"$constraint\" matches)."
       echo ""
@@ -258,7 +258,7 @@ propose_for_entry() {
   fi
 
   # Aged-out check
-  if [ "$entry_epoch" -lt "$cutoff" ]; then
+  if [[ "${entry_epoch}" -lt "${cutoff}" ]]; then
     echo "**Single-instance, aged-out** (older than threshold; no overlap found)."
     echo ""
     echo "Proposed line:"
@@ -287,7 +287,7 @@ slugify() {
     | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//' \
     | cut -d- -f1-6)
   # Fall back to a stable placeholder if the task had no usable characters.
-  [ -n "$slug" ] && printf '%s' "$slug" || printf 'entry'
+  [[ -n "${slug}" ]] && printf '%s' "${slug}" || printf 'entry'
 }
 
 # trim_blanks: strip leading and trailing blank lines from stdin, emitting
@@ -311,7 +311,7 @@ trim_blanks() {
 # yields Date order then slug order — the aggregate's canonical ordering.
 fragment_paths() {
   local active_dir="${1:-reflections/active}"
-  [ -d "$active_dir" ] || return 0
+  [[ -d "${active_dir}" ]] || return 0
   find "$active_dir" -maxdepth 1 -name '*.md' 2>/dev/null | LC_ALL=C sort
 }
 
@@ -356,7 +356,7 @@ regenerate_log() {
   local out="${2:-REFLECTION_LOG.md}"
   local tmp="${out}.regen.tmp"
 
-  if [ -f "$out" ] && grep -q '^---$' "$out"; then
+  if [[ -f "${out}" ]] && grep -q '^---$' "${out}"; then
     awk '/^---$/{exit} {print}' "$out" > "$tmp"
   else
     default_reflection_header > "$tmp"
@@ -364,7 +364,7 @@ regenerate_log() {
 
   local f
   while IFS= read -r f; do
-    [ -n "$f" ] || continue
+    [[ -n "${f}" ]] || continue
     {
       echo "---"
       echo ""

@@ -1,7 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/bash
+#
 # Fail on t.Skip used to hide a failing test, or a commented-out Test
 # function. testing.Short() and GOOS/GOARCH skips in the same function
 # are allowed.
+
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

@@ -66,3 +66,6 @@
   wrap (except links, tables, headings, code); ATX headings; one H1;
   fenced code with a language; 4-space nested lists; no trailing
   whitespace. No Gitiles `[TOC]`; `../` links are allowed on GitHub.
+- Shell scripts follow Google's Shell Style Guide: `#!/bin/bash`,
+  `set -euo pipefail`, 2-space indent, `"${var}"`, `[[ ... ]]`,
+  errors on STDERR. `scripts/lib/*.sh` are not executable.
