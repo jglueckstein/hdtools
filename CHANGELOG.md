@@ -4,6 +4,9 @@
 
 ### Added
 
+- Governance constraint **User-facing copy is not medical** (agent, PR):
+  TUI chrome/help, README, ONBOARDING, and idea.md must not claim
+  diagnosis, treatment, prescription, or medical advice
 - Promote **DB and config files are 0600** to deterministic PR enforcement
   (`go test` private-file tests; covered by existing suite, no extra CI step)
 - Promote **Prefs out of SQLite** to deterministic PR enforcement

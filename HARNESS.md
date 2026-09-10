@@ -150,6 +150,34 @@
 - **Tool**: scripts/check-no-live-log.sh
 - **Scope**: pr
 
+### User-facing copy is not medical
+
+- **Rule**: User-facing copy in TUI chrome and help strings, README.md,
+  ONBOARDING.md, and idea.md product claims must not present the
+  application as diagnosing, treating, prescribing, or giving medical
+  advice. Paraphrase counts. Internal docs (HARNESS.md, CLAUDE.md,
+  AGENTS.md) and non-product comments are out of scope.
+- **Enforcement**: agent
+- **Tool**: harness-enforcer
+- **Scope**: pr
+- **Governance requirement**: The application must remain a tracking
+  and analysis tool rather than presenting itself as a medical
+  diagnosis or treatment system
+- **Operational meaning**: Those four surfaces must not claim
+  diagnosis, treatment, prescription, or medical advice. Feature
+  behaviour (trend, meal planning) and a visible disclaimer are out
+  of scope.
+- **Verification method**: harness-enforcer reviews the listed
+  surfaces on the PR, including paraphrase
+- **Evidence**: harness-enforcer PR output
+- **Failure action**: block merge
+- **Frame check**: divergence resolved: copy-only is an explicit
+  scope limit — this constraint does not ban clinical-adjacent
+  features or require a disclaimer. Engineering, compliance, and AI
+  frames agree on user-facing copy only. Block-merge is the declared
+  failure action; agent PR constraints are not dispatched in CI today
+  (`harness.yml` does not run harness-enforcer).
+
 ---
 
 ## Garbage Collection
