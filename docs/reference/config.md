@@ -20,10 +20,10 @@ Any other value fails the load. Storage is always kilograms.
 ## `[colors]`
 
 Optional table. Keys are roles. Values are a 16-color name (case
-insensitive; hyphens and spaces are equivalent), an integer `0`–`15`, or
-hex `#rrggbb` / `#rgb`. Unknown keys are ignored. An omitted or invalid
-value for a role uses that role's default. A `colors` value that is not
-a table is treated as a missing table. Fallback is silent.
+insensitive; hyphens and spaces are equivalent), an integer `0`–`15`,
+or hex `#rrggbb` / `#rgb`. Unknown keys are ignored. An omitted or
+invalid value for a role uses that role's default. A `colors` value
+that is not a table is treated as a missing table. Fallback is silent.
 
 | Key | Where it appears | Default |
 | --- | --- | --- |

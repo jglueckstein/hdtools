@@ -11,8 +11,8 @@ It is a tracking tool, not a diagnosis or treatment system.
 
 ## Documentation
 
-Product docs follow [Diátaxis](https://diataxis.fr). Start with the kind
-of page you need:
+Product docs follow [Diátaxis](https://diataxis.fr). Start with the
+kind of page you need:
 
 | I want to… | Read |
 | --- | --- |
@@ -25,5 +25,6 @@ The map of all four is [docs/README.md](docs/README.md).
 
 ## Contributors
 
-Product intent: [`idea.md`](idea.md). Living harness: [`HARNESS.md`](HARNESS.md).
-New to the repo: [`ONBOARDING.md`](ONBOARDING.md).
+Product intent: [`idea.md`](idea.md). Living harness:
+[`HARNESS.md`](HARNESS.md). New to the repo:
+[`ONBOARDING.md`](ONBOARDING.md).

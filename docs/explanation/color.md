@@ -1,9 +1,10 @@
 # Why colour is a scheme of roles
 
 The TUI uses colour so the eye can separate chrome from data, the
-selected row from the rest, and the trend from noisy daily weights. Those
-are roles, not raw terminal sequences. A `[colors]` table names the
-roles so you can copy hex out of an existing theme without rebuilding.
+selected row from the rest, and the trend from noisy daily weights.
+Those are roles, not raw terminal sequences. A `[colors]` table names
+the roles so you can copy hex out of an existing theme without
+rebuilding.
 
 Sixteen named colours are the floor: the default palette, and the
 downshift target when a hex value is shown on a 16-color terminal. They

@@ -3,7 +3,9 @@
 High-signal rules for agents. Stack, full constraints, and GC live in
 `HARNESS.md` — do not duplicate that file here. User-facing docs follow
 Diátaxis (`docs/tutorials`, `how-to`, `reference`, `explanation`);
-README is the map.
+README is the map. Markdown source follows Google's Markdown Style
+Guide (80-col wrap, ATX headings, one H1, fenced code with a
+language).
 
 ## Literate Programming
 

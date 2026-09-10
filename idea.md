@@ -98,6 +98,15 @@ or meals. Then the user can enter 1/4 of this recipe or 245 g of that recipe.
 
 User-facing documentation follows
 [Diátaxis](https://diataxis.fr): tutorials, how-to guides, reference,
-and explanation, kept distinct. The README is the map, not a dump of all
-four. Habitat files (harness, onboarding, agent memory, dated specs) are
-for people working on the code and are not part of that split.
+and explanation, kept distinct. The README is the map, not a dump of
+all four. Habitat files (harness, onboarding, agent memory, dated
+specs) are for people working on the code and are not part of that
+split.
+
+Markdown source follows the main points of
+[Google's Markdown Style Guide](https://google.github.io/styleguide/docguide/style.html):
+80-character wrap (except links, tables, headings, and code blocks);
+ATX headings with a single H1; fenced code with a language; nested
+lists indented 4 spaces; no trailing whitespace; informative link
+text. GitHub does not honour Gitiles `[TOC]`; `../` links are allowed
+because GitHub has no repo-root Markdown paths.
