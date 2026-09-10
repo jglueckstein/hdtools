@@ -42,6 +42,7 @@
   - Function comments must explain the reasoning behind the approach, not restate the signature
   - Inline comments explain WHY, not WHAT — comments that restate the next line are prohibited
   - Every exported function, type, and const has a doc comment. The first sentence states what it does or returns, not how. Comments that only restate the signature (e.g. `// Weight returns the weight.`) count as missing. Unexported code gets a comment only when the reason is non-obvious (a constraint, a workaround, or a domain rule from The Hacker's Diet). Each package has a package comment (on one file in the package, or `doc.go`).
+  - User-facing docs follow [Diátaxis](https://diataxis.fr): tutorials, how-to guides, reference, and explanation stay in separate pages under `docs/`. The README is the map. Do not mix a lesson with a key table or a recipe with a design discussion. Habitat files (`HARNESS.md`, `ONBOARDING.md`, `AGENTS.md`, `docs/superpowers/`) are a different audience and stay outside that split.
 
 ---
 

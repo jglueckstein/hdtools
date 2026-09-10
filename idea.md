@@ -93,3 +93,11 @@ try to work consistently with grams. We will support U.S. units.
 
 Besides the ingredients, we should save groups of ingredients as recipes
 or meals. Then the user can enter 1/4 of this recipe or 245 g of that recipe.
+
+## Documentation
+
+User-facing documentation follows
+[Diátaxis](https://diataxis.fr): tutorials, how-to guides, reference,
+and explanation, kept distinct. The README is the map, not a dump of all
+four. Habitat files (harness, onboarding, agent memory, dated specs) are
+for people working on the code and are not part of that split.

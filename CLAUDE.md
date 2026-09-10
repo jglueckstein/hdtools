@@ -1,7 +1,9 @@
 # Project Conventions
 
 High-signal rules for agents. Stack, full constraints, and GC live in
-`HARNESS.md` — do not duplicate that file here.
+`HARNESS.md` — do not duplicate that file here. User-facing docs follow
+Diátaxis (`docs/tutorials`, `how-to`, `reference`, `explanation`);
+README is the map.
 
 ## Literate Programming
 

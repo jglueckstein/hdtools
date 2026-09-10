@@ -4,6 +4,8 @@
 
 ### Added
 
+- Product docs follow Diátaxis under `docs/` (tutorials, how-to,
+  reference, explanation); README is the map
 - User-configurable TUI `[colors]` in `config.toml` (16-color names,
   `0`–`15`, or `#rrggbb` / `#rgb`), silent fallback, and `NO_COLOR`
 - Harness health snapshot 2026-09-10 (15/15, Trends vs 2026-09-09) and

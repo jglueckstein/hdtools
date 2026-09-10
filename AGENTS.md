@@ -59,3 +59,6 @@
 - `[colors]` is a sparse overlay of named 16-color or hex values.
   16-color is the floor and downshift target. `NO_COLOR` strips
   chromatic color only; bold, reverse, and `>` remain.
+- User-facing docs follow Diátaxis under `docs/` (tutorials, how-to,
+  reference, explanation). README is the map. Habitat files are not
+  that split.
