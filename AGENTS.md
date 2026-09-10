@@ -62,3 +62,7 @@
 - User-facing docs follow Diátaxis under `docs/` (tutorials, how-to,
   reference, explanation). README is the map. Habitat files are not
   that split.
+- User-facing Markdown follows Google's Markdown Style Guide: 80-col
+  wrap (except links, tables, headings, code); ATX headings; one H1;
+  fenced code with a language; 4-space nested lists; no trailing
+  whitespace. No Gitiles `[TOC]`; `../` links are allowed on GitHub.
