@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hdtools — Governance Dashboard</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --panel: #16213e;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --green: #22c55e;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --grey: #6b7280;
+    --line: #334155;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.45;
+  }
+  header, main { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+  h1 { font-size: 1.5rem; margin: 0 0 0.25rem; }
+  h2 { font-size: 1.1rem; margin: 2rem 0 0.75rem; font-weight: 600; }
+  .sub { color: var(--muted); font-size: 0.9rem; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+  }
+  .card .label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .card .value { font-size: 1.6rem; font-weight: 700; margin: 0.35rem 0; }
+  .dot { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%; margin-right: 0.4rem; vertical-align: middle; }
+  .green { color: var(--green); } .amber { color: var(--amber); } .red { color: var(--red); } .grey { color: var(--grey); }
+  .bg-green { background: var(--green); } .bg-amber { background: var(--amber); } .bg-red { background: var(--red); } .bg-grey { background: var(--grey); }
+  .bar { display: flex; height: 10px; border-radius: 6px; overflow: hidden; background: #0f172a; margin-top: 0.6rem; }
+  .bar span { display: block; height: 100%; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; cursor: pointer; user-select: none; }
+  th:hover { color: var(--text); }
+  .pill {
+    display: inline-block;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .pill-red { background: #3f1d1d; color: var(--red); }
+  .pill-amber { background: #3f2e12; color: var(--amber); }
+  .pill-green { background: #143322; color: var(--green); }
+  .pill-grey { background: #2d3348; color: var(--grey); }
+  .heat { display: grid; grid-template-columns: 2.2fr 1fr 1fr 1fr; gap: 4px; max-width: 780px; }
+  .heat div { padding: 0.55rem 0.6rem; border-radius: 6px; background: var(--panel); font-size: 0.85rem; }
+  .heat .h { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; background: transparent; }
+  .cell-amber { background: #3f2e12; color: var(--amber); text-align: center; font-weight: 600; }
+  .sparks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+  .chart-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; }
+  .legend { color: var(--muted); font-size: 0.8rem; margin-top: 0.5rem; }
+  .legend i { display: inline-block; width: 18px; height: 3px; margin: 0 0.35rem 0 0.8rem; vertical-align: middle; }
+  footer { color: var(--muted); font-size: 0.8rem; margin: 2rem 0 1rem; }
+  @media (max-width: 800px) {
+    .cards, .sparks, .heat { grid-template-columns: 1fr; }
+  }
+  @media print {
+    body { background: #fff; color: #111; }
+    .card, .heat div { border: 1px solid #ccc; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Governance Dashboard</h1>
+  <p class="sub">hdtools · generated 2026-09-09 · source audit-2026-09-09.md (first audit)</p>
+</header>
+<main>
+  <section>
+    <h2>1. Governance Health Summary</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="label">Overall score</div>
+        <div class="value red"><span class="dot bg-red"></span>0.00</div>
+        <div class="sub">Conservative composite: min(falsifiability 0.00, drift health 0.50, debt health 1.00)</div>
+      </div>
+      <div class="card">
+        <div class="label">Constraint quality</div>
+        <div class="value amber">0 / 1 / 0</div>
+        <div class="sub">falsifiable / partial / vague</div>
+        <div class="bar" title="1 partial">
+          <span class="bg-amber" style="width:100%"></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="label">Last audit</div>
+        <div class="value green"><span class="dot bg-green"></span>2026-09-09</div>
+        <div class="sub">0 days ago · fresh (&lt; 90d)</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Constraint Quality</h2>
+    <table id="quality">
+      <thead>
+        <tr>
+          <th data-col="0">Constraint</th>
+          <th data-col="1">Falsifiability</th>
+          <th data-col="2">Drift risk</th>
+          <th data-col="3">Drift stage</th>
+          <th data-col="4">Frame alignment</th>
+          <th data-col="5">Promotion</th>
+          <th data-col="6">Last reviewed</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>User-facing copy is not medical</td>
+          <td><span class="pill pill-amber">partial</span></td>
+          <td><span class="pill pill-amber">medium</span></td>
+          <td>3</td>
+          <td><span class="pill pill-amber">partial</span></td>
+          <td>agent</td>
+          <td>2026-09-09</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="sub">Live HARNESS.md count: 1 governance constraint. Partially operationalised does not count as falsifiable. Copy-only meaning is operational; the merge gate is not wired.</p>
+  </section>
+
+  <section>
+    <h2>3. Governance Debt Inventory</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Severity</th>
+          <th>Blast</th>
+          <th>Score</th>
+          <th>Affected</th>
+          <th>Recommended action</th>
+          <th>Age</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Failure action is “block merge” and evidence is harness-enforcer PR output, but neither GitHub workflow runs harness-enforcer. The strict loop cannot fail this constraint.</td>
+          <td>2</td>
+          <td>2</td>
+          <td><strong>4</strong></td>
+          <td>User-facing copy is not medical</td>
+          <td>Dispatch harness-enforcer on PRs as a required check, or change the failure action to match today’s review-only process.</td>
+          <td>0 days</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="sub">Priority medium (score 3–4): address this quarter. Aggregate debt score 4.</p>
+  </section>
+
+  <section>
+    <h2>4. Drift Timeline</h2>
+    <div class="chart-wrap">
+      <svg viewBox="0 0 640 180" width="100%" height="180" role="img" aria-label="Drift and falsifiability over one audit">
+        <line x1="48" y1="20" x2="48" y2="150" stroke="#334155"/>
+        <line x1="48" y1="150" x2="620" y2="150" stroke="#334155"/>
+        <text x="8" y="24" fill="#94a3b8" font-size="11">1.0</text>
+        <text x="8" y="90" fill="#94a3b8" font-size="11">0.5</text>
+        <text x="8" y="154" fill="#94a3b8" font-size="11">0.0</text>
+        <text x="300" y="172" fill="#94a3b8" font-size="11">2026-09-09</text>
+        <!-- medium drift = 0.5 → y = 150 - 0.5*130 = 85 -->
+        <circle cx="334" cy="85" r="6" fill="#6b7280"/>
+        <!-- falsifiability 0 → y = 150 -->
+        <circle cx="334" cy="150" r="5" fill="#ef4444"/>
+        <line x1="48" y1="85" x2="620" y2="85" stroke="#6b7280" stroke-dasharray="4 4" opacity="0.5"/>
+      </svg>
+      <div class="legend">
+        <i style="background:#6b7280"></i> drift (medium=0.5, stable → grey)
+        <i style="background:#ef4444"></i> falsifiability ratio (0%)
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. Three-Frame Alignment Heatmap</h2>
+    <div class="heat">
+      <div class="h">Constraint</div>
+      <div class="h">Engineering</div>
+      <div class="h">Compliance</div>
+      <div class="h">AI system</div>
+      <div>User-facing copy is not medical</div>
+      <div class="cell-amber">partial</div>
+      <div class="cell-amber">partial</div>
+      <div class="cell-amber">partial</div>
+    </div>
+    <p class="sub">Aligned on copy-only meaning. Split on whether failure is a merge gate: engineering has no red check, compliance wants block merge, the named agent is not dispatched.</p>
+  </section>
+
+  <section>
+    <h2>6. Trend Comparison</h2>
+    <div class="sparks">
+      <div class="card">
+        <div class="label">Falsifiability ratio</div>
+        <div class="value red">0%</div>
+        <div class="sub">Need 2+ audits for a trend line</div>
+      </div>
+      <div class="card">
+        <div class="label">Debt inventory size</div>
+        <div class="value green">1</div>
+        <div class="sub">Need 2+ audits for a trend line</div>
+      </div>
+      <div class="card">
+        <div class="label">Drift velocity</div>
+        <div class="value grey">→ stable</div>
+        <div class="sub">First audit; no prior stage to compare</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Source: HARNESS.md live count + observability/governance/audit-2026-09-09.md. Regenerated by /governance-health --dashboard. No external dependencies.</footer>
+</main>
+<script type="application/json" id="governance-data">
+{
+  "generated": "2026-09-09",
+  "repo": "hdtools",
+  "live": {
+    "constraintCount": 1,
+    "constraints": [
+      {
+        "name": "User-facing copy is not medical",
+        "enforcement": "agent",
+        "scope": "pr",
+        "tool": "harness-enforcer"
+      }
+    ]
+  },
+  "audits": [
+    {
+      "date": "2026-09-09",
+      "totalConstraints": 1,
+      "falsifiable": 0,
+      "partial": 1,
+      "vague": 0,
+      "falsifiabilityRatio": 0,
+      "semanticDriftStage": 3,
+      "driftRisk": "medium",
+      "driftMapped": 0.5,
+      "driftVelocity": "stable",
+      "debtItems": 1,
+      "aggregateDebtScore": 4,
+      "frameAlignment": 0,
+      "overallScore": 0.0,
+      "constraints": [
+        {
+          "name": "User-facing copy is not medical",
+          "falsifiability": "partial",
+          "driftRisk": "medium",
+          "driftStage": 3,
+          "frameAlignment": "partial",
+          "promotion": "agent",
+          "lastReviewed": "2026-09-09",
+          "frames": {
+            "engineering": "partial",
+            "compliance": "partial",
+            "aiSystem": "partial"
+          }
+        }
+      ],
+      "debt": [
+        {
+          "description": "Failure action is block merge and evidence is harness-enforcer PR output, but neither GitHub workflow runs harness-enforcer.",
+          "severity": 2,
+          "blastRadius": 2,
+          "score": 4,
+          "affected": ["User-facing copy is not medical"],
+          "recommendedAction": "Dispatch harness-enforcer on PRs as a required check, or change the failure action to match today’s review-only process.",
+          "firstDetected": "2026-09-09",
+          "ageDays": 0
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "constraintCount": 1,
+    "falsifiabilityRatio": 0,
+    "falsifiable": 0,
+    "partial": 1,
+    "vague": 0,
+    "driftScore": "medium",
+    "driftStage": 3,
+    "debtItems": 1,
+    "aggregateDebtScore": 4,
+    "frameAlignment": 0,
+    "lastAudit": "2026-09-09",
+    "daysSinceAudit": 0,
+    "driftVelocity": "stable",
+    "overallScore": 0.0
+  }
+}
+</script>
+<script>
+(function () {
+  var table = document.getElementById("quality");
+  if (!table) return;
+  table.querySelectorAll("th").forEach(function (th) {
+    th.addEventListener("click", function () {
+      var col = +th.getAttribute("data-col");
+      var tbody = table.tBodies[0];
+      var rows = Array.prototype.slice.call(tbody.rows);
+      var dir = th.getAttribute("data-dir") === "asc" ? "desc" : "asc";
+      table.querySelectorAll("th").forEach(function (h) { h.removeAttribute("data-dir"); });
+      th.setAttribute("data-dir", dir);
+      rows.sort(function (a, b) {
+        var av = a.cells[col].innerText.trim().toLowerCase();
+        var bv = b.cells[col].innerText.trim().toLowerCase();
+        if (av < bv) return dir === "asc" ? -1 : 1;
+        if (av > bv) return dir === "asc" ? 1 : -1;
+        return 0;
+      });
+      rows.forEach(function (r) { tbody.appendChild(r); });
+    });
+  });
+})();
+</script>
+</body>
+</html>

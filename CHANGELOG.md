@@ -6,6 +6,8 @@
 
 - First governance audit (`observability/governance/audit-2026-09-09.md`):
   1 constraint, 0% falsifiable, Stage 3 drift, 1 debt item (score 4)
+- Governance health dashboard from that audit
+  (`observability/governance/governance-dashboard.html`)
 - Governance constraint **User-facing copy is not medical** (agent, PR):
   TUI chrome/help, README, ONBOARDING, and idea.md must not claim
   diagnosis, treatment, prescription, or medical advice
