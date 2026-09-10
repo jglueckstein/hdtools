@@ -4,6 +4,8 @@
 
 ### Added
 
+- User-configurable TUI `[colors]` in `config.toml` (16-color names,
+  `0`–`15`, or `#rrggbb` / `#rgb`), silent fallback, and `NO_COLOR`
 - Harness health snapshot 2026-09-10 (15/15, Trends vs 2026-09-09) and
   README Harness Health badge
 - First governance audit (`observability/governance/audit-2026-09-09.md`):

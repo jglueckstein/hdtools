@@ -19,13 +19,19 @@ one way to do that, since the app already uses Bubble Tea. Another
 styling library is fine if it fits the same stack.
 
 Color schemes should be user-configurable in the same config file as
-display units. The user names roles (at least: title, muted chrome,
-header, help, daily weight, trend, selection, error, status), not
-raw terminal sequences. A built-in default scheme is the 16-color
-palette that ships with the app (blue daily weight, red trend, matching
-the book's charts). Omitted or invalid colors fall back to that
-default. `NO_COLOR` disables color entirely; structure must remain
-readable. Changing scheme must not require a rebuild.
+display units (`[colors]` table). The user names roles (`title`,
+`muted`, `header`, `help`, `weight`, `trend`, `selection`, `error`,
+`status`), not raw terminal sequences. A role value is a 16-color name
+or a hex color (`#rrggbb` / `#rgb`) so the file can copy definitions
+from existing terminal and editor themes. A built-in default scheme is
+the 16-color palette that ships with the app (blue daily weight, red
+trend, matching the book's charts). Omitted or invalid colors fall back
+to that default. Hex still works on a 16-color terminal by mapping down
+to the nearest of those sixteen. `NO_COLOR` disables chromatic color;
+structure (headers, `>` marks, bold trend, reverse selection) must
+remain readable. Changing scheme must not require a rebuild.
+
+Change record: [docs/superpowers/specs/2026-09-09-color-schemes.md](docs/superpowers/specs/2026-09-09-color-schemes.md).
 
 ## Database
 

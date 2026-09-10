@@ -7,8 +7,9 @@
 // ~/.local/share). A missing file is not an error — first run is kilograms.
 // Invalid display_unit is an error so "lbs" cannot be stored as kg.
 //
-// Color schemes and NO_COLOR are specified in idea.md but not parsed here
-// yet. This package does not open the database.
+// [colors] is a sparse overlay of valid roles; invalid values fall back
+// silently so a typo cannot keep someone out of the log. Invalid
+// display_unit still fails. This package does not open the database.
 package config
 
 import (
@@ -30,6 +31,9 @@ const (
 // fields later does not break older files.
 type Config struct {
 	DisplayUnit units.Unit `toml:"display_unit"`
+	// Colors is the sparse overlay of valid [colors] roles. Omitted roles
+	// use the TUI built-in default. Load fills this from the file.
+	Colors map[string]string `toml:"colors,omitempty"`
 }
 
 // Default is first-run preferences: kilograms, matching storage.
@@ -92,6 +96,7 @@ func Load(path string) (Config, error) {
 	}
 	var raw struct {
 		DisplayUnit string `toml:"display_unit"`
+		Colors      any    `toml:"colors"`
 	}
 	if err := toml.Unmarshal(data, &raw); err != nil {
 		return Config{}, fmt.Errorf("parse config %s: %w", path, err)
@@ -104,6 +109,7 @@ func Load(path string) (Config, error) {
 		}
 		cfg.DisplayUnit = u
 	}
+	cfg.Colors = parseColorOverlay(raw.Colors)
 	return cfg, nil
 }
 
