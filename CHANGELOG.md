@@ -44,6 +44,9 @@
 
 ### Changed
 
+- Harness Status and README badge 14/14 → 15/15 after `/harness-audit`
+- Sync Cursor, Copilot, and Windsurf copies with **User-facing copy is not medical**
+- Regenerate ONBOARDING.md: fifteenth constraint, and CI vs agent-review split
 - Harness Status and README badge 8/8 → 14/14 after `/harness-audit`
   and promoting the extracted constraints (drift yes:
   convention-file lag)

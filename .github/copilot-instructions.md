@@ -125,3 +125,14 @@ directly — run `/convention-sync` to regenerate.
 - **Enforcement**: deterministic
 - **Tool**: scripts/check-no-live-log.sh
 - **Scope**: pr
+
+### User-facing copy is not medical
+
+- **Rule**: User-facing copy in TUI chrome and help strings, README.md,
+  ONBOARDING.md, and idea.md product claims must not present the
+  application as diagnosing, treating, prescribing, or giving medical
+  advice. Paraphrase counts. Internal docs (HARNESS.md, CLAUDE.md,
+  AGENTS.md) and non-product comments are out of scope.
+- **Enforcement**: agent
+- **Tool**: harness-enforcer
+- **Scope**: pr
