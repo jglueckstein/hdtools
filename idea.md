@@ -121,3 +121,9 @@ Shell scripts follow the main points of
 quoted `"${var}"`; `$(...)` not backticks; `[[ ... ]]` not `[ ... ]`;
 errors on STDERR; file header comments; `scripts/lib/*.sh` are not
 executable. ShellCheck is recommended.
+
+Go source follows the main points of
+[Google's Go Style Guide](https://google.github.io/styleguide/go/guide):
+`gofmt`, MixedCaps, no fixed line length, package comments, and
+package `testing` only. The 80-column wrap used for Markdown and
+shell does not apply to `.go` files.
