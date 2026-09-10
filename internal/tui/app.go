@@ -30,8 +30,8 @@ const (
 	screenMonth
 )
 
-// App is the root Bubble Tea model: a log list, a day form, and the
-// display unit from config.toml.
+// App is the root Bubble Tea model: a log list, a day form, a monthly
+// sheet, and the display unit from config.toml.
 type App struct {
 	store     *dailylog.Store
 	cfg       config.Config
@@ -301,7 +301,7 @@ func (a *App) saveMonthCell() tea.Msg {
 	return savedMsg{}
 }
 
-// View renders the list or the day form.
+// View renders the list, the day form, or the month sheet.
 func (a *App) View() string {
 	switch a.screen {
 	case screenForm:

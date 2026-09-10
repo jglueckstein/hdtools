@@ -24,6 +24,11 @@
 
 ### Fixed
 
+- Drop the HARNESS.md pointer at a plugin spec this tree never vendored
+- Document that origin exists; stop telling agents to commit on `master`
+- App and View comments include the month sheet
+- `layout.go` preamble states what the file does not do
+- Remove unused month-sheet `cellSeed`
 - Wrap remaining bare `return err` in config, form, and store
 - Create new `config.toml` and SQLite log files as `0600`
 - Pin `gitleaks/gitleaks-action` to v3.0.0 so Harness Constraints CI
