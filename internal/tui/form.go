@@ -218,8 +218,11 @@ func formatWeight(w float64) string {
 	return strconv.FormatFloat(w, 'f', 1, 64)
 }
 
+// nowFn is time.Now in production. Tests replace it to freeze "today".
+var nowFn = time.Now
+
 func localToday() time.Time {
-	now := time.Now()
+	now := nowFn()
 	y, m, d := now.Date()
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
