@@ -79,10 +79,17 @@ The tool should be able to generate pdf of the monthly log sheets
 monthly charts.
 
 The TUI should be able to display on screen the monthly charts and the
-long term charts.
+long term charts. A monthly chart also shows Monthly Loss in the
+display weight unit and Daily Deficit in calories, from the first and
+last trend of the plotted span, as in the book's pencil-and-paper
+analysis (3500 kcal per pound). The current month ends at today.
 
 The style of the charts is described more fully [in this
 section](https://www.fourmilab.ch/hackdiet/e4/signalnoise.html)
+
+Change record (monthly, on screen):
+[docs/superpowers/specs/2026-09-10-monthly-charts.md](docs/superpowers/specs/2026-09-10-monthly-charts.md).
+Long-term charts and PDF are not in that slice.
 
 ## Meal Planning
 

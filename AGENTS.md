@@ -22,6 +22,8 @@
   treat non-empty output as failure (`test -z "$(gofmt -l .)"`).
 - `ApplyTrend` needs the full chronological series. Loading only the
   current month drops carry-forward from the previous month.
+- A chart of the current calendar month ends at today. Do not plot
+  carried trend into the future.
 - Display-unit conversion (`units.FromKG`) is for the TUI only. Saving
   must go through `units.ToKG` so SQLite always stores kilograms.
 - `View()` emits chroma unless `NO_COLOR` is non-empty; the process does
@@ -36,6 +38,9 @@
   store the display unit in each row (rejected — mixed series).
 - Decision: do not persist trend. Reason: a backdated weight edit would
   desync a stored moving average. `ApplyTrend` is the source of truth.
+- Decision: Monthly Loss is first minus last trend of the plotted
+  span; Daily Deficit is that loss in pounds × 3500 ÷ days in the
+  span. Reason: the book's pencil identity. Neither number is stored.
 - Decision: config file under XDG, database under XDG data, not
   `~/.hdtools`. Reason: spec-compliant Unix paths; config is
   hand-editable and must not live in SQLite.

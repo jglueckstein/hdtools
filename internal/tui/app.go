@@ -3,7 +3,8 @@
 // It owns Bubble Tea state and talks to dailylog.Store but never opens
 // SQLite or imports database/sql, so tests inject a file and a later
 // remote database can reuse the same Model. Missing days are
-// dailylog.ErrNotFound. Charts, meal planning, and PDF are out of scope.
+// dailylog.ErrNotFound. Long-term charts, meal planning, and PDF are
+// out of scope.
 //
 // Color comes from a palette built at New from config.toml and NO_COLOR.
 // Column geometry lives in layout.go so headers stay over numbers after
@@ -29,23 +30,25 @@ const (
 	screenList screen = iota
 	screenForm
 	screenMonth
+	screenChart
 )
 
 // App is the root Bubble Tea model: a log list, a day form, a monthly
 // sheet, and the display unit from config.toml.
 type App struct {
-	store     *dailylog.Store
-	cfg       config.Config
-	dbPath    string
-	logs      []dailylog.DailyLog
-	cursor    int
-	screen    screen
-	form      formModel
-	month     monthModel
-	afterSave screen
-	err       error
-	status    string
-	pal       palette
+	store      *dailylog.Store
+	cfg        config.Config
+	dbPath     string
+	logs       []dailylog.DailyLog
+	cursor     int
+	screen     screen
+	form       formModel
+	month      monthModel
+	afterSave  screen
+	afterChart screen
+	err        error
+	status     string
+	pal        palette
 }
 
 type loadedMsg struct {
@@ -147,6 +150,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a.updateForm(msg)
 		case screenMonth:
 			return a.updateMonth(msg)
+		case screenChart:
+			return a.updateChart(msg)
 		default:
 			return a.updateList(msg)
 		}
@@ -163,6 +168,9 @@ func (a *App) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case "m":
 		a.openMonth()
+		return a, nil
+	case "c":
+		a.openChart()
 		return a, nil
 	case "enter":
 		if len(a.logs) == 0 {
@@ -271,6 +279,9 @@ func (a *App) updateMonth(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.month.prevMonth()
 	case "]":
 		a.month.nextMonth()
+	case "c":
+		a.openChart()
+		return a, nil
 	case "enter":
 		a.openForm(a.month.cursorDay(), screenMonth)
 		return a, nil
@@ -330,6 +341,8 @@ func (a *App) View() string {
 	case screenMonth:
 		sheet := buildMonthSheet(a.logs, a.month.year, a.month.month)
 		return a.month.view(sheet, a.cfg.DisplayUnit, a.dbPath, a.status, a.pal)
+	case screenChart:
+		return a.chartView()
 	default:
 		return a.listView()
 	}
@@ -395,6 +408,6 @@ func (a *App) listView() string {
 	if a.status != "" {
 		fmt.Fprintf(&b, "\n%s\n", p.status.Render(a.status))
 	}
-	fmt.Fprintf(&b, "\n%s\n", p.help.Render("n new   enter edit   m month   q quit"))
+	fmt.Fprintf(&b, "\n%s\n", p.help.Render("n new   enter edit   m month   c chart   q quit"))
 	return b.String()
 }

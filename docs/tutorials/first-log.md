@@ -35,6 +35,8 @@ computed from the series; you do not type it.
 *   Arrow keys move the selection. `>` marks the selected row.
 *   Press `m` for the monthly sheet of the selected day, then Esc to
     return.
+*   Press `c` for that month's chart (daily marks and trend), then Esc
+    to return.
 *   Press `q` to quit.
 
 Your log is in the SQLite file created on first run. Where that file

@@ -4,6 +4,8 @@
 
 ### Added
 
+- On-screen monthly weight chart (`c`): daily marks, trend path,
+  Monthly Loss, and Daily Deficit
 - Go source follows Google's Go Style Guide (`gofmt`, MixedCaps, no
   fixed line length)
 - Shell scripts follow Google's Shell Style Guide (`#!/bin/bash`,
