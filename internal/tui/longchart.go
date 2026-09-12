@@ -207,7 +207,7 @@ func (a *App) longView() string {
 	}
 	daily := len(span) <= w
 	cols := bucketSpan(span, w)
-	b.WriteString(renderLongPlot(cols, unit, p, daily))
+	b.WriteString(renderLongPlot(span, cols, unit, p, daily))
 	if line, ok := longAnalysis(span, unit); ok {
 		fmt.Fprintf(&b, "\n%s\n", line)
 	}
@@ -230,7 +230,7 @@ func longAnalysis(span []sheetDay, unit units.Unit) (string, bool) {
 	return fmt.Sprintf("Loss: %.1f %s   Daily deficit: %d cal", loss, unit, kcal), true
 }
 
-func renderLongPlot(span []sheetDay, unit units.Unit, p palette, daily bool) string {
+func renderLongPlot(orig, span []sheetDay, unit units.Unit, p palette, daily bool) string {
 	n := len(span)
 	ymin, ymax, ok := longYRange(span, unit, daily)
 	if !ok {
@@ -324,17 +324,119 @@ func renderLongPlot(span []sheetDay, unit units.Unit, p palette, daily bool) str
 		}
 		b.WriteByte('\n')
 	}
-	fmt.Fprintf(&b, "%s%d", strings.Repeat(" ", 6), 1)
-	if n > 1 {
-		last := fmt.Sprintf("%d", n)
-		pad := n - 1 - len(last)
-		if pad < 1 {
-			pad = 1
-		}
-		fmt.Fprintf(&b, "%s%s", strings.Repeat(" ", pad), last)
-	}
-	b.WriteByte('\n')
+	b.WriteString(formatLongXAxis(n, placeLongXLabels(monthTicks(orig, n), n)))
 	return b.String()
+}
+
+type monthTick struct {
+	col     int
+	mon, yy string
+}
+
+type xPlaced struct {
+	col     int
+	two     bool
+	mon, yy string
+}
+
+func dayCol(d, w, idx int) int {
+	if d <= w {
+		return idx
+	}
+	for i := 0; i < w; i++ {
+		if idx < (i+1)*d/w {
+			return i
+		}
+	}
+	return w - 1
+}
+
+func monthTicks(orig []sheetDay, nCols int) []monthTick {
+	d := len(orig)
+	if d == 0 || nCols < 1 {
+		return nil
+	}
+	seen := make(map[int]bool)
+	var ticks []monthTick
+	for i, row := range orig {
+		if i > 0 && row.Day.Day() != 1 {
+			continue
+		}
+		c := dayCol(d, nCols, i)
+		if seen[c] {
+			continue
+		}
+		seen[c] = true
+		ticks = append(ticks, monthTick{
+			col: c,
+			mon: row.Day.Format("Jan"),
+			yy:  row.Day.Format("06"),
+		})
+	}
+	return ticks
+}
+
+func placeLongXLabels(ticks []monthTick, nCols int) []xPlaced {
+	var out []xPlaced
+	prevEnd := 0
+	for i, t := range ticks {
+		if t.col < prevEnd {
+			continue
+		}
+		next := nCols
+		if i+1 < len(ticks) {
+			next = ticks[i+1].col
+		}
+		gap := next - t.col
+		if gap >= 6 {
+			out = append(out, xPlaced{col: t.col, two: false, mon: t.mon, yy: t.yy})
+			prevEnd = t.col + 6
+			continue
+		}
+		if i == 0 || gap >= 3 {
+			out = append(out, xPlaced{col: t.col, two: true, mon: t.mon, yy: t.yy})
+			prevEnd = t.col + 3
+		}
+	}
+	return out
+}
+
+func formatLongXAxis(n int, labels []xPlaced) string {
+	if n < 1 {
+		return ""
+	}
+	line1 := make([]rune, n)
+	line2 := make([]rune, n)
+	for i := range line1 {
+		line1[i] = ' '
+		line2[i] = ' '
+	}
+	two := false
+	write := func(dst []rune, at int, s string) {
+		for i, r := range s {
+			if at+i >= len(dst) {
+				break
+			}
+			if at+i >= 0 {
+				dst[at+i] = r
+			}
+		}
+	}
+	for _, L := range labels {
+		if L.two {
+			two = true
+			write(line1, L.col, L.mon)
+			write(line2, L.col, L.yy)
+			continue
+		}
+		write(line1, L.col, L.mon+" "+L.yy)
+	}
+	gutter := strings.Repeat(" ", 6)
+	out := gutter + string(line1) + "\n"
+	if two {
+		out += gutter + string(line2) + "\n"
+	}
+	return out
 }
 
 func longYRange(span []sheetDay, unit units.Unit, daily bool) (ymin, ymax float64, ok bool) {

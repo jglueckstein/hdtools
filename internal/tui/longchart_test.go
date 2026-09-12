@@ -399,3 +399,136 @@ func TestLongChartHelpSaysKind(t *testing.T) {
 		t.Fatalf("help cue missing: %q", app.View())
 	}
 }
+
+func TestLongChartXLabelsQuarterlyOneLine(t *testing.T) {
+	freezeToday(t, nov1990())
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	press(app, "l")
+	view := visible(app.View())
+	for _, want := range []string{"Sep 90", "Oct 90", "Nov 90"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("missing %q in %q", want, view)
+		}
+	}
+}
+
+func TestLongChartXLabelsCompleteTwoLine(t *testing.T) {
+	freezeToday(t, nov1990())
+	store := openStore(t)
+	w := 80.0
+	first, err := dailylog.New(time.Date(1989, 4, 15, 0, 0, 0, 0, time.UTC), &w, 8, 0, false, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Upsert(context.Background(), first); err != nil {
+		t.Fatal(err)
+	}
+	app := twoDayApp(t, store)
+	press(app, "l", "]", "]", "]")
+	view := visible(app.View())
+	if strings.Contains(view, "Apr 89") {
+		t.Fatalf("one-line label on dense complete: %q", view)
+	}
+	if !strings.Contains(view, "Apr") || !strings.Contains(view, "89") {
+		t.Fatalf("want two-line Apr/89: %q", view)
+	}
+}
+
+func TestLongChartXLabelsSkipMonths(t *testing.T) {
+	freezeToday(t, nov1990())
+	store := openStore(t)
+	w := 80.0
+	first, err := dailylog.New(time.Date(1988, 1, 1, 0, 0, 0, 0, time.UTC), &w, 8, 0, false, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Upsert(context.Background(), first); err != nil {
+		t.Fatal(err)
+	}
+	app := twoDayApp(t, store)
+	press(app, "l", "]", "]", "]")
+	ticks := placeLongXLabels(monthTicks(sheetRange(app.logs, time.Date(1988, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC)), 72), 72)
+	if len(ticks) == 0 {
+		t.Fatal("no X labels")
+	}
+	months := 0
+	for d := time.Date(1988, 1, 1, 0, 0, 0, 0, time.UTC); !d.After(time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC)); d = d.AddDate(0, 1, 0) {
+		months++
+	}
+	if len(ticks) >= months {
+		t.Fatalf("placed %d labels for %d months, want skips", len(ticks), months)
+	}
+	for i := 1; i < len(ticks); i++ {
+		if ticks[i].col < ticks[i-1].col+3 {
+			t.Fatalf("overlap %v then %v", ticks[i-1], ticks[i])
+		}
+		if !ticks[i].two {
+			t.Fatalf("expected two-line at col %d", ticks[i].col)
+		}
+	}
+}
+
+func TestLongChartXLabelsMidMonthStart(t *testing.T) {
+	freezeToday(t, nov1990())
+	store := openStore(t)
+	w := 80.0
+	first, err := dailylog.New(time.Date(1989, 4, 15, 0, 0, 0, 0, time.UTC), &w, 8, 0, false, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Upsert(context.Background(), first); err != nil {
+		t.Fatal(err)
+	}
+	app := twoDayApp(t, store)
+	press(app, "l", "]", "]", "]")
+	view := visible(app.View())
+	if !strings.Contains(view, "Apr") || !strings.Contains(view, "89") {
+		t.Fatalf("want Apr 89 at start: %q", view)
+	}
+}
+
+func TestLongChartEmptyHasNoMonthXLabels(t *testing.T) {
+	store := openStore(t)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "l")
+	view := visible(app.View())
+	for _, m := range []string{"Jan ", "Feb ", "Mar ", "Apr ", "May ", "Jun ", "Jul ", "Aug ", "Sep ", "Oct ", "Nov ", "Dec "} {
+		if strings.Contains(view, m) {
+			t.Fatalf("X label %q on empty: %q", m, view)
+		}
+	}
+}
+
+func TestPlaceLongXLabelsModes(t *testing.T) {
+	t.Parallel()
+	one := placeLongXLabels([]monthTick{
+		{col: 0, mon: "Sep", yy: "90"},
+		{col: 30, mon: "Oct", yy: "90"},
+		{col: 61, mon: "Nov", yy: "90"},
+	}, 71)
+	if len(one) != 3 || one[0].two || one[1].two {
+		t.Fatalf("one-line: %#v", one)
+	}
+	two := placeLongXLabels([]monthTick{
+		{col: 0, mon: "Apr", yy: "89"},
+		{col: 4, mon: "May", yy: "89"},
+		{col: 8, mon: "Jun", yy: "89"},
+	}, 72)
+	if len(two) < 2 || !two[0].two || !two[1].two {
+		t.Fatalf("two-line: %#v", two)
+	}
+	skip := placeLongXLabels([]monthTick{
+		{col: 0, mon: "Jan", yy: "88"},
+		{col: 2, mon: "Feb", yy: "88"},
+		{col: 4, mon: "Mar", yy: "88"},
+		{col: 6, mon: "Apr", yy: "88"},
+	}, 72)
+	if len(skip) >= 4 {
+		t.Fatalf("want skips: %#v", skip)
+	}
+	if skip[0].col != 0 || !skip[0].two {
+		t.Fatalf("first %#v", skip[0])
+	}
+}

@@ -1,7 +1,8 @@
 # Long-term chart: month-start X labels
 
 **Date**: 2026-09-12
-**Status**: draft
+**Status**: approved
+**Issue**: [#42](https://github.com/jglueckstein/hdtools/issues/42)
 **Backlog**: [`idea.md`](../../../idea.md) (Monthly Log)
 **Amends**:
 [`2026-09-12-long-term-charts.md`](2026-09-12-long-term-charts.md)
