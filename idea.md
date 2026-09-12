@@ -84,12 +84,30 @@ display weight unit and Daily Deficit in calories, from the first and
 last trend of the plotted span, as in the book's pencil-and-paper
 analysis (3500 kcal per pound). The current month ends at today.
 
+Monthly charts (TUI and later PDF) should match the Excel monthly
+chart's floats-and-sinkers look:
+
+*   A text box centered above the plot names the month and year
+    (for example `June 1990`). In Excel that box has a red border,
+    blue background, and yellow foreground. The TUI should match
+    those colours as far as the terminal allows. Under `NO_COLOR`,
+    the month and year stay centered and readable without colour.
+*   Each daily weight is a float or sinker: a mark tied to the trend
+    with a thin vertical stem (green in Excel). The stem is part of
+    the look, not an extra logged series.
+
+PDF monthly charts should use the same title box and stems, not a
+stripped-down plot.
+
 The style of the charts is described more fully [in this
 section](https://www.fourmilab.ch/hackdiet/e4/signalnoise.html)
 
 Change record (monthly, on screen):
 [docs/superpowers/specs/2026-09-10-monthly-charts.md](docs/superpowers/specs/2026-09-10-monthly-charts.md).
-Long-term charts and PDF are not in that slice.
+Long-term charts and PDF layout are not in that slice.
+
+Change record (title box and stems):
+[docs/superpowers/specs/2026-09-11-monthly-chart-floats-sinkers.md](docs/superpowers/specs/2026-09-11-monthly-chart-floats-sinkers.md).
 
 ## Meal Planning
 

@@ -1,17 +1,22 @@
 package tui
 
 // The monthly chart is the book's signal/noise plot for one sitting:
-// daily weight as marks, trend as a path, Monthly Loss and Daily
-// Deficit from first and last trend of the plotted span. This file
-// does not open SQLite or edit the log.
+// a month-year title box, daily weight as marks, green stems from
+// each mark to the trend (floats and sinkers), the trend path, and
+// Monthly Loss and Daily Deficit from first and last trend of the
+// plotted span. Title-box and stem colours are Excel defaults, not
+// [colors] roles. This file does not open SQLite, edit the log, or
+// emit PDF.
 
 import (
 	"fmt"
 	"math"
+	"os"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 	"github.com/jglueckstein/hdtools/internal/units"
 )
@@ -60,15 +65,45 @@ func (a *App) updateChart(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
+func monthYearLabel(month time.Month, year int) string {
+	return fmt.Sprintf("%s %d", month.String(), year)
+}
+
+func monthYearBox(month time.Month, year int, plotWidth int) string {
+	s := lipgloss.NewStyle().Padding(0, 1)
+	if os.Getenv("NO_COLOR") == "" {
+		s = s.
+			Foreground(lipgloss.Color("3")).
+			Background(lipgloss.Color("4")).
+			Border(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("1"))
+	}
+	box := s.Render(monthYearLabel(month, year))
+	if plotWidth < 1 {
+		return box
+	}
+	return lipgloss.PlaceHorizontal(plotWidth, lipgloss.Center, box)
+}
+
+func stemCell(ch string) string {
+	if os.Getenv("NO_COLOR") != "" {
+		return ch
+	}
+	return lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Render(ch)
+}
+
 func (a *App) chartView() string {
 	p := a.pal
 	unit := a.cfg.DisplayUnit
-	title := fmt.Sprintf("hdtools — %s %d  (weight %s)", a.month.month.String(), a.month.year, unit)
-	var b strings.Builder
-	fmt.Fprintf(&b, "%s\n", p.title.Render(title))
-	fmt.Fprintf(&b, "%s\n\n", p.muted.Render("db: "+a.dbPath))
-
 	last := lastPlottedDay(a.month.year, a.month.month)
+	plotWidth := 6 + last
+	if last <= 0 {
+		plotWidth = 6 + daysInMonth(a.month.year, a.month.month)
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s\n", monthYearBox(a.month.month, a.month.year, plotWidth))
+	fmt.Fprintf(&b, "%s\n\n", p.muted.Render(fmt.Sprintf("db: %s   weight %s", a.dbPath, unit)))
+
 	sheet := buildMonthSheet(a.logs, a.month.year, a.month.month)
 	if last <= 0 {
 		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(empty month)"), p.help.Render("esc back   [ ] month   q quit"))
@@ -163,6 +198,27 @@ func renderPlot(span []sheetDay, unit units.Unit, p palette) string {
 		hasPrev = true
 	}
 	for i, d := range span {
+		if d.Log.Weight == nil || !d.HasTrend {
+			continue
+		}
+		wy, errW := units.FromKG(*d.Log.Weight, unit)
+		ty, errT := units.FromKG(d.Trend, unit)
+		if errW != nil || errT != nil {
+			continue
+		}
+		wr, tr := yToRow(wy), yToRow(ty)
+		if wr == tr {
+			continue
+		}
+		lo, hi := wr, tr
+		if lo > hi {
+			lo, hi = hi, lo
+		}
+		for r := lo + 1; r < hi; r++ {
+			grid[r][i] = '|'
+		}
+	}
+	for i, d := range span {
 		if d.Log.Weight == nil {
 			continue
 		}
@@ -189,6 +245,8 @@ func renderPlot(span []sheetDay, unit units.Unit, p palette) string {
 				s = p.weight.Render(s)
 			case '-', '/', '\\':
 				s = p.trend.Render(s)
+			case '|':
+				s = stemCell(s)
 			}
 			b.WriteString(s)
 		}

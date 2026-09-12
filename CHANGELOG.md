@@ -4,6 +4,8 @@
 
 ### Added
 
+- Monthly chart title box (month and year) and green float/sinker
+  stems from each daily mark to the trend
 - On-screen monthly weight chart (`c`): daily marks, trend path,
   Monthly Loss, and Daily Deficit
 - Go source follows Google's Go Style Guide (`gofmt`, MixedCaps, no
