@@ -36,6 +36,8 @@ computed from the series; you do not type it.
 *   Press `m` for the monthly sheet of the selected day, then Esc to
     return.
 *   Press `c` for that month's chart (daily marks and trend), then Esc
+*   Press `l` for a long-term chart (quarterly / year / all history),
+    then `[` / `]` to change kind, then Esc
     to return.
 *   Press `q` to quit.
 

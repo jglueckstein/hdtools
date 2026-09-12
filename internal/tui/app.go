@@ -1,10 +1,9 @@
-// Package tui is the screen: list, day form, and monthly sheet.
+// Package tui is the screen: list, day form, monthly sheet, and charts.
 //
 // It owns Bubble Tea state and talks to dailylog.Store but never opens
 // SQLite or imports database/sql, so tests inject a file and a later
 // remote database can reuse the same Model. Missing days are
-// dailylog.ErrNotFound. Long-term charts, meal planning, and PDF are
-// out of scope.
+// dailylog.ErrNotFound. Meal planning and PDF are out of scope.
 //
 // Color comes from a palette built at New from config.toml and NO_COLOR.
 // Column geometry lives in layout.go so headers stay over numbers after
@@ -31,10 +30,11 @@ const (
 	screenForm
 	screenMonth
 	screenChart
+	screenLong
 )
 
 // App is the root Bubble Tea model: a log list, a day form, a monthly
-// sheet, and the display unit from config.toml.
+// sheet, charts, and the display unit from config.toml.
 type App struct {
 	store      *dailylog.Store
 	cfg        config.Config
@@ -46,6 +46,9 @@ type App struct {
 	month      monthModel
 	afterSave  screen
 	afterChart screen
+	afterLong  screen
+	longKind   longKind
+	termCols   int
 	err        error
 	status     string
 	pal        palette
@@ -144,6 +147,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		a.err = msg.err
 		return a, nil
+	case tea.WindowSizeMsg:
+		a.termCols = msg.Width
+		return a, nil
 	case tea.KeyMsg:
 		switch a.screen {
 		case screenForm:
@@ -152,6 +158,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a.updateMonth(msg)
 		case screenChart:
 			return a.updateChart(msg)
+		case screenLong:
+			return a.updateLong(msg)
 		default:
 			return a.updateList(msg)
 		}
@@ -171,6 +179,9 @@ func (a *App) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case "c":
 		a.openChart()
+		return a, nil
+	case "l":
+		a.openLong()
 		return a, nil
 	case "enter":
 		if len(a.logs) == 0 {
@@ -282,6 +293,9 @@ func (a *App) updateMonth(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "c":
 		a.openChart()
 		return a, nil
+	case "l":
+		a.openLong()
+		return a, nil
 	case "enter":
 		a.openForm(a.month.cursorDay(), screenMonth)
 		return a, nil
@@ -333,7 +347,7 @@ func (a *App) saveMonthCellAndAdvance() tea.Msg {
 	return msg
 }
 
-// View renders the list, the day form, or the month sheet.
+// View renders the list, the day form, the month sheet, or a chart.
 func (a *App) View() string {
 	switch a.screen {
 	case screenForm:
@@ -343,6 +357,8 @@ func (a *App) View() string {
 		return a.month.view(sheet, a.cfg.DisplayUnit, a.dbPath, a.status, a.pal)
 	case screenChart:
 		return a.chartView()
+	case screenLong:
+		return a.longView()
 	default:
 		return a.listView()
 	}
@@ -358,7 +374,7 @@ func (a *App) listView() string {
 		return b.String()
 	}
 	if len(a.logs) == 0 {
-		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(no entries yet)"), p.help.Render("n new day   m month   q quit"))
+		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(no entries yet)"), p.help.Render("n new day   m month   l long   q quit"))
 		return b.String()
 	}
 	fmt.Fprintf(&b, "%s\n", p.header.Render(listHeader()))
@@ -408,6 +424,6 @@ func (a *App) listView() string {
 	if a.status != "" {
 		fmt.Fprintf(&b, "\n%s\n", p.status.Render(a.status))
 	}
-	fmt.Fprintf(&b, "\n%s\n", p.help.Render("n new   enter edit   m month   c chart   q quit"))
+	fmt.Fprintf(&b, "\n%s\n", p.help.Render("n new   enter edit   m month   c chart   l long   q quit"))
 	return b.String()
 }

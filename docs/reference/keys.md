@@ -6,6 +6,7 @@
 | Enter | list | edit selected day |
 | `m` | list | monthly sheet |
 | `c` | list or month (not editing) | monthly chart |
+| `l` | list, month (not editing), or monthly chart | long-term chart |
 | `q` | list, month, or chart | quit |
 | Tab | form | next field |
 | Enter | form | save |
@@ -14,6 +15,7 @@
 | Tab | month | accept cell (if editing) and move to the next |
 | Type | month | edit cell |
 | Space | month | toggle workout |
-| `[` / `]` | month or chart | previous / next month |
+| `[` / `]` | month or monthly chart | previous / next month |
+| `[` / `]` | long-term chart | previous / next kind |
 
 The selected list row, month cell, or form field is marked with `>`.

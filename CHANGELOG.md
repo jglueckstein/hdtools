@@ -4,6 +4,8 @@
 
 ### Added
 
+- On-screen long-term charts (`l`): quarterly, semiannual, annual,
+  and complete history; trend path, daily line when the span fits
 - Monthly chart title box (month and year) and green float/sinker
   stems from each daily mark to the trend
 - On-screen monthly weight chart (`c`): daily marks, trend path,

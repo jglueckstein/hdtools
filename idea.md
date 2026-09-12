@@ -109,6 +109,17 @@ Long-term charts and PDF layout are not in that slice.
 Change record (title box and stems):
 [docs/superpowers/specs/2026-09-11-monthly-chart-floats-sinkers.md](docs/superpowers/specs/2026-09-11-monthly-chart-floats-sinkers.md).
 
+Long-term charts follow the book's WEIGHT menu: four views
+(quarterly, semiannual, annual, complete history), always ending at
+the latest data, with daily weight as a thin line and trend as a
+thick line — not the monthly floats-and-sinkers form. `l` opens that
+screen; `[` / `]` cycle the four kinds. Loss and Daily Deficit use
+the same first-and-last trend identity over the window's day count.
+
+Change record (long-term, on screen):
+[docs/superpowers/specs/2026-09-12-long-term-charts.md](docs/superpowers/specs/2026-09-12-long-term-charts.md).
+PDF is not in that slice.
+
 ## Meal Planning
 
 The tool should implement the meal planning system described

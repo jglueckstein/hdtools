@@ -61,6 +61,9 @@ func (a *App) updateChart(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.month.prevMonth()
 	case "]":
 		a.month.nextMonth()
+	case "l":
+		a.openLong()
+		return a, nil
 	}
 	return a, nil
 }
@@ -69,7 +72,7 @@ func monthYearLabel(month time.Month, year int) string {
 	return fmt.Sprintf("%s %d", month.String(), year)
 }
 
-func monthYearBox(month time.Month, year int, plotWidth int) string {
+func titleBox(text string, plotWidth int) string {
 	s := lipgloss.NewStyle().Padding(0, 1)
 	if os.Getenv("NO_COLOR") == "" {
 		s = s.
@@ -78,11 +81,15 @@ func monthYearBox(month time.Month, year int, plotWidth int) string {
 			Border(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("1"))
 	}
-	box := s.Render(monthYearLabel(month, year))
+	box := s.Render(text)
 	if plotWidth < 1 {
 		return box
 	}
 	return lipgloss.PlaceHorizontal(plotWidth, lipgloss.Center, box)
+}
+
+func monthYearBox(month time.Month, year int, plotWidth int) string {
+	return titleBox(monthYearLabel(month, year), plotWidth)
 }
 
 func stemCell(ch string) string {
@@ -106,12 +113,12 @@ func (a *App) chartView() string {
 
 	sheet := buildMonthSheet(a.logs, a.month.year, a.month.month)
 	if last <= 0 {
-		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(empty month)"), p.help.Render("esc back   [ ] month   q quit"))
+		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(empty month)"), p.help.Render("esc back   [ ] month   l long   q quit"))
 		return b.String()
 	}
 	span := sheet[:last]
 	if chartEmpty(span) {
-		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(empty month)"), p.help.Render("esc back   [ ] month   q quit"))
+		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(empty month)"), p.help.Render("esc back   [ ] month   l long   q quit"))
 		return b.String()
 	}
 
@@ -119,7 +126,7 @@ func (a *App) chartView() string {
 	if line, ok := analysisLine(span, unit); ok {
 		fmt.Fprintf(&b, "\n%s\n", line)
 	}
-	fmt.Fprintf(&b, "\n%s\n", p.help.Render("esc back   [ ] month   q quit"))
+	fmt.Fprintf(&b, "\n%s\n", p.help.Render("esc back   [ ] month   l long   q quit"))
 	return b.String()
 }
 
