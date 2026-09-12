@@ -79,7 +79,10 @@ The tool should be able to generate pdf of the monthly log sheets
 monthly charts.
 
 The TUI should be able to display on screen the monthly charts and the
-long term charts. A monthly chart also shows Monthly Loss in the
+long term charts. Every on-screen chart (monthly and all four
+long-term kinds) uses the same vertical scale: (min of plotted
+values) − 2 lb through (max) + 2 lb, with the equivalent margin in
+kg and stone. A monthly chart also shows Monthly Loss in the
 display weight unit and Daily Deficit in calories, from the first and
 last trend of the plotted span, as in the book's pencil-and-paper
 analysis (3500 kcal per pound). The current month ends at today.
@@ -119,6 +122,16 @@ the same first-and-last trend identity over the window's day count.
 Change record (long-term, on screen):
 [docs/superpowers/specs/2026-09-12-long-term-charts.md](docs/superpowers/specs/2026-09-12-long-term-charts.md).
 PDF is not in that slice.
+
+Change record (Y range, every on-screen chart):
+[docs/superpowers/specs/2026-09-12-chart-y-range.md](docs/superpowers/specs/2026-09-12-chart-y-range.md).
+
+Long-term X labels sit at month starts as `Aug 26` (month + two-digit
+year). If that will not fit, use two lines (`Aug` over `26`); if that
+will not fit, skip months.
+
+Change record (long-term X labels):
+[docs/superpowers/specs/2026-09-12-long-term-x-labels.md](docs/superpowers/specs/2026-09-12-long-term-x-labels.md).
 
 ## Meal Planning
 

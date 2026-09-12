@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -362,6 +363,132 @@ func TestChartFlatSeriesHasScale(t *testing.T) {
 	view := visible(app.View())
 	if !strings.Contains(view, "November 1990") {
 		t.Fatalf("chart missing: %q", app.View())
+	}
+	lo, hi, ok := chartYBounds(view)
+	if !ok {
+		t.Fatalf("no Y scale: %q", view)
+	}
+	p := yPad(units.Kilogram)
+	if hi-lo < 2*p-0.15 || hi-lo > 2*p+0.15 {
+		t.Fatalf("Y span = %.2f, want ~%.2f (2P)", hi-lo, 2*p)
+	}
+}
+
+func chartYBounds(view string) (ymin, ymax float64, ok bool) {
+	var ys []float64
+	for _, line := range strings.Split(visible(view), "\n") {
+		if len(line) < 6 || line[5] != '-' {
+			continue
+		}
+		var v float64
+		if _, err := fmt.Sscanf(strings.TrimSpace(line[:5]), "%f", &v); err != nil {
+			continue
+		}
+		ys = append(ys, v)
+	}
+	if len(ys) < 2 {
+		return 0, 0, false
+	}
+	return ys[len(ys)-1], ys[0], true
+}
+
+func upsertKG(t *testing.T, store *dailylog.Store, day time.Time, kg float64) {
+	t.Helper()
+	log, err := dailylog.New(day, &kg, 8, 0, false, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Upsert(context.Background(), log); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestChartYRangePounds(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	loKG, err := units.ToKG(170, units.Pound)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hiKG, err := units.ToKG(175, units.Pound)
+	if err != nil {
+		t.Fatal(err)
+	}
+	upsertKG(t, store, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), loKG)
+	upsertKG(t, store, time.Date(1990, 11, 2, 0, 0, 0, 0, time.UTC), hiKG)
+	cfg := config.Default()
+	cfg.DisplayUnit = units.Pound
+	app := New(store, "mem.db", cfg)
+	app.Update(app.load())
+	press(app, "c")
+	ymin, ymax, ok := chartYBounds(app.View())
+	if !ok {
+		t.Fatalf("no Y scale: %q", app.View())
+	}
+	if ymin < 167.9 || ymin > 168.2 || ymax < 176.8 || ymax > 177.2 {
+		t.Fatalf("monthly Y = [%.2f, %.2f], want [168, 177]", ymin, ymax)
+	}
+	press(app, "l")
+	ymin, ymax, ok = chartYBounds(app.View())
+	if !ok {
+		t.Fatalf("long-term no Y scale: %q", app.View())
+	}
+	if ymin < 167.9 || ymin > 168.2 || ymax < 176.8 || ymax > 177.2 {
+		t.Fatalf("long-term Y = [%.2f, %.2f], want [168, 177]", ymin, ymax)
+	}
+}
+
+func TestChartYRangeKilograms(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	upsertKG(t, store, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), 80)
+	upsertKG(t, store, time.Date(1990, 11, 2, 0, 0, 0, 0, time.UTC), 81)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "c")
+	p := yPad(units.Kilogram)
+	ymin, ymax, ok := chartYBounds(app.View())
+	if !ok {
+		t.Fatal("no Y scale")
+	}
+	if ymin < 80-p-0.05 || ymin > 80-p+0.05 || ymax < 81+p-0.05 || ymax > 81+p+0.05 {
+		t.Fatalf("monthly Y = [%.3f, %.3f], want [%.3f, %.3f]", ymin, ymax, 80-p, 81+p)
+	}
+	press(app, "l")
+	ymin, ymax, ok = chartYBounds(app.View())
+	if !ok {
+		t.Fatal("long-term no Y scale")
+	}
+	if ymin < 80-p-0.05 || ymin > 80-p+0.05 || ymax < 81+p-0.05 || ymax > 81+p+0.05 {
+		t.Fatalf("long-term Y = [%.3f, %.3f], want [%.3f, %.3f]", ymin, ymax, 80-p, 81+p)
+	}
+}
+
+func TestChartYRangeStone(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	loKG, err := units.ToKG(12.0, units.Stone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hiKG, err := units.ToKG(12.5, units.Stone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	upsertKG(t, store, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), loKG)
+	upsertKG(t, store, time.Date(1990, 11, 2, 0, 0, 0, 0, time.UTC), hiKG)
+	cfg := config.Default()
+	cfg.DisplayUnit = units.Stone
+	app := New(store, "mem.db", cfg)
+	app.Update(app.load())
+	press(app, "c")
+	p := yPad(units.Stone)
+	ymin, ymax, ok := chartYBounds(app.View())
+	if !ok {
+		t.Fatal("no Y scale")
+	}
+	if ymin < 12-p-0.05 || ymin > 12-p+0.05 || ymax < 12.5+p-0.05 || ymax > 12.5+p+0.05 {
+		t.Fatalf("monthly Y = [%.3f, %.3f], want [%.3f, %.3f]", ymin, ymax, 12-p, 12.5+p)
 	}
 }
 

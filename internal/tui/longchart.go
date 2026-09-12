@@ -366,11 +366,6 @@ func longYRange(span []sheetDay, unit units.Unit, daily bool) (ymin, ymax float6
 	if !ok {
 		return 0, 0, false
 	}
-	if ymax == ymin {
-		ymin -= 0.5
-		ymax += 0.5
-		return ymin, ymax, true
-	}
-	pad := (ymax - ymin) * 0.05
-	return ymin - pad, ymax + pad, true
+	ymin, ymax = applyYPad(ymin, ymax, unit)
+	return ymin, ymax, true
 }
