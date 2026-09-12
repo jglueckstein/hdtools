@@ -13,6 +13,9 @@ only.
 4.  Press `[` or `]` to cycle the four kinds. Esc returns to the
     screen you came from.
 
+The horizontal axis is labeled at month starts (`Sep 90`). If those
+labels would collide, they stack (`Sep` over `90`) or skip months.
+
 The vertical scale is the plotted min and max plus 2 lb of margin
 (the same margin in kg and stone), as on the monthly chart.
 

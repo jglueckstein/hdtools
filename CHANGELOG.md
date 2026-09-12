@@ -4,6 +4,8 @@
 
 ### Added
 
+- Long-term chart X labels at month starts (`Sep 90`), then two-line,
+  then skip months if bins are too narrow
 - Chart Y axis is plotted min/max ± 2 lb (equivalent in kg and st)
   on monthly and long-term charts
 - On-screen long-term charts (`l`): quarterly, semiannual, annual,
