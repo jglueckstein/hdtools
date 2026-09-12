@@ -4,6 +4,8 @@
 
 ### Added
 
+- Chart Y axis is plotted min/max ± 2 lb (equivalent in kg and st)
+  on monthly and long-term charts
 - On-screen long-term charts (`l`): quarterly, semiannual, annual,
   and complete history; trend path, daily line when the span fits
 - Monthly chart title box (month and year) and green float/sinker

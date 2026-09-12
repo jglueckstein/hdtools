@@ -12,7 +12,8 @@ stem joins it to the trend that day.
 3.  Press `[` or `]` to change month. Esc returns to the screen you
     came from.
 
-The current month ends at today. A month with no weights and no
+The vertical scale is the plotted min and max plus 2 lb of margin
+(the same margin in kg and stone). The current month ends at today. A month with no weights and no
 carried trend shows as empty. The two numbers are the book's
 first-and-last trend identity (3500 kcal per pound); they are not
 medical advice.

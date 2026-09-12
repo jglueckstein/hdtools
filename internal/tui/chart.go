@@ -272,6 +272,23 @@ func renderPlot(span []sheetDay, unit units.Unit, p palette) string {
 	return b.String()
 }
 
+func yPad(unit units.Unit) float64 {
+	kg, err := units.ToKG(2, units.Pound)
+	if err != nil {
+		return 2
+	}
+	p, err := units.FromKG(kg, unit)
+	if err != nil {
+		return 2
+	}
+	return p
+}
+
+func applyYPad(ymin, ymax float64, unit units.Unit) (float64, float64) {
+	p := yPad(unit)
+	return ymin - p, ymax + p
+}
+
 func yRange(span []sheetDay, unit units.Unit) (ymin, ymax float64, ok bool) {
 	first := true
 	add := func(kg float64) {
@@ -301,11 +318,6 @@ func yRange(span []sheetDay, unit units.Unit) (ymin, ymax float64, ok bool) {
 	if !ok {
 		return 0, 0, false
 	}
-	if ymax == ymin {
-		ymin -= 0.5
-		ymax += 0.5
-		return ymin, ymax, true
-	}
-	pad := (ymax - ymin) * 0.05
-	return ymin - pad, ymax + pad, true
+	ymin, ymax = applyYPad(ymin, ymax, unit)
+	return ymin, ymax, true
 }

@@ -13,6 +13,9 @@ only.
 4.  Press `[` or `]` to cycle the four kinds. Esc returns to the
     screen you came from.
 
+The vertical scale is the plotted min and max plus 2 lb of margin
+(the same margin in kg and stone), as on the monthly chart.
+
 Loss and Daily deficit use the same first-and-last trend identity as
 the monthly chart (3500 kcal per pound); they are not medical
 advice.

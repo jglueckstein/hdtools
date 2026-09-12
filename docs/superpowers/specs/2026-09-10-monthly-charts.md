@@ -79,11 +79,12 @@ without me doing the arithmetic.
     by putting two glyphs in one cell.
 5.  **Display unit.** Axis labels and the implied scale are in
     `display_unit`. Storage remains kilograms.
-6.  **Auto Y range.** The vertical scale is the min and max of values
-    plotted in the span (daily weights and trend), with padding so
-    the series is not glued to the frame. When min equals max, the
-    span is **1.0 in the display unit** centred on that value. An
-    empty month has no scale.
+6.  **Auto Y range.** The vertical scale is (min of plotted values)
+    − *P* through (max of plotted values) + *P*, where *P* is 2 lb
+    in `display_unit` (`units.ToKG(2, lb)` then `FromKG`). When min
+    equals max, that is a 4 lb band centred on the value. An empty
+    month has no scale. See
+    [2026-09-12-chart-y-range.md](2026-09-12-chart-y-range.md).
 7.  **X is the plotted span.** One **character column** per day from
     day 1 through the last plotted day. Y-axis labels sit to the left
     of day 1 (the gutter). Day *N* is the *N*th plot column after
@@ -269,7 +270,7 @@ plotted day
 
 **Given** a month whose plotted values are all the same
 **When** the chart is shown
-**Then** the vertical scale spans 1.0 in the display unit
+**Then** the vertical scale spans 4 lb in the display unit (2 × *P*)
 **And** the process does not crash
 
 ### S14 — Loss follows display unit
@@ -344,8 +345,9 @@ display unit; deficit is a signed integer followed by a calorie word
     span after a Y-label gutter, at least 8 rows when there is data,
     with day 1 and the last plotted day labeled. Tests locate day *N*
     in that column.
--   **FR15.** When min equals max among plotted values, the Y span is
-    1.0 in the display unit.
+-   **FR15.** Ymin = min − *P*, Ymax = max + *P*, with *P* = 2 lb in
+    `display_unit`. When min equals max, the span is 4 lb (or kg/st
+    equivalent).
 
 ## Out of scope
 

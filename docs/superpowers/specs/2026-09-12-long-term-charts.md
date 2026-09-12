@@ -132,7 +132,9 @@ that window.
     (0-based) is days `[floor(i·D/W), floor((i+1)·D/W))` of the
     span (O4). Each column uses the **last trend** in that bucket
     (carry-forward counts). Complete history uses the same rule, so
-    a decade still fits.
+    a decade still fits. **X labels** are month starts (`Aug 26`),
+    not day numbers: see
+    [2026-09-12-long-term-x-labels.md](2026-09-12-long-term-x-labels.md).
 7.  **Same loaded series.** Already-loaded, already-trended logs. No
     SQLite in the TUI. Carry-forward from before the window is
     included when `ApplyTrend` has seen those days.
@@ -144,10 +146,10 @@ that window.
     `NO_COLOR`, the text stays centered with no chromatic SGR.
     Display unit stays off the box.
 9.  **Display unit and Y range.** Axis labels use `display_unit`.
-    Storage remains kilograms. Auto Y is min and max of the series
-    actually plotted (both when *D* ≤ *W*, trend only when *D* > *W*),
-    with the monthly padding rule (1.0 display-unit band when min
-    equals max).
+    Storage remains kilograms. Auto Y is (min − *P*) through (max +
+    *P*) of the series actually plotted (both when *D* ≤ *W*, trend
+    only when *D* > *W*), with *P* = 2 lb in `display_unit`. See
+    [2026-09-12-chart-y-range.md](2026-09-12-chart-y-range.md).
 10. **No editing.** Type, Tab, and Space do not write.
 11. **Not medical.** Copy does not claim diagnosis or treatment and
     does not tell the reader what to eat.
@@ -366,6 +368,9 @@ deficit is a signed integer followed by `cal` or `calories`.
     (*W* = 72 until a resize). Bucket *i* is days
     `[floor(i·D/W), floor((i+1)·D/W))`.
 -   **FR8.** Vertical labels use `display_unit` via `units.FromKG`.
+    Horizontal labels are month starts (`Mon YY`), with two-line
+    then skip-months if bins are too narrow
+    ([2026-09-12-long-term-x-labels.md](2026-09-12-long-term-x-labels.md)).
 -   **FR9.** The screen does not create or update log rows.
 -   **FR10.** Copy does not present the chart as medical advice.
 -   **FR11.** When both endpoints have a trend, show Loss and Daily
