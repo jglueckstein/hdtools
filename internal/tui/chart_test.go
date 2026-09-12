@@ -365,6 +365,129 @@ func TestChartFlatSeriesHasScale(t *testing.T) {
 	}
 }
 
+func chartTitleLine(view string) string {
+	for _, line := range strings.Split(visible(view), "\n") {
+		if strings.Contains(line, "November 1990") && !strings.Contains(line, "hdtools") {
+			return strings.TrimSpace(line)
+		}
+	}
+	return ""
+}
+
+func plotColumn(view string, dayIndex int) string {
+	var b strings.Builder
+	for _, line := range strings.Split(visible(view), "\n") {
+		if !strings.ContainsAny(line, "o-/\\|") {
+			continue
+		}
+		// Gutter is "%5.1f-" (6 runes); plot columns follow.
+		vis := []rune(line)
+		col := 6 + dayIndex
+		if col >= 0 && col < len(vis) {
+			b.WriteRune(vis[col])
+		}
+	}
+	return b.String()
+}
+
+func TestChartTitleIsMonthYear(t *testing.T) {
+	t.Parallel()
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	press(app, "c")
+	line := chartTitleLine(app.View())
+	if line == "" || strings.Contains(line, "hdtools") {
+		t.Fatalf("title line = %q, want November 1990 without hdtools —", line)
+	}
+	if !strings.Contains(line, "November 1990") {
+		t.Fatalf("title line = %q", line)
+	}
+}
+
+func TestChartTitleBoxColours(t *testing.T) {
+	enableChroma(t)
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	press(app, "c")
+	view := app.View()
+	if chartTitleLine(view) == "" {
+		t.Fatalf("title missing: %q", view)
+	}
+	if !hasIndexedForeground(view, 3) {
+		t.Fatalf("missing yellow title foreground: %q", view)
+	}
+	if !hasSGRCode(view, 44) {
+		t.Fatalf("missing blue title background: %q", view)
+	}
+}
+
+func TestChartTitleSurvivesNoColor(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	press(app, "c")
+	view := app.View()
+	if chartTitleLine(view) == "" {
+		t.Fatalf("title missing under NO_COLOR: %q", view)
+	}
+	if hasChromaticSGR(view) {
+		t.Fatalf("chromatic SGR under NO_COLOR: %q", view)
+	}
+}
+
+func TestChartStemJoinsMarkToTrend(t *testing.T) {
+	t.Parallel()
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	press(app, "c")
+	view := visible(app.View())
+	col := plotColumn(view, 1)
+	if !strings.Contains(col, "o") {
+		t.Fatalf("day 2 missing mark: %q (col %q)", view, col)
+	}
+	if !strings.Contains(col, "|") {
+		t.Fatalf("day 2 missing stem: %q (col %q)", view, col)
+	}
+}
+
+func TestChartNoStemWhenMarkOnTrend(t *testing.T) {
+	t.Parallel()
+	store := openStore(t)
+	w := 80.0
+	log, err := dailylog.New(time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), &w, 8, 0, false, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Upsert(context.Background(), log); err != nil {
+		t.Fatal(err)
+	}
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "c")
+	view := visible(app.View())
+	col := plotColumn(view, 0)
+	if !strings.Contains(col, "o") {
+		t.Fatalf("coincident mark missing: %q (col %q)", view, col)
+	}
+	if strings.Contains(col, "|") {
+		t.Fatalf("stem on coincident day: %q (col %q)", view, col)
+	}
+}
+
+func TestChartStemGreen(t *testing.T) {
+	enableChroma(t)
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	press(app, "c")
+	view := app.View()
+	if !strings.Contains(visible(view), "|") {
+		t.Fatalf("stem missing: %q", view)
+	}
+	if !hasIndexedForeground(view, 2) {
+		t.Fatalf("missing green stem: %q", view)
+	}
+}
+
 func TestChartDailyMarkWinsSharedCell(t *testing.T) {
 	t.Parallel()
 	store := openStore(t)
