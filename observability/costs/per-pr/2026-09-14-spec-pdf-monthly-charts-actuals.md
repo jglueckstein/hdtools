@@ -2,7 +2,7 @@
 date: 2026-09-14
 branch: spec/pdf-monthly-charts
 issue: "#46"
-pr: null
+pr: "#47"
 task_summary: Add PDF export of the on-screen monthly chart (CLI -chart-pdf and TUI p).
 progressed_slice: null
 stages_run: [spec-writer, tdd-agent, implementer, code-reviewer, integration-agent]
