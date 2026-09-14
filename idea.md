@@ -78,6 +78,13 @@ The tool should be able to generate pdf of the monthly log sheets
 (filled in, not the blank sheets mentioned above), and pdfs of the
 monthly charts.
 
+PDF monthly charts are the on-screen monthly chart on paper. CLI
+`-chart-pdf YYYY-MM` and TUI `p` write that picture. Filled log-sheet
+PDFs and long-term PDFs are not in this slice.
+
+Change record:
+[docs/superpowers/specs/2026-09-12-pdf-monthly-charts.md](docs/superpowers/specs/2026-09-12-pdf-monthly-charts.md).
+
 The TUI should be able to display on screen the monthly charts and the
 long term charts. Every on-screen chart (monthly and all four
 long-term kinds) uses the same vertical scale: (min of plotted

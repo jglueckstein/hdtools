@@ -7,6 +7,7 @@
 | `m` | list | monthly sheet |
 | `c` | list or month (not editing) | monthly chart |
 | `l` | list, month (not editing), or monthly chart | long-term chart |
+| `p` | monthly chart | write a PDF of this month in the current directory |
 | `q` | list, month, or chart | quit |
 | Tab | form | next field |
 | Enter | form | save |

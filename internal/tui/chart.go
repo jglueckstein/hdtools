@@ -5,36 +5,29 @@ package tui
 // each mark to the trend (floats and sinkers), the trend path, and
 // Monthly Loss and Daily Deficit from first and last trend of the
 // plotted span. Title-box and stem colours are Excel defaults, not
-// [colors] roles. This file does not open SQLite, edit the log, or
-// emit PDF.
+// [colors] roles. Clip, empty, Y pad, and analysis live in
+// chartspan so the PDF cannot drift. p writes that picture through
+// chartpdf; this file does not import a PDF library.
 
 import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/jglueckstein/hdtools/internal/dailylog"
+	"github.com/jglueckstein/hdtools/internal/chartpdf"
+	"github.com/jglueckstein/hdtools/internal/chartspan"
 	"github.com/jglueckstein/hdtools/internal/units"
 )
 
-const plotRows = 8
-
-func lastPlottedDay(year int, month time.Month) int {
-	today := localToday()
-	ty, tm, td := today.Date()
-	if year > ty || (year == ty && month > tm) {
-		return 0
-	}
-	n := daysInMonth(year, month)
-	if year == ty && month == tm && td < n {
-		return td
-	}
-	return n
-}
+const (
+	plotRows  = 8
+	chartHelp = "esc back   [ ] month   l long   p pdf   q quit"
+)
 
 func (a *App) openChart() {
 	if a.screen == screenList {
@@ -64,8 +57,37 @@ func (a *App) updateChart(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "l":
 		a.openLong()
 		return a, nil
+	case "p":
+		a.writeChartPDF()
+		return a, nil
 	}
 	return a, nil
+}
+
+func (a *App) writeChartPDF() {
+	cwd, err := os.Getwd()
+	if err != nil {
+		a.err = fmt.Errorf("write chart pdf: %w", err)
+		a.status = ""
+		return
+	}
+	name := fmt.Sprintf("%04d-%02d-chart.pdf", a.month.year, a.month.month)
+	path := filepath.Join(cwd, name)
+	err = chartpdf.Write(path, chartpdf.Options{
+		Year:   a.month.year,
+		Month:  a.month.month,
+		Logs:   a.logs,
+		Unit:   a.cfg.DisplayUnit,
+		Colors: a.cfg.Colors,
+		Today:  localToday(),
+	})
+	if err != nil {
+		a.err = fmt.Errorf("write chart pdf: %w", err)
+		a.status = ""
+		return
+	}
+	a.err = nil
+	a.status = path
 }
 
 func monthYearLabel(month time.Month, year int) string {
@@ -102,7 +124,8 @@ func stemCell(ch string) string {
 func (a *App) chartView() string {
 	p := a.pal
 	unit := a.cfg.DisplayUnit
-	last := lastPlottedDay(a.month.year, a.month.month)
+	span := chartspan.Clip(a.logs, a.month.year, a.month.month, localToday())
+	last := len(span.Points)
 	plotWidth := 6 + last
 	if last <= 0 {
 		plotWidth = 6 + daysInMonth(a.month.year, a.month.month)
@@ -111,22 +134,30 @@ func (a *App) chartView() string {
 	fmt.Fprintf(&b, "%s\n", monthYearBox(a.month.month, a.month.year, plotWidth))
 	fmt.Fprintf(&b, "%s\n\n", p.muted.Render(fmt.Sprintf("db: %s   weight %s", a.dbPath, unit)))
 
-	sheet := buildMonthSheet(a.logs, a.month.year, a.month.month)
-	if last <= 0 {
-		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(empty month)"), p.help.Render("esc back   [ ] month   l long   q quit"))
-		return b.String()
-	}
-	span := sheet[:last]
-	if chartEmpty(span) {
-		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(empty month)"), p.help.Render("esc back   [ ] month   l long   q quit"))
+	if last <= 0 || span.Empty() {
+		fmt.Fprintf(&b, "%s\n", p.muted.Render("(empty month)"))
+		b.WriteString(a.chartFooter())
 		return b.String()
 	}
 
 	b.WriteString(renderPlot(span, unit, p))
-	if line, ok := analysisLine(span, unit); ok {
+	if line, ok := span.Analysis(unit); ok {
 		fmt.Fprintf(&b, "\n%s\n", line)
 	}
-	fmt.Fprintf(&b, "\n%s\n", p.help.Render("esc back   [ ] month   l long   q quit"))
+	b.WriteString(a.chartFooter())
+	return b.String()
+}
+
+func (a *App) chartFooter() string {
+	p := a.pal
+	var b strings.Builder
+	if a.err != nil {
+		fmt.Fprintf(&b, "\n%s\n", p.error.Render("error: "+a.err.Error()))
+	}
+	if a.status != "" {
+		fmt.Fprintf(&b, "\n%s\n", p.status.Render(a.status))
+	}
+	fmt.Fprintf(&b, "\n%s\n", p.help.Render(chartHelp))
 	return b.String()
 }
 
@@ -139,24 +170,9 @@ func chartEmpty(span []sheetDay) bool {
 	return true
 }
 
-func analysisLine(span []sheetDay, unit units.Unit) (string, bool) {
-	if len(span) == 0 || !span[0].HasTrend || !span[len(span)-1].HasTrend {
-		return "", false
-	}
-	lossKG, kcal, ok := dailylog.MonthlyBalance(span[0].Trend, span[len(span)-1].Trend, len(span))
-	if !ok {
-		return "", false
-	}
-	loss, err := units.FromKG(lossKG, unit)
-	if err != nil {
-		return "", false
-	}
-	return fmt.Sprintf("Monthly loss: %.1f %s   Daily deficit: %d cal", loss, unit, kcal), true
-}
-
-func renderPlot(span []sheetDay, unit units.Unit, p palette) string {
-	n := len(span)
-	ymin, ymax, ok := yRange(span, unit)
+func renderPlot(span chartspan.Span, unit units.Unit, p palette) string {
+	n := len(span.Points)
+	ymin, ymax, ok := chartspan.YRange(span, unit)
 	if !ok {
 		return ""
 	}
@@ -183,7 +199,7 @@ func renderPlot(span []sheetDay, unit units.Unit, p palette) string {
 	}
 	var prevRow int
 	var hasPrev bool
-	for i, d := range span {
+	for i, d := range span.Points {
 		if !d.HasTrend {
 			continue
 		}
@@ -204,11 +220,11 @@ func renderPlot(span []sheetDay, unit units.Unit, p palette) string {
 		prevRow = r
 		hasPrev = true
 	}
-	for i, d := range span {
-		if d.Log.Weight == nil || !d.HasTrend {
+	for i, d := range span.Points {
+		if d.Weight == nil || !d.HasTrend {
 			continue
 		}
-		wy, errW := units.FromKG(*d.Log.Weight, unit)
+		wy, errW := units.FromKG(*d.Weight, unit)
 		ty, errT := units.FromKG(d.Trend, unit)
 		if errW != nil || errT != nil {
 			continue
@@ -225,11 +241,11 @@ func renderPlot(span []sheetDay, unit units.Unit, p palette) string {
 			grid[r][i] = '|'
 		}
 	}
-	for i, d := range span {
-		if d.Log.Weight == nil {
+	for i, d := range span.Points {
+		if d.Weight == nil {
 			continue
 		}
-		y, err := units.FromKG(*d.Log.Weight, unit)
+		y, err := units.FromKG(*d.Weight, unit)
 		if err != nil {
 			continue
 		}
@@ -261,7 +277,7 @@ func renderPlot(span []sheetDay, unit units.Unit, p palette) string {
 	}
 	fmt.Fprintf(&b, "%s%d", strings.Repeat(" ", 6), 1)
 	if n > 1 {
-		last := fmt.Sprintf("%d", span[n-1].Day.Day())
+		last := fmt.Sprintf("%d", span.Points[n-1].Day.Day())
 		pad := n - 1 - len(last)
 		if pad < 1 {
 			pad = 1
@@ -273,51 +289,10 @@ func renderPlot(span []sheetDay, unit units.Unit, p palette) string {
 }
 
 func yPad(unit units.Unit) float64 {
-	kg, err := units.ToKG(2, units.Pound)
-	if err != nil {
-		return 2
-	}
-	p, err := units.FromKG(kg, unit)
-	if err != nil {
-		return 2
-	}
-	return p
+	return chartspan.YPad(unit)
 }
 
 func applyYPad(ymin, ymax float64, unit units.Unit) (float64, float64) {
 	p := yPad(unit)
 	return ymin - p, ymax + p
-}
-
-func yRange(span []sheetDay, unit units.Unit) (ymin, ymax float64, ok bool) {
-	first := true
-	add := func(kg float64) {
-		v, err := units.FromKG(kg, unit)
-		if err != nil {
-			return
-		}
-		if first {
-			ymin, ymax, first, ok = v, v, false, true
-			return
-		}
-		if v < ymin {
-			ymin = v
-		}
-		if v > ymax {
-			ymax = v
-		}
-	}
-	for _, d := range span {
-		if d.Log.Weight != nil {
-			add(*d.Log.Weight)
-		}
-		if d.HasTrend {
-			add(d.Trend)
-		}
-	}
-	if !ok {
-		return 0, 0, false
-	}
-	ymin, ymax = applyYPad(ymin, ymax, unit)
-	return ymin, ymax, true
 }
