@@ -4,6 +4,8 @@
 
 ### Added
 
+- PDF of the monthly chart: CLI `-chart-pdf YYYY-MM` (and `-o`) and
+  TUI `p` on the monthly chart write a one-page landscape Letter file
 - Long-term chart X labels at month starts (`Sep 90`), then two-line,
   then skip months if bins are too narrow
 - Chart Y axis is plotted min/max ± 2 lb (equivalent in kg and st)

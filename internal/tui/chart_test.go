@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -635,5 +636,120 @@ func TestChartDailyMarkWinsSharedCell(t *testing.T) {
 	}
 	if !strings.Contains(view, "o") {
 		t.Fatalf("daily mark missing on coincident day: %q", view)
+	}
+}
+
+func TestChartPWritesPDF(t *testing.T) {
+	t.Chdir(t.TempDir())
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	press(app, "c")
+	applyP(t, app)
+	info, err := os.Stat("1990-11-chart.pdf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("mode = %04o, want 0600", info.Mode().Perm())
+	}
+	view := visible(app.View())
+	if !strings.Contains(view, "1990-11-chart.pdf") {
+		t.Fatalf("status missing path: %q", view)
+	}
+	if !strings.Contains(view, "November 1990") || strings.Contains(view, "arrows move") {
+		t.Fatalf("left the monthly chart: %q", view)
+	}
+}
+
+func TestChartPWriteFailure(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if err := os.Mkdir("1990-11-chart.pdf", 0o700); err != nil {
+		t.Fatal(err)
+	}
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	press(app, "c")
+	applyP(t, app)
+	view := visible(app.View())
+	if strings.Contains(view, "1990-11-chart.pdf") && !strings.Contains(strings.ToLower(view), "error") {
+		t.Fatalf("claimed saved path on write failure: %q", view)
+	}
+	if !strings.Contains(strings.ToLower(view), "error") && app.err == nil && !strings.Contains(strings.ToLower(app.status), "error") {
+		t.Fatalf("missing error status: view=%q status=%q err=%v", view, app.status, app.err)
+	}
+	if !strings.Contains(view, "November 1990") || strings.Contains(view, "arrows move") || strings.Contains(view, "daily log") {
+		t.Fatalf("left the monthly chart: %q", view)
+	}
+}
+
+func TestChartPIgnoredOnList(t *testing.T) {
+	t.Chdir(t.TempDir())
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	applyP(t, app)
+	if _, err := os.Stat("1990-11-chart.pdf"); err == nil {
+		t.Fatal("p on the list wrote a PDF")
+	}
+	press(app, "m")
+	applyP(t, app)
+	if _, err := os.Stat("1990-11-chart.pdf"); err == nil {
+		t.Fatal("p on the month sheet wrote a PDF")
+	}
+	press(app, "esc", "l")
+	applyP(t, app)
+	if _, err := os.Stat("1990-11-chart.pdf"); err == nil {
+		t.Fatal("p on the long-term chart wrote a PDF")
+	}
+}
+
+func TestChartPWhileEditingIsText(t *testing.T) {
+	t.Chdir(t.TempDir())
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	press(app, "m")
+	app.month.col = colNote
+	app.month.beginEdit("")
+	press(app, "p")
+	if _, err := os.Stat("1990-11-chart.pdf"); err == nil {
+		t.Fatal("p while editing wrote a PDF")
+	}
+	if !strings.Contains(app.month.input.Value(), "p") {
+		t.Fatalf("input = %q, want p", app.month.input.Value())
+	}
+	if strings.Contains(visible(app.View()), "November 1990") && !strings.Contains(visible(app.View()), "arrows move") {
+		t.Fatal("p opened the chart while editing")
+	}
+}
+
+func TestChartPDoesNotWriteLogs(t *testing.T) {
+	t.Chdir(t.TempDir())
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	press(app, "c")
+	applyP(t, app)
+	if _, err := os.Stat("1990-11-chart.pdf"); err != nil {
+		t.Fatalf("pdf missing: %v", err)
+	}
+	logs, err := store.All(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(logs) != 2 {
+		t.Fatalf("rows = %d, want 2", len(logs))
+	}
+}
+
+func applyP(t *testing.T, app *App) {
+	t.Helper()
+	_, cmd := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+	if cmd == nil {
+		return
+	}
+	msg := cmd()
+	if _, ok := msg.(tea.QuitMsg); ok {
+		t.Fatal("p quit")
+	}
+	if msg != nil {
+		app.Update(msg)
 	}
 }

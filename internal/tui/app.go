@@ -3,7 +3,9 @@
 // It owns Bubble Tea state and talks to dailylog.Store but never opens
 // SQLite or imports database/sql, so tests inject a file and a later
 // remote database can reuse the same Model. Missing days are
-// dailylog.ErrNotFound. Meal planning and PDF are out of scope.
+// dailylog.ErrNotFound. Meal planning is out of scope. Monthly chart
+// PDF export goes through internal/chartpdf; this package must not
+// import a PDF library.
 //
 // Color comes from a palette built at New from config.toml and NO_COLOR.
 // Column geometry lives in layout.go so headers stay over numbers after
