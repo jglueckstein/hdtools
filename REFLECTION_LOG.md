@@ -68,3 +68,14 @@
   - Model tiers used: unknown (Grok Build, grok-4.6)
   - Pipeline stages completed: /harness-gc, /governance-constrain, /governance-audit, /governance-health, /harness-audit, /convention-sync, /harness-onboarding, /observatory-verify, /harness-health, /harness-sync
   - Agent delegation: partial
+
+---
+
+- **Date**: 2026-09-14
+- **Agent**: integration-agent
+- **Task**: Add PDF export of the on-screen monthly chart (CLI -chart-pdf and TUI p).
+- **Surprise**: Spec and plan drafted in an earlier session were uncommitted and had to be recovered from rewind points after a branch switch. Code-mode diaboli caught `fpdf.OutputFileAndClose` (`os.Create` 0666 then chmod) as a real 0600 hole; temp+rename was the store's pattern. `ai-literacy-superpowers:advocatus-diaboli` spawn failed as unknown even when listed; `tdd-agent` and `code-reviewer` spawned by short name.
+- **Proposal**: AGENTS.md GOTCHA: a print artefact that must be 0600 cannot use `os.Create` then chmod; write a same-dir temp at 0600 and `Rename`.
+- **Improvement**: Keep spec/plan on the feature branch before switching away. Dispatch diaboli as `general-purpose` with the skill when the plugin-prefixed type is unknown.
+- **Signal**: workflow
+- **Constraint**: none
