@@ -61,7 +61,10 @@ It would be good to add user configuration to the daily logging. For
 example, individuals may want to track a sleep quality number, water
 intake, mood, stress, resting HR, HRV.
 
-The TUI should make it easy to create and edit daily logs.
+The TUI should make it easy to create and edit daily logs. On
+startup the daily list selects the log row whose date is closest to
+today, not the first row. Opening the monthly chart from the list
+still uses that selected row's month.
 
 ### Monthly Log
 
