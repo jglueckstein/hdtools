@@ -1,0 +1,8 @@
+- **Date**: 2026-09-18
+- **Agent**: integration-agent
+- **Task**: Select the existing log row closest to today on TUI startup.
+- **Surprise**: Four of the eleven first-load tests were already green because the closest row was index 0 (the old default). `gh pr checks` exit 1 is not only "failed": a pending-safe watcher must read check conclusions, or a 1s poll false-fails CI. Goto Today was written into the spec then pulled back to `idea.md` as a later slice.
+- **Proposal**: When writing load-selection tests, include a case where closest is not index 0 first, so "already green" cannot hide a missing scan. Treat `gh pr checks` status 8 (pending) as wait, not fail.
+- **Improvement**: Keep hotkeys out of a startup slice until `idea.md` says they are in. Clear one-shot `selectDay` on `loadErrMsg` so a later month-cell reload cannot reuse a form-save day.
+- **Signal**: workflow
+- **Constraint**: none
