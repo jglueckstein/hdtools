@@ -1,0 +1,13 @@
+- **Date**: 2026-09-12
+- **Agent**: Grok 4.6
+- **Task**: Spec, /diaboli, dispositions, then ship long-term charts (l, four WEIGHT-menu kinds), ±2 lb Y on every on-screen chart, and month-start X labels. PDF monthly-chart spec/plan drafted, not implemented.
+- **Surprise**: The first long-term spec collapsed the book to one 12-month weekly trend plot. Weight Monitoring lists four charts (quarterly, semiannual, annual, complete) with two lines, not monthly stems. Diaboli O1: end month must be the latest log, or a 1990 database opened in 2026 is empty. Tests: freezeToday plus t.Parallel races nowFn; strings.Contains(view, "o") matches "November".
+- **Proposal**: AGENTS.md GOTCHA: do not t.Parallel tests that call freezeToday (nowFn is process-global). Assert plot glyphs on plot cells, not the whole View(). Long-term charts follow the WEIGHT menu: four kinds, latest-log end, daily line only when one column per day fits.
+- **Improvement**: Read the cited book chapter before inventing a long-term geometry. Spec Y pad as 2 lb converted, not 2 of the display unit. Aug 26 is August 2026, not day 26.
+- **Signal**: workflow
+- **Constraint**: none
+- **Session metadata**:
+  - Duration: unknown
+  - Model tiers used: unknown (Grok Build, grok-4.6)
+  - Pipeline stages completed: spec, /diaboli, dispositions, TDD, implement; PDF spec/plan only
+  - Agent delegation: partial
