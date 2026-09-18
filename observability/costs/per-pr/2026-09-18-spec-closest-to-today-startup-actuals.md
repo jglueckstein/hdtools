@@ -2,7 +2,7 @@
 date: 2026-09-18
 branch: spec/closest-to-today-startup
 issue: "#51"
-pr: null
+pr: "#52"
 task_summary: Select the existing log row closest to today on TUI startup.
 progressed_slice: null
 stages_run: [spec-writer, tdd-agent, implementer, code-reviewer, integration-agent]
