@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -226,6 +227,207 @@ func TestQuitKeys(t *testing.T) {
 	}
 }
 
+func TestLoadSelectsToday(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	seedDays(t, store,
+		time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC),
+		time.Date(1990, 11, 20, 0, 0, 0, 0, time.UTC),
+	)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	assertSelectedDay(t, app, time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC))
+}
+
+func TestLoadSelectsNearestPast(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	seedDays(t, store,
+		time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(1990, 11, 8, 0, 0, 0, 0, time.UTC),
+	)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	assertSelectedDay(t, app, time.Date(1990, 11, 8, 0, 0, 0, 0, time.UTC))
+}
+
+func TestLoadSelectsNearestFuture(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	seedDays(t, store,
+		time.Date(1990, 11, 12, 0, 0, 0, 0, time.UTC),
+		time.Date(1990, 11, 20, 0, 0, 0, 0, time.UTC),
+	)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	assertSelectedDay(t, app, time.Date(1990, 11, 12, 0, 0, 0, 0, time.UTC))
+}
+
+func TestLoadTiePrefersPast(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	seedDays(t, store,
+		time.Date(1990, 11, 9, 0, 0, 0, 0, time.UTC),
+		time.Date(1990, 11, 11, 0, 0, 0, 0, time.UTC),
+	)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	assertSelectedDay(t, app, time.Date(1990, 11, 9, 0, 0, 0, 0, time.UTC))
+}
+
+func TestLoadEmptyHasNoSelection(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	if len(app.logs) != 0 {
+		t.Fatalf("logs = %d, want empty", len(app.logs))
+	}
+	view := visible(app.View())
+	if !strings.Contains(view, "no entries yet") {
+		t.Fatalf("View = %q", view)
+	}
+}
+
+func TestLoadSelectsAcrossMonths(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	seedDays(t, store,
+		time.Date(1990, 6, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC),
+	)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	assertSelectedDay(t, app, time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC))
+}
+
+func TestLoadNearerFutureBeatsLastPast(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	seedDays(t, store,
+		time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(1990, 11, 11, 0, 0, 0, 0, time.UTC),
+	)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	assertSelectedDay(t, app, time.Date(1990, 11, 11, 0, 0, 0, 0, time.UTC))
+}
+
+func TestSaveKeepsNonClosestDay(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	first := time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC)
+	seedDays(t, store,
+		first,
+		time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC),
+	)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	selectDay(t, app, first)
+	press(app, "enter")
+	saved := app.saveForm()
+	if _, ok := saved.(savedMsg); !ok {
+		t.Fatalf("save = %#v", saved)
+	}
+	app.Update(saved)
+	app.Update(app.load())
+	assertSelectedDay(t, app, first)
+}
+
+func TestSaveFromNewDaySelectsWrittenDay(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	seedDays(t, store, time.Date(1990, 11, 8, 0, 0, 0, 0, time.UTC))
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "n")
+	saved := app.saveForm()
+	if _, ok := saved.(savedMsg); !ok {
+		t.Fatalf("save = %#v", saved)
+	}
+	app.Update(saved)
+	app.Update(app.load())
+	assertSelectedDay(t, app, time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC))
+}
+
+func TestLoadOutOfRangeSelectsClosest(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	seedDays(t, store,
+		time.Date(1990, 6, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC),
+	)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	app.cursor = len(app.logs) + 1
+	app.Update(app.load())
+	assertSelectedDay(t, app, time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC))
+}
+
+func TestMonthCellSaveKeepsNonClosestDay(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	first := time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC)
+	seedDays(t, store,
+		first,
+		time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC),
+	)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	selectDay(t, app, first)
+	app.month = newMonth(time.Date(1990, 6, 1, 0, 0, 0, 0, time.UTC))
+	app.month.col = colWeight
+	app.month.beginEdit("80.0")
+	saved := app.saveMonthCell()
+	if _, ok := saved.(savedMsg); !ok {
+		t.Fatalf("save = %#v", saved)
+	}
+	app.Update(saved)
+	app.Update(app.load())
+	assertSelectedDay(t, app, first)
+}
+
+func TestLoadSelectsLocalCivilDate(t *testing.T) {
+	loc, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 9 Nov 20:00 in LA is 10 Nov UTC; closest must follow local date.
+	freezeToday(t, time.Date(1990, 11, 9, 20, 0, 0, 0, loc))
+	store := openStore(t)
+	seedDays(t, store,
+		time.Date(1990, 11, 9, 0, 0, 0, 0, time.UTC),
+		time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC),
+	)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	assertSelectedDay(t, app, time.Date(1990, 11, 9, 0, 0, 0, 0, time.UTC))
+}
+
+func TestFailedLoadClearsSelectDay(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	first := time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC)
+	seedDays(t, store,
+		first,
+		time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC),
+	)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "n")
+	saved := app.saveForm()
+	if _, ok := saved.(savedMsg); !ok {
+		t.Fatalf("save = %#v", saved)
+	}
+	app.Update(saved)
+	app.Update(loadErrMsg{err: errors.New("load failed")})
+	selectDay(t, app, first)
+	app.Update(savedMsg{})
+	app.Update(app.load())
+	assertSelectedDay(t, app, first)
+}
+
 func openStore(t *testing.T) *dailylog.Store {
 	t.Helper()
 	s, err := dailylog.Open(filepath.Join(t.TempDir(), "t.db"))
@@ -234,4 +436,44 @@ func openStore(t *testing.T) *dailylog.Store {
 	}
 	t.Cleanup(func() { _ = s.Close() })
 	return s
+}
+
+func seedDays(t *testing.T, store *dailylog.Store, days ...time.Time) {
+	t.Helper()
+	ctx := context.Background()
+	w := 80.0
+	for _, day := range days {
+		log, err := dailylog.New(day, &w, 8, 0, false, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Upsert(ctx, log); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func selectDay(t *testing.T, app *App, day time.Time) {
+	t.Helper()
+	for i, log := range app.logs {
+		if log.Day.Equal(day) {
+			app.cursor = i
+			return
+		}
+	}
+	t.Fatalf("day %s not in logs", day.Format(time.DateOnly))
+}
+
+func assertSelectedDay(t *testing.T, app *App, want time.Time) {
+	t.Helper()
+	if len(app.logs) == 0 {
+		t.Fatal("no logs loaded")
+	}
+	if app.cursor < 0 || app.cursor >= len(app.logs) {
+		t.Fatalf("cursor %d out of range (len %d)", app.cursor, len(app.logs))
+	}
+	got := app.logs[app.cursor].Day
+	if !got.Equal(want) {
+		t.Fatalf("selected day = %s, want %s", got.Format(time.DateOnly), want.Format(time.DateOnly))
+	}
 }

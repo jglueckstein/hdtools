@@ -54,6 +54,9 @@ type App struct {
 	err        error
 	status     string
 	pal        palette
+	// selectDay, when set, is the calendar day the next loadedMsg
+	// should land on (the day a form just wrote).
+	selectDay time.Time
 }
 
 type loadedMsg struct {
@@ -66,6 +69,7 @@ type loadErrMsg struct {
 
 type savedMsg struct {
 	advance bool
+	day     time.Time // form save: the written day; zero for month-cell save
 }
 
 // DefaultDBPath is $XDG_DATA_HOME/hdtools/hdtools.db.
@@ -114,29 +118,61 @@ func (a *App) saveForm() tea.Msg {
 	if err := a.store.Upsert(context.Background(), log); err != nil {
 		return loadErrMsg{err: err}
 	}
-	return savedMsg{}
+	return savedMsg{day: log.Day}
+}
+
+// placeCursor sets the list cursor after a load. A form save lands on
+// the written day; otherwise keep the previous calendar day if it is
+// still present; otherwise closest to local today.
+func (a *App) placeCursor(logs []dailylog.DailyLog) {
+	keep := time.Time{}
+	if a.cursor >= 0 && a.cursor < len(a.logs) {
+		keep = a.logs[a.cursor].Day
+	}
+	want := a.selectDay
+	a.selectDay = time.Time{}
+	a.logs = logs
+	if len(a.logs) == 0 {
+		a.cursor = 0
+		return
+	}
+	if !want.IsZero() {
+		if i := indexOfDay(a.logs, want); i >= 0 {
+			a.cursor = i
+			return
+		}
+	} else if !keep.IsZero() {
+		if i := indexOfDay(a.logs, keep); i >= 0 {
+			a.cursor = i
+			return
+		}
+	}
+	a.cursor = closestLogIndex(a.logs, localToday())
 }
 
 // Update handles list navigation, the day form, and load/save results.
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case loadedMsg:
-		a.logs = msg.logs
+		a.placeCursor(msg.logs)
 		a.err = nil
-		if a.cursor >= len(a.logs) {
-			a.cursor = 0
-		}
 		return a, nil
 	case savedMsg:
 		a.month.cancelEdit()
 		if msg.advance {
 			a.month.nextCell()
 		}
+		if !msg.day.IsZero() {
+			a.selectDay = msg.day
+		}
 		a.screen = a.afterSave
 		a.status = "saved"
 		a.err = nil
 		return a, a.load
 	case loadErrMsg:
+		// A failed reload must not apply a form-save day to a later
+		// month-cell load (keep-or-closest, not a sticky want).
+		a.selectDay = time.Time{}
 		if a.screen == screenForm {
 			a.form.err = msg.err.Error()
 			a.err = nil
