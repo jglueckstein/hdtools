@@ -75,6 +75,25 @@ func TestChartOpensFromListAndEscapes(t *testing.T) {
 	}
 }
 
+func TestChartFollowsSelectedRow(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	seedDays(t, store,
+		time.Date(1990, 6, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC),
+	)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "c")
+	view := visible(app.View())
+	if !strings.Contains(view, "November 1990") {
+		t.Fatalf("chart title missing November 1990: %q", app.View())
+	}
+	if strings.Contains(view, "June 1990") {
+		t.Fatalf("chart still on June 1990: %q", app.View())
+	}
+}
+
 func TestChartDailyMarksAndTrendPath(t *testing.T) {
 	t.Parallel()
 	store := openStore(t)

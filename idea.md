@@ -66,6 +66,13 @@ startup the daily list selects the log row whose date is closest to
 today, not the first row. Opening the monthly chart from the list
 still uses that selected row's month.
 
+Change record:
+[docs/superpowers/specs/2026-09-17-closest-to-today-startup.md](docs/superpowers/specs/2026-09-17-closest-to-today-startup.md).
+
+In the daily list, a Goto Today key should select that same closest
+row and must not create today if it is missing. That key is not in
+the startup-selection slice.
+
 ### Monthly Log
 
 We should support the printing of blank sheets for recording daily
