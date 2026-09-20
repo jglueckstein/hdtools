@@ -215,6 +215,12 @@ func (a *App) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "m":
 		a.openMonth()
 		return a, nil
+	case "t":
+		if len(a.logs) == 0 {
+			return a, nil
+		}
+		a.cursor = closestLogIndex(a.logs, localToday())
+		return a, nil
 	case "c":
 		a.openChart()
 		return a, nil
@@ -334,6 +340,9 @@ func (a *App) updateMonth(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "l":
 		a.openLong()
 		return a, nil
+	case "t":
+		a.month = newMonth(localToday())
+		return a, nil
 	case "enter":
 		a.openForm(a.month.cursorDay(), screenMonth)
 		return a, nil
@@ -412,7 +421,7 @@ func (a *App) listView() string {
 		return b.String()
 	}
 	if len(a.logs) == 0 {
-		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(no entries yet)"), p.help.Render("n new day   m month   l long   q quit"))
+		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(no entries yet)"), p.help.Render("n new day   m month   l long   t today   q quit"))
 		return b.String()
 	}
 	fmt.Fprintf(&b, "%s\n", p.header.Render(listHeader()))
@@ -462,6 +471,6 @@ func (a *App) listView() string {
 	if a.status != "" {
 		fmt.Fprintf(&b, "\n%s\n", p.status.Render(a.status))
 	}
-	fmt.Fprintf(&b, "\n%s\n", p.help.Render("n new   enter edit   m month   c chart   l long   q quit"))
+	fmt.Fprintf(&b, "\n%s\n", p.help.Render("n new   enter edit   m month   c chart   l long   t today   q quit"))
 	return b.String()
 }

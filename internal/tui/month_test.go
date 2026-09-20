@@ -1,9 +1,12 @@
 package tui
 
 import (
+	"context"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/jglueckstein/hdtools/internal/config"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 	"github.com/jglueckstein/hdtools/internal/units"
 )
@@ -103,6 +106,130 @@ func TestNextCellStaysOnLastCellOfMonth(t *testing.T) {
 	if m.day != 30 || m.col != colNote {
 		t.Fatalf("got day %d col %d", m.day, m.col)
 	}
+}
+
+func TestGotoTodayMonthJumpsToToday(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	seedDays(t, store, dateUTC(1990, 6, 1))
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "m")
+	app.month.col = colSleep
+	press(app, "t")
+	if app.month.year != 1990 || app.month.month != time.November {
+		t.Fatalf("sheet = %s %d, want November 1990", app.month.month, app.month.year)
+	}
+	if app.month.day != 10 {
+		t.Fatalf("day = %d, want 10", app.month.day)
+	}
+	if app.month.col != colWeight {
+		t.Fatalf("col = %d, want weight", app.month.col)
+	}
+	logs, err := store.All(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(logs) != 1 {
+		t.Fatalf("rows = %d, want 1", len(logs))
+	}
+}
+
+func TestGotoTodayMonthDoesNotCreateToday(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	seedDays(t, store, dateUTC(1990, 11, 8))
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "m")
+	app.month.day = 8
+	app.month.col = colNote
+	press(app, "t")
+	if app.month.day != 10 {
+		t.Fatalf("day = %d, want 10", app.month.day)
+	}
+	if app.month.col != colWeight {
+		t.Fatalf("col = %d, want weight", app.month.col)
+	}
+	if _, err := store.Get(context.Background(), dateUTC(1990, 11, 10)); err == nil {
+		t.Fatal("created 10 November 1990")
+	}
+}
+
+func TestGotoTodayMonthEmptyStillGoesToToday(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "m")
+	press(app, "[")
+	if app.month.month != time.October {
+		t.Fatalf("after [: %s, want October", app.month.month)
+	}
+	press(app, "t")
+	if app.month.year != 1990 || app.month.month != time.November {
+		t.Fatalf("sheet = %s %d, want November 1990", app.month.month, app.month.year)
+	}
+	if app.month.day != 10 {
+		t.Fatalf("day = %d, want 10", app.month.day)
+	}
+	if app.month.col != colWeight {
+		t.Fatalf("col = %d, want weight", app.month.col)
+	}
+	logs, err := store.All(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(logs) != 0 {
+		t.Fatalf("rows = %d, want 0", len(logs))
+	}
+}
+
+func TestGotoTodayMonthEditingIsText(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	seedDays(t, store, dateUTC(1990, 11, 8))
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "m")
+	app.month.col = colNote
+	app.month.beginEdit("")
+	press(app, "t")
+	if !strings.Contains(app.month.input.Value(), "t") {
+		t.Fatalf("input = %q, want t", app.month.input.Value())
+	}
+	if app.month.day != 8 {
+		t.Fatalf("day = %d, want 8", app.month.day)
+	}
+}
+
+func TestGotoTodayMonthDoesNotMoveList(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	june := dateUTC(1990, 6, 1)
+	seedDays(t, store,
+		june,
+		dateUTC(1990, 11, 10),
+	)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	selectDay(t, app, june)
+	press(app, "m")
+	if app.month.month != time.June {
+		t.Fatalf("month = %s, want June", app.month.month)
+	}
+	press(app, "t")
+	press(app, "esc")
+	if app.month.editing {
+		press(app, "esc")
+	}
+	if app.screen != screenList {
+		press(app, "esc")
+	}
+	if app.screen != screenList {
+		t.Fatalf("screen = %v, want list", app.screen)
+	}
+	assertSelectedDay(t, app, june)
 }
 
 func dateUTC(y int, m time.Month, d int) time.Time {

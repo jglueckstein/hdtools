@@ -55,6 +55,12 @@ By default, the daily log should track
 
 A trend number should be calculated from the daily weight.
 
+To the right of trend, the daily list and the month sheet should
+show a calculated delta: daily weight minus trend, in the display
+unit. Color-code positive, negative, and zero. The delta is derived,
+not stored. Color must not be the only way to read the sign. This is
+not the Goto Today slice.
+
 Tracking calories is a separate tool, see below.
 
 It would be good to add user configuration to the daily logging. For
@@ -69,9 +75,14 @@ still uses that selected row's month.
 Change record:
 [docs/superpowers/specs/2026-09-17-closest-to-today-startup.md](docs/superpowers/specs/2026-09-17-closest-to-today-startup.md).
 
-In the daily list, a Goto Today key should select that same closest
-row and must not create today if it is missing. That key is not in
-the startup-selection slice.
+A Goto Today key should work in the daily list and in the monthly
+log. In the list it selects the closest existing row to today. In
+the month sheet it shows today's calendar month and focuses today's
+day. It must not create today if that day has no log. That key is
+not in the startup-selection slice.
+
+Change record:
+[docs/superpowers/specs/2026-09-19-goto-today.md](docs/superpowers/specs/2026-09-19-goto-today.md).
 
 ### Monthly Log
 
@@ -83,6 +94,13 @@ display of an entire month's data sheet.
 
 Change record:
 [docs/superpowers/specs/2026-09-10-month-tab-next-cell.md](docs/superpowers/specs/2026-09-10-month-tab-next-cell.md).
+
+While a month-sheet cell is being edited, keys should work as a
+spreadsheet: Tab already accepts and moves to the next cell. Enter
+and Down should accept the edit and move down in the current column.
+Up should accept the edit and move up in the current column. Left
+and Right should move the caret in the text being edited, not leave
+the cell. This is not the Goto Today slice.
 
 The tool should be able to generate pdf of the monthly log sheets
 (filled in, not the blank sheets mentioned above), and pdfs of the
@@ -149,6 +167,16 @@ will not fit, skip months.
 
 Change record (long-term X labels):
 [docs/superpowers/specs/2026-09-12-long-term-x-labels.md](docs/superpowers/specs/2026-09-12-long-term-x-labels.md).
+
+On-screen monthly and long-term charts should look at least as good
+as the book's Excel charts. Hacker's Diet Online is a higher bar the
+book does not cover; match it where the terminal allows. Paint may
+use high-resolution glyphs so curves and stems are not one character
+per day in a handful of rows. Data identity is unchanged: title box,
+marks, stems, trend, Y margin, clip, Loss / Daily Deficit, `[colors]`,
+16-color floor, `NO_COLOR`. PDF stays vector. The TUI chart need not
+be a character-cell twin of the PDF. This is not the Goto Today
+slice.
 
 ## Meal Planning
 

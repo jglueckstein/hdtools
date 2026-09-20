@@ -428,6 +428,170 @@ func TestFailedLoadClearsSelectDay(t *testing.T) {
 	assertSelectedDay(t, app, first)
 }
 
+func TestGotoTodayListJumpsToClosest(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	june := time.Date(1990, 6, 1, 0, 0, 0, 0, time.UTC)
+	today := time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC)
+	seedDays(t, store, june, today)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	selectDay(t, app, june)
+	press(app, "t")
+	assertSelectedDay(t, app, today)
+	logs, err := store.All(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(logs) != 2 {
+		t.Fatalf("rows = %d, want 2", len(logs))
+	}
+}
+
+func TestGotoTodayListDoesNotCreateToday(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	first := time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC)
+	eighth := time.Date(1990, 11, 8, 0, 0, 0, 0, time.UTC)
+	seedDays(t, store, first, eighth)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	selectDay(t, app, first)
+	press(app, "t")
+	assertSelectedDay(t, app, eighth)
+	if _, err := store.Get(context.Background(), time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC)); err == nil {
+		t.Fatal("created 10 November 1990")
+	} else if !errors.Is(err, dailylog.ErrNotFound) {
+		t.Fatal(err)
+	}
+}
+
+func TestGotoTodayListNearestFuture(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	twelfth := time.Date(1990, 11, 12, 0, 0, 0, 0, time.UTC)
+	twentieth := time.Date(1990, 11, 20, 0, 0, 0, 0, time.UTC)
+	seedDays(t, store, twelfth, twentieth)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	selectDay(t, app, twentieth)
+	press(app, "t")
+	assertSelectedDay(t, app, twelfth)
+}
+
+func TestGotoTodayListTiePrefersPast(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	ninth := time.Date(1990, 11, 9, 0, 0, 0, 0, time.UTC)
+	eleventh := time.Date(1990, 11, 11, 0, 0, 0, 0, time.UTC)
+	seedDays(t, store, ninth, eleventh)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	selectDay(t, app, eleventh)
+	press(app, "t")
+	assertSelectedDay(t, app, ninth)
+}
+
+func TestGotoTodayListNearerFutureBeatsLastPast(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	first := time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC)
+	eleventh := time.Date(1990, 11, 11, 0, 0, 0, 0, time.UTC)
+	seedDays(t, store, first, eleventh)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	selectDay(t, app, first)
+	press(app, "t")
+	assertSelectedDay(t, app, eleventh)
+}
+
+func TestGotoTodayListEmptyDoesNothing(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "t")
+	if app.screen != screenList {
+		t.Fatalf("screen = %v, want list", app.screen)
+	}
+	if len(app.logs) != 0 {
+		t.Fatalf("logs = %d, want empty", len(app.logs))
+	}
+	if !strings.Contains(visible(app.View()), "no entries yet") {
+		t.Fatalf("View = %q", app.View())
+	}
+	if !helpHasKey(visible(app.View()), "t") {
+		t.Fatal("empty-list help does not mention t")
+	}
+	logs, err := store.All(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(logs) != 0 {
+		t.Fatalf("rows = %d, want 0", len(logs))
+	}
+}
+
+func TestGotoTodayListDoesNotChangeMonthModel(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	seedDays(t, store, time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC))
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "m")
+	press(app, "[")
+	if app.month.month != time.October {
+		t.Fatalf("month = %s, want October", app.month.month)
+	}
+	press(app, "esc")
+	press(app, "t")
+	if app.month.year != 1990 || app.month.month != time.October {
+		t.Fatalf("after list t: %s %d, want October 1990", app.month.month, app.month.year)
+	}
+	assertSelectedDay(t, app, time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC))
+}
+
+func TestGotoTodayFormIsText(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	june := time.Date(1990, 6, 1, 0, 0, 0, 0, time.UTC)
+	seedDays(t, store,
+		june,
+		time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC),
+	)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	selectDay(t, app, june)
+	press(app, "enter")
+	for i := 0; i < fieldNote; i++ {
+		press(app, "tab")
+	}
+	press(app, "t")
+	if app.screen != screenForm {
+		t.Fatalf("screen = %v, want form", app.screen)
+	}
+	if !strings.Contains(app.form.inputs[4].Value(), "t") {
+		t.Fatalf("note = %q, want t", app.form.inputs[4].Value())
+	}
+	press(app, "esc")
+	assertSelectedDay(t, app, june)
+}
+
+func TestGotoTodayHelpMentionsT(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	seedDays(t, store, time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC))
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	if !helpHasKey(visible(app.View()), "t") {
+		t.Fatal("list help does not mention t")
+	}
+	press(app, "m")
+	if !helpHasKey(visible(app.View()), "t") {
+		t.Fatal("month help does not mention t")
+	}
+}
+
 func openStore(t *testing.T) *dailylog.Store {
 	t.Helper()
 	s, err := dailylog.Open(filepath.Join(t.TempDir(), "t.db"))
@@ -476,4 +640,22 @@ func assertSelectedDay(t *testing.T, app *App, want time.Time) {
 	if !got.Equal(want) {
 		t.Fatalf("selected day = %s, want %s", got.Format(time.DateOnly), want.Format(time.DateOnly))
 	}
+}
+
+func helpHasKey(view, key string) bool {
+	lines := strings.Split(view, "\n")
+	help := ""
+	for i := len(lines) - 1; i >= 0; i-- {
+		if s := strings.TrimSpace(lines[i]); s != "" {
+			help = s
+			break
+		}
+	}
+	for _, item := range strings.Split(help, "   ") {
+		item = strings.TrimSpace(item)
+		if item == key || strings.HasPrefix(item, key+" ") {
+			return true
+		}
+	}
+	return false
 }

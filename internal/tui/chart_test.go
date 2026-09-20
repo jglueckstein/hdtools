@@ -772,3 +772,56 @@ func applyP(t *testing.T, app *App) {
 		app.Update(msg)
 	}
 }
+
+func TestGotoTodayIgnoredOnChart(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	press(app, "c")
+	press(app, "[")
+	if app.month.month != time.October {
+		t.Fatalf("after [: %s, want October", app.month.month)
+	}
+	press(app, "t")
+	if app.screen != screenChart {
+		t.Fatalf("screen = %v, want chart", app.screen)
+	}
+	if app.month.month != time.October {
+		t.Fatalf("chart month = %s, want October", app.month.month)
+	}
+	view := visible(app.View())
+	if strings.Contains(view, "daily log") || strings.Contains(view, "arrows move") {
+		t.Fatalf("left the monthly chart: %q", view)
+	}
+	logs, err := store.All(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(logs) != 2 {
+		t.Fatalf("rows = %d, want 2", len(logs))
+	}
+	press(app, "l")
+	kind := app.longKind
+	press(app, "]")
+	if app.longKind == kind {
+		t.Fatal("] did not change long-term kind")
+	}
+	kind = app.longKind
+	press(app, "t")
+	if app.screen != screenLong {
+		t.Fatalf("screen = %v, want long", app.screen)
+	}
+	if app.longKind != kind {
+		t.Fatalf("longKind = %v, want %v", app.longKind, kind)
+	}
+	if !strings.Contains(visible(app.View()), app.longKind.name()) {
+		t.Fatalf("left the long-term chart: %q", app.View())
+	}
+	logs, err = store.All(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(logs) != 2 {
+		t.Fatalf("rows = %d, want 2", len(logs))
+	}
+}
