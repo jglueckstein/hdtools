@@ -1,0 +1,8 @@
+- **Date**: 2026-09-20
+- **Agent**: integration-agent
+- **Task**: Goto Today (`t`) on the daily list and month sheet.
+- **Surprise**: Orthogonal gotos (month `t` must not move the list) were the spec-time fight; the code-mode hole was the other direction — list `t` leaving `a.month` untested because `New()` already pointed it at today. Chart S8 was also a same-month fixture, so a chart-side Goto would have stayed green.
+- **Proposal**: When FR3 is two-way, test both directions. For “key is ignored on this screen,” start from a state where applying the key would be visible (not already today).
+- **Improvement**: Help token `t today` is a mnemonic, not a landing-day promise; lock empty-list help as a second string. `newMonth(localToday())` resets the weight column — document it in `keys.md`.
+- **Signal**: workflow
+- **Constraint**: none
