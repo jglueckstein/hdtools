@@ -217,7 +217,7 @@ func (m monthModel) view(sheet []sheetDay, unit units.Unit, dbPath string, statu
 	if status != "" {
 		fmt.Fprintf(&b, "\n%s\n", p.status.Render(status))
 	}
-	fmt.Fprintf(&b, "\n%s\n", p.help.Render("arrows move   type edit   tab next   space workout   enter form   c chart   l long   [ ] month   esc list"))
+	fmt.Fprintf(&b, "\n%s\n", p.help.Render("arrows move   type edit   tab next   space workout   enter form   c chart   l long   t today   [ ] month   esc list"))
 	return b.String()
 }
 

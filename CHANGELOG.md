@@ -4,6 +4,7 @@
 
 ### Added
 
+- Goto Today (`t`) on the daily list and month sheet (does not create a log)
 - Daily list opens on the log row closest to today (not the first row)
 - PDF of the monthly chart: CLI `-chart-pdf YYYY-MM` (and `-o`) and
   TUI `p` on the monthly chart write a one-page landscape Letter file

@@ -14,6 +14,8 @@
 | Esc | form, month, or chart | cancel / back |
 | Arrows | month | move cells |
 | Tab | month | accept cell (if editing) and move to the next |
+| `t` | list | select the log closest to today |
+| `t` | month (not editing) | today's month and day, weight column |
 | Type | month | edit cell |
 | Space | month | toggle workout |
 | `[` / `]` | month or monthly chart | previous / next month |
