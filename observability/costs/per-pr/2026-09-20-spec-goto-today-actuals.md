@@ -2,7 +2,7 @@
 date: 2026-09-20
 branch: spec/goto-today
 issue: "#55"
-pr: null
+pr: "#56"
 task_summary: Goto Today (t) on the daily list and month sheet.
 progressed_slice: null
 stages_run: [spec-writer, tdd-agent, implementer, code-reviewer, integration-agent]
