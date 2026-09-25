@@ -117,3 +117,14 @@
 - **Improvement**: Help token `t today` is a mnemonic, not a landing-day promise; lock empty-list help as a second string. `newMonth(localToday())` resets the weight column — document it in `keys.md`.
 - **Signal**: workflow
 - **Constraint**: none
+
+---
+
+- **Date**: 2026-09-25
+- **Agent**: integration-agent
+- **Task**: Weight−trend delta column on the daily list and month sheet.
+- **Surprise**: Subtracting kilograms then converting disagreed with the two painted cells (80.0/79.9 kg in lb is `+0.3` by eye, `+0.2` from a kg residual). `math.Round` still disagreed with `fmt.Sprintf("%.1f")` at halfway (80.05). First weigh-in is `0.0` only in kg; 176.5 lb is `-0.1` because `ApplyTrend` rounds stored kilograms.
+- **Proposal**: A derived display column must parse the same `%.1f` strings the adjacent cells paint. Tests that lock “first day is zero” need a non-kg fixture or they hide `ApplyTrend` rounding.
+- **Improvement**: Colour and selection contracts need a test per role and per surface (list reverse vs month role colour), not only `delta-pos`.
+- **Signal**: workflow
+- **Constraint**: none
