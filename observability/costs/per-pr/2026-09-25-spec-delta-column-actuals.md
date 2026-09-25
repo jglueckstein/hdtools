@@ -2,7 +2,7 @@
 date: 2026-09-25
 branch: spec/delta-column
 issue: "#59"
-pr: null
+pr: "#60"
 task_summary: Weight−trend delta column on the daily list and month sheet.
 progressed_slice: null
 stages_run: [spec-writer, tdd-agent, implementer, code-reviewer, integration-agent]
