@@ -115,6 +115,14 @@ PDFs and long-term PDFs are not in this slice.
 Change record:
 [docs/superpowers/specs/2026-09-12-pdf-monthly-charts.md](docs/superpowers/specs/2026-09-12-pdf-monthly-charts.md).
 
+PDFs (monthly charts, filled log sheets, long-term charts, and blank
+sheets) should land in an XDG location, the same data tree as the
+database (`$XDG_DATA_HOME/hdtools`, default `~/.local/share/hdtools`),
+not the process working directory. The user should also be able to
+set that directory in the config file. CLI `-o` still overrides the
+output path. The shipped chart-PDF slice writes to cwd; this is a
+later change.
+
 The TUI should be able to display on screen the monthly charts and the
 long term charts. Every on-screen chart (monthly and all four
 long-term kinds) uses the same vertical scale: (min of plotted
