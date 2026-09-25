@@ -12,11 +12,15 @@ restart; you do not rebuild.
     weight = "green"
     trend = "#c22"
     title = "magenta"
+    delta-pos = "yellow"
+    delta-neg = "green"
+    delta-zero = "white"
     ```
 
 3.  Save and restart hdtools.
 
-Omitted roles keep the built-in default (blue daily weight, red trend).
+Omitted roles keep the built-in default (blue daily weight, red trend,
+yellow / green / white for the weight−trend delta).
 A typo in one role falls back to that default and does not prevent the
 log from opening.
 

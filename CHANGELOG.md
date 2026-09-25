@@ -4,6 +4,7 @@
 
 ### Added
 
+- Weight−trend `delta` column on the daily list and month sheet
 - Goto Today (`t`) on the daily list and month sheet (does not create a log)
 - Daily list opens on the log row closest to today (not the first row)
 - PDF of the monthly chart: CLI `-chart-pdf YYYY-MM` (and `-o`) and

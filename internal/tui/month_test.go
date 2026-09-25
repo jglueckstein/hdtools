@@ -232,6 +232,85 @@ func TestGotoTodayMonthDoesNotMoveList(t *testing.T) {
 	assertSelectedDay(t, app, june)
 }
 
+func TestMonthDeltaBlankWithoutWeight(t *testing.T) {
+	t.Parallel()
+	store := openStore(t)
+	seedWeighIn(t, store, dateUTC(1990, 11, 1), 80.0)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "m")
+	app.month.day = 2
+	view := visible(app.View())
+	header := headerLine(view)
+	data := cursorRow(view)
+	if header == "" || data == "" {
+		t.Fatalf("missing header or data in %q", view)
+	}
+	if cellUnder(t, header, data, "trend") != "80.0" {
+		t.Fatalf("carried trend missing on blank day\nheader %q\ndata   %q", header, data)
+	}
+	cell := cellUnder(t, header, data, "delta")
+	if cell != "" {
+		t.Fatalf("delta = %q, want empty on a day with no weigh-in\ndata %q", cell, data)
+	}
+}
+
+func TestMonthDeltaMatchesList(t *testing.T) {
+	t.Parallel()
+	app := listWithPair(t, 80.5, 80.0, config.Default())
+	press(app, "m")
+	view := visible(app.View())
+	header := headerLine(view)
+	data := cursorRow(view)
+	if header == "" || data == "" {
+		t.Fatalf("missing header or data in %q", view)
+	}
+	assertDeltaRightOfTrend(t, header)
+	cell := cellUnder(t, header, data, "delta")
+	if cell != "+0.5" {
+		t.Fatalf("month delta = %q, want +0.5\nheader %q\ndata   %q", cell, header, data)
+	}
+}
+
+func TestMonthDeltaKeepsRoleWhenWeightFocused(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
+	cfg := loadConfigTOML(t, `display_unit = "kg"
+
+[colors]
+delta-pos = "magenta"
+selection = "yellow"
+`)
+	app := listWithPair(t, 80.5, 80.0, cfg)
+	press(app, "m")
+	app.month.col = colWeight
+	view := app.View()
+	var line string
+	for _, l := range strings.Split(view, "\n") {
+		if strings.Contains(visible(l), "+0.5") {
+			line = l
+			break
+		}
+	}
+	if line == "" {
+		t.Fatalf("no +0.5 month row: %q", visible(view))
+	}
+	if !hasIndexedForeground(line, 5) {
+		t.Fatalf("month delta missing magenta role: %q", line)
+	}
+}
+
+func TestMonthTabSkipsDelta(t *testing.T) {
+	t.Parallel()
+	app := New(nil, "mem.db", config.Default())
+	app.screen = screenMonth
+	app.month = newMonth(dateUTC(1990, 11, 4))
+	app.month.col = colWeight
+	press(app, "tab")
+	if app.month.col != colSleep {
+		t.Fatalf("col = %d, want sleep (tab must skip delta)", app.month.col)
+	}
+}
+
 func dateUTC(y int, m time.Month, d int) time.Time {
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }

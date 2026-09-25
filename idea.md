@@ -58,8 +58,10 @@ A trend number should be calculated from the daily weight.
 To the right of trend, the daily list and the month sheet should
 show a calculated delta: daily weight minus trend, in the display
 unit. Color-code positive, negative, and zero. The delta is derived,
-not stored. Color must not be the only way to read the sign. This is
-not the Goto Today slice.
+not stored. Color must not be the only way to read the sign.
+
+Change record:
+[docs/superpowers/specs/2026-09-22-delta-column.md](docs/superpowers/specs/2026-09-22-delta-column.md).
 
 Tracking calories is a separate tool, see below.
 

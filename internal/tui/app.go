@@ -446,18 +446,23 @@ func (a *App) listView() string {
 			workout = "yes"
 		}
 		selected := i == a.cursor
-		var weightCell, trendCell string
+		showTrend := log.Weight != nil || log.Trend != 0
+		delta := formatDelta(log.Weight, log.Trend, showTrend, a.cfg.DisplayUnit)
+		var weightCell, trendCell, deltaCell string
 		if selected && p.selectionFG {
 			weightCell = visPad(weight, wWeight, true)
 			trendCell = visPad(trend, wTrend, true)
+			deltaCell = visPad(delta, wDelta, true)
 		} else {
 			weightCell = visPad(p.weight.Render(weight), wWeight, true)
 			trendCell = visPad(p.trend.Render(trend), wTrend, true)
+			deltaCell = styleDelta(delta, p)
 		}
 		line := visPad(mark, wMark, false) + joinCols(
 			visPad(log.Day.Format("2006-01-02"), wDate, false),
 			weightCell,
 			trendCell,
+			deltaCell,
 			visPad(fmt.Sprintf("%.1f", log.SleepHours), wSleep, true),
 			visPad(fmt.Sprintf("%d", log.Steps), wSteps, true),
 			visPad(workout, wWorkout, false),

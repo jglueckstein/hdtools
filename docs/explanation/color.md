@@ -19,6 +19,9 @@ A bad colour must not lock you out of the log, so omitted and invalid
 values fall back silently. That is the inverse of `display_unit`, which
 can corrupt stored kilograms if it is wrong.
 
+The `delta` column (weight minus trend) uses `delta-pos`, `delta-neg`,
+and `delta-zero`. The sign is still in the text (`+`, `-`, or `0.0`).
+
 Sleep, steps, workout, and note have no colour keys. The scheme spends
 its budget on the book's signal/noise split, not on a fully themed
 table. There is no per-role "off" token: the only way to drop chroma is
