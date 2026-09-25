@@ -33,6 +33,9 @@ that is not a table is treated as a missing table. Fallback is silent.
 | `help` | Keybinding lines | `bright-black` |
 | `weight` | Daily weight values | `blue` |
 | `trend` | Trend values | `red` |
+| `delta-pos` | Weight above trend | `yellow` |
+| `delta-neg` | Weight below trend | `green` |
+| `delta-zero` | Weight on trend | `white` |
 | `selection` | Extra foreground on reverse video (list row or focused month cell). Omitted: reverse only. Unused on the form. | none |
 | `error` | Error lines | `red` |
 | `status` | Status lines | `green` |

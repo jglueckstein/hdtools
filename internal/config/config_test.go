@@ -191,6 +191,26 @@ trend = "yellow"
 	}
 }
 
+func TestInvalidDeltaColorDropped(t *testing.T) {
+	t.Parallel()
+	path := writeTOML(t, `display_unit = "kg"
+
+[colors]
+delta-pos = "chartreuse"
+trend = "yellow"
+`)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := cfg.Colors["delta-pos"]; ok {
+		t.Fatalf("invalid delta-pos kept: %#v", cfg.Colors)
+	}
+	if cfg.Colors["trend"] != "yellow" {
+		t.Fatalf("trend = %q, want yellow", cfg.Colors["trend"])
+	}
+}
+
 func TestLoadMalformedHexAndSequencesFallBack(t *testing.T) {
 	t.Parallel()
 	for _, in := range []string{

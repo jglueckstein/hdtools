@@ -14,12 +14,13 @@ import (
 )
 
 type palette struct {
-	title, muted, header, help lipgloss.Style
-	weight, trend              lipgloss.Style
-	error, status              lipgloss.Style
-	label, focusLabel          lipgloss.Style
-	selected                   lipgloss.Style
-	selectionFG                bool
+	title, muted, header, help    lipgloss.Style
+	weight, trend                 lipgloss.Style
+	deltaPos, deltaNeg, deltaZero lipgloss.Style
+	error, status                 lipgloss.Style
+	label, focusLabel             lipgloss.Style
+	selected                      lipgloss.Style
+	selectionFG                   bool
 }
 
 var nameIndex = map[string]string{
@@ -31,14 +32,17 @@ var nameIndex = map[string]string{
 }
 
 var defaultColors = map[string]string{
-	config.RoleTitle:  "cyan",
-	config.RoleMuted:  "bright-black",
-	config.RoleHeader: "white",
-	config.RoleHelp:   "bright-black",
-	config.RoleWeight: "blue",
-	config.RoleTrend:  "red",
-	config.RoleError:  "red",
-	config.RoleStatus: "green",
+	config.RoleTitle:     "cyan",
+	config.RoleMuted:     "bright-black",
+	config.RoleHeader:    "white",
+	config.RoleHelp:      "bright-black",
+	config.RoleWeight:    "blue",
+	config.RoleTrend:     "red",
+	config.RoleDeltaPos:  "yellow",
+	config.RoleDeltaNeg:  "green",
+	config.RoleDeltaZero: "white",
+	config.RoleError:     "red",
+	config.RoleStatus:    "green",
 }
 
 func newPalette(cfg config.Config) palette {
@@ -70,6 +74,9 @@ func newPalette(cfg config.Config) palette {
 		help:        fg(config.RoleHelp, false),
 		weight:      fg(config.RoleWeight, false),
 		trend:       fg(config.RoleTrend, true),
+		deltaPos:    fg(config.RoleDeltaPos, false),
+		deltaNeg:    fg(config.RoleDeltaNeg, false),
+		deltaZero:   fg(config.RoleDeltaZero, false),
 		error:       fg(config.RoleError, false),
 		status:      fg(config.RoleStatus, false),
 		label:       fg(config.RoleTitle, false),

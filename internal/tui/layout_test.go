@@ -80,6 +80,19 @@ func TestMonthHeaderAlignsWithWeightAndTrend(t *testing.T) {
 	assertRightAligned(t, header, "trend", data, "172.4")
 }
 
+func TestDeltaColumnAligns(t *testing.T) {
+	t.Parallel()
+	app := listWithPair(t, 80.5, 80.0, config.Default())
+	view := visible(app.View())
+	header := headerLine(view)
+	data := dataRow(view, "1990-11-02")
+	if header == "" || data == "" {
+		t.Fatalf("missing header or data in %q", view)
+	}
+	assertDeltaRightOfTrend(t, header)
+	assertRightAligned(t, header, "delta", data, "+0.5")
+}
+
 func twoDayApp(t *testing.T, store *dailylog.Store) *App {
 	t.Helper()
 	ctx := context.Background()
@@ -110,4 +123,70 @@ func assertRightAligned(t *testing.T, header, label, data, value string) {
 	if hEnd != dEnd {
 		t.Fatalf("%s header ends at %d, %s ends at %d\nheader %q\ndata   %q", label, hEnd, value, dEnd, header, data)
 	}
+}
+
+func headerLine(view string) string {
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, "weight") && strings.Contains(line, "trend") {
+			return line
+		}
+	}
+	return ""
+}
+
+func dataRow(view, needle string) string {
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, needle) && !strings.Contains(line, "weight") {
+			return line
+		}
+	}
+	return ""
+}
+
+func cursorRow(view string) string {
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, "> ") {
+			return line
+		}
+	}
+	return ""
+}
+
+func assertDeltaRightOfTrend(t *testing.T, header string) {
+	t.Helper()
+	ti := strings.Index(header, "trend")
+	di := strings.Index(header, "delta")
+	if ti < 0 || di < 0 {
+		t.Fatalf("header missing trend or delta: %q", header)
+	}
+	if di <= ti {
+		t.Fatalf("delta is not right of trend: %q", header)
+	}
+}
+
+func cellUnder(t *testing.T, header, data, label string) string {
+	t.Helper()
+	h := strings.Index(header, label)
+	if h < 0 {
+		t.Fatalf("header missing %q\nheader %q\ndata   %q", label, header, data)
+	}
+	start := lipgloss.Width(header[:h])
+	end := start + lipgloss.Width(label)
+	return strings.TrimSpace(visCut(data, start, end))
+}
+
+func visCut(s string, start, end int) string {
+	var b strings.Builder
+	col := 0
+	for _, r := range s {
+		w := lipgloss.Width(string(r))
+		if col+w > end {
+			break
+		}
+		if col >= start {
+			b.WriteRune(r)
+		}
+		col += w
+	}
+	return b.String()
 }

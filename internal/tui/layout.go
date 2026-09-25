@@ -20,6 +20,7 @@ const (
 	wWeekday = 2
 	wWeight  = 7
 	wTrend   = 6
+	wDelta   = 6
 	wSleep   = 5
 	wSteps   = 6
 	wWorkout = 7
@@ -47,6 +48,7 @@ func listHeader() string {
 		visPad("date", wDate, false),
 		visPad("weight", wWeight, true),
 		visPad("trend", wTrend, true),
+		visPad("delta", wDelta, true),
 		visPad("sleep", wSleep, true),
 		visPad("steps", wSteps, true),
 		visPad("workout", wWorkout, false),
@@ -60,6 +62,7 @@ func monthHeader() string {
 		visPad("wd", wWeekday, false),
 		visPad("weight", wWeight, true),
 		visPad("trend", wTrend, true),
+		visPad("delta", wDelta, true),
 		visPad("sleep", wSleep, true),
 		visPad("steps", wSteps, true),
 		visPad("workout", wWorkout, false),

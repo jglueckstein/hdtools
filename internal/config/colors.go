@@ -19,6 +19,9 @@ const (
 	RoleHelp      = "help"
 	RoleWeight    = "weight"
 	RoleTrend     = "trend"
+	RoleDeltaPos  = "delta-pos"
+	RoleDeltaNeg  = "delta-neg"
+	RoleDeltaZero = "delta-zero"
 	RoleSelection = "selection"
 	RoleError     = "error"
 	RoleStatus    = "status"
@@ -31,6 +34,9 @@ var colorRoles = map[string]struct{}{
 	RoleHelp:      {},
 	RoleWeight:    {},
 	RoleTrend:     {},
+	RoleDeltaPos:  {},
+	RoleDeltaNeg:  {},
+	RoleDeltaZero: {},
 	RoleSelection: {},
 	RoleError:     {},
 	RoleStatus:    {},

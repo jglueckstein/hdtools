@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -592,6 +593,302 @@ func TestGotoTodayHelpMentionsT(t *testing.T) {
 	}
 }
 
+func TestListDeltaPositive(t *testing.T) {
+	t.Parallel()
+	app := listWithPair(t, 80.5, 80.0, config.Default())
+	header, data, cell := listDeltaCell(t, app, "1990-11-02")
+	if cell != "+0.5" {
+		t.Fatalf("delta = %q, want +0.5\nheader %q\ndata   %q", cell, header, data)
+	}
+}
+
+func TestListDeltaNegative(t *testing.T) {
+	t.Parallel()
+	app := listWithPair(t, 79.5, 80.0, config.Default())
+	_, data, cell := listDeltaCell(t, app, "1990-11-02")
+	if cell != "-0.5" {
+		t.Fatalf("delta = %q, want -0.5\ndata %q", cell, data)
+	}
+}
+
+func TestListDeltaZero(t *testing.T) {
+	t.Parallel()
+	store := openStore(t)
+	seedWeighIn(t, store, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), 80.0)
+	seedWeighIn(t, store, time.Date(1990, 11, 2, 0, 0, 0, 0, time.UTC), 80.0)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	_, data, cell := listDeltaCell(t, app, "1990-11-02")
+	if cell != "0.0" {
+		t.Fatalf("delta = %q, want 0.0\ndata %q", cell, data)
+	}
+	if strings.Contains(cell, "+") || strings.Contains(cell, "-") {
+		t.Fatalf("zero delta must not be signed: %q", cell)
+	}
+}
+
+func TestListDeltaRoundedZero(t *testing.T) {
+	t.Parallel()
+	store := openStore(t)
+	// 80.04 vs ApplyTrend's first-day round1(80.04)=80.0; difference rounds to 0.0.
+	seedWeighIn(t, store, time.Date(1990, 11, 2, 0, 0, 0, 0, time.UTC), 80.04)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	_, data, cell := listDeltaCell(t, app, "1990-11-02")
+	if cell != "0.0" {
+		t.Fatalf("delta = %q, want 0.0\ndata %q", cell, data)
+	}
+	if strings.Contains(cell, "+") || strings.Contains(cell, "-") {
+		t.Fatalf("rounded-zero delta must not be signed: %q", cell)
+	}
+}
+
+func TestListDeltaHalfwayMatchesPaintedCells(t *testing.T) {
+	t.Parallel()
+	// 80.05 kg: %.1f is 80.0, math.Round is 80.1. Delta must match paint.
+	app := listWithPair(t, 80.05, 80.00, config.Default())
+	view := visible(app.View())
+	if !strings.Contains(view, "80.0") {
+		t.Fatalf("missing painted 80.0: %q", view)
+	}
+	_, data, cell := listDeltaCell(t, app, "1990-11-02")
+	if cell != "0.0" {
+		t.Fatalf("delta = %q, want 0.0 (painted 80.0−80.0), not +0.1 from math.Round\ndata %q", cell, data)
+	}
+}
+
+func TestListDeltaFirstWeighInIsZero(t *testing.T) {
+	t.Parallel()
+	store := openStore(t)
+	seedWeighIn(t, store, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), 80.0)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	if len(app.logs) != 1 || app.logs[0].Weight == nil || app.logs[0].Trend != *app.logs[0].Weight {
+		t.Fatalf("first weigh-in trend = %v weight = %v", app.logs[0].Trend, app.logs[0].Weight)
+	}
+	_, data, cell := listDeltaCell(t, app, "1990-11-01")
+	if cell != "0.0" {
+		t.Fatalf("delta = %q, want 0.0\ndata %q", cell, data)
+	}
+}
+
+func TestListDeltaDisplayedCellsAddUp(t *testing.T) {
+	t.Parallel()
+	app := listWithPair(t, 80.0, 79.9, config.Config{DisplayUnit: units.Pound})
+	view := visible(app.View())
+	if !strings.Contains(view, "176.4") || !strings.Contains(view, "176.1") {
+		t.Fatalf("list missing displayed lb cells: %q", view)
+	}
+	_, data, cell := listDeltaCell(t, app, "1990-11-02")
+	if cell != "+0.3" {
+		t.Fatalf("delta = %q, want +0.3 (displayed 176.4−176.1), not kg residual\ndata %q", cell, data)
+	}
+	if cell == "+0.2" || strings.Contains(data, "+0.2") {
+		t.Fatalf("delta used kilogram residual conversion: %q", data)
+	}
+}
+
+func TestListDeltaFirstWeighInLBIsDisplayedSubtraction(t *testing.T) {
+	t.Parallel()
+	store := openStore(t)
+	kg, err := units.ToKG(176.5, units.Pound)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seedWeighIn(t, store, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), kg)
+	app := New(store, "mem.db", config.Config{DisplayUnit: units.Pound})
+	app.Update(app.load())
+	view := visible(app.View())
+	if !strings.Contains(view, "176.5") {
+		t.Fatalf("missing painted 176.5: %q", view)
+	}
+	_, data, cell := listDeltaCell(t, app, "1990-11-01")
+	if cell != "-0.1" {
+		t.Fatalf("delta = %q, want -0.1 (176.5−176.6)\ndata %q", cell, data)
+	}
+}
+
+func TestListDeltaNOCOLORKeepsSign(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	app := listWithPair(t, 80.5, 80.0, config.Default())
+	view := app.View()
+	vis := visible(view)
+	if !strings.Contains(vis, "+0.5") {
+		t.Fatalf("NO_COLOR dropped signed delta: %q", vis)
+	}
+	for _, line := range strings.Split(view, "\n") {
+		if !strings.Contains(visible(line), "+0.5") {
+			continue
+		}
+		if strings.Contains(line, "38;2;") || strings.Contains(line, "38;5;") {
+			t.Fatalf("delta cell has chromatic ANSI under NO_COLOR: %q", line)
+		}
+		if hasChromaticSGR(line) {
+			t.Fatalf("delta cell has chromatic SGR under NO_COLOR: %q", line)
+		}
+	}
+}
+
+func TestListDeltaCustomColorPainted(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
+	cfg := loadConfigTOML(t, `display_unit = "kg"
+
+[colors]
+delta-pos = "magenta"
+`)
+	app := listWithPair(t, 80.5, 80.0, cfg)
+	view := app.View()
+	vis := visible(view)
+	if !strings.Contains(vis, "+0.5") {
+		t.Fatalf("visible missing +0.5: %q", vis)
+	}
+	var line string
+	for _, l := range strings.Split(view, "\n") {
+		if strings.Contains(visible(l), "+0.5") {
+			line = l
+			break
+		}
+	}
+	if !hasIndexedForeground(line, 5) {
+		t.Fatalf("+0.5 not magenta: %q", line)
+	}
+	if hasIndexedForeground(line, 3) {
+		t.Fatalf("+0.5 still default yellow: %q", line)
+	}
+}
+
+func TestListDeltaCustomNegColorPainted(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
+	cfg := loadConfigTOML(t, `display_unit = "kg"
+
+[colors]
+delta-neg = "magenta"
+`)
+	app := listWithPair(t, 79.5, 80.0, cfg)
+	view := app.View()
+	if !strings.Contains(visible(view), "-0.5") {
+		t.Fatalf("visible missing -0.5: %q", visible(view))
+	}
+	var line string
+	for _, l := range strings.Split(view, "\n") {
+		if strings.Contains(visible(l), "-0.5") {
+			line = l
+			break
+		}
+	}
+	if !hasIndexedForeground(line, 5) {
+		t.Fatalf("-0.5 not magenta: %q", line)
+	}
+}
+
+func TestListDeltaCustomZeroColorPainted(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
+	cfg := loadConfigTOML(t, `display_unit = "kg"
+
+[colors]
+delta-zero = "magenta"
+`)
+	app := listWithPair(t, 80.0, 80.0, cfg)
+	view := app.View()
+	if !strings.Contains(visible(view), "0.0") {
+		t.Fatalf("visible missing 0.0: %q", visible(view))
+	}
+	var line string
+	for _, l := range strings.Split(view, "\n") {
+		if strings.Contains(visible(l), "0.0") && strings.Contains(visible(l), "1990-11-02") {
+			line = l
+			break
+		}
+	}
+	if line == "" {
+		t.Fatalf("no data row: %q", visible(view))
+	}
+	if !hasIndexedForeground(line, 5) {
+		t.Fatalf("0.0 not magenta: %q", line)
+	}
+}
+
+func TestInvalidDeltaNegColorDropped(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
+	cfg := loadConfigTOML(t, `display_unit = "kg"
+
+[colors]
+delta-neg = "chartreuse"
+`)
+	app := listWithPair(t, 79.5, 80.0, cfg)
+	if app.err != nil {
+		t.Fatalf("TUI did not open: %v", app.err)
+	}
+	view := app.View()
+	vis := visible(view)
+	if !strings.Contains(vis, "-0.5") {
+		t.Fatalf("visible missing -0.5: %q", vis)
+	}
+	var line string
+	for _, l := range strings.Split(view, "\n") {
+		if strings.Contains(visible(l), "-0.5") {
+			line = l
+			break
+		}
+	}
+	if !hasIndexedForeground(line, 2) {
+		t.Fatalf("-0.5 not default green: %q", line)
+	}
+}
+
+func TestListDeltaSelectionIncludesReverse(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
+	app := listWithPair(t, 80.5, 80.0, config.Default())
+	view := app.View()
+	var line string
+	for _, l := range strings.Split(view, "\n") {
+		if strings.Contains(visible(l), "+0.5") {
+			line = l
+			break
+		}
+	}
+	if line == "" {
+		t.Fatalf("no +0.5 line: %q", visible(view))
+	}
+	if !hasSGRCode(line, 7) {
+		t.Fatalf("selected delta row missing reverse: %q", line)
+	}
+}
+
+func TestInvalidDeltaColorDropped(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
+	cfg := loadConfigTOML(t, `display_unit = "kg"
+
+[colors]
+delta-pos = "chartreuse"
+`)
+	app := listWithPair(t, 80.5, 80.0, cfg)
+	if app.err != nil {
+		t.Fatalf("TUI did not open: %v", app.err)
+	}
+	view := app.View()
+	vis := visible(view)
+	if strings.Contains(vis, "error:") {
+		t.Fatalf("TUI error: %q", vis)
+	}
+	if !strings.Contains(vis, "1990-11-02") {
+		t.Fatalf("log did not open: %q", vis)
+	}
+	if !strings.Contains(vis, "+0.5") {
+		t.Fatalf("visible missing +0.5: %q", vis)
+	}
+	var line string
+	for _, l := range strings.Split(view, "\n") {
+		if strings.Contains(visible(l), "+0.5") {
+			line = l
+			break
+		}
+	}
+	if !hasIndexedForeground(line, 3) {
+		t.Fatalf("+0.5 not default yellow: %q", line)
+	}
+}
+
 func openStore(t *testing.T) *dailylog.Store {
 	t.Helper()
 	s, err := dailylog.Open(filepath.Join(t.TempDir(), "t.db"))
@@ -658,4 +955,60 @@ func helpHasKey(view, key string) bool {
 		}
 	}
 	return false
+}
+
+func seedWeighIn(t *testing.T, store *dailylog.Store, day time.Time, kg float64) {
+	t.Helper()
+	w := kg
+	log, err := dailylog.New(day, &w, 8, 1000, false, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Upsert(context.Background(), log); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// listWithPair loads one weigh-in so ApplyTrend runs, then stamps Weight
+// and Trend. Smoothing cannot produce every spec pair (80.5 vs 80.0);
+// the delta cell is FromKG(weight)−FromKG(trend) of the displayed row.
+func listWithPair(t *testing.T, weight, trend float64, cfg config.Config) *App {
+	t.Helper()
+	store := openStore(t)
+	seedWeighIn(t, store, time.Date(1990, 11, 2, 0, 0, 0, 0, time.UTC), weight)
+	app := New(store, "mem.db", cfg)
+	app.Update(app.load())
+	if len(app.logs) != 1 {
+		t.Fatalf("logs = %d, want 1", len(app.logs))
+	}
+	w := weight
+	app.logs[0].Weight = &w
+	app.logs[0].Trend = trend
+	return app
+}
+
+func loadConfigTOML(t *testing.T, body string) config.Config {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cfg
+}
+
+func listDeltaCell(t *testing.T, app *App, day string) (header, data, cell string) {
+	t.Helper()
+	view := visible(app.View())
+	header = headerLine(view)
+	data = dataRow(view, day)
+	if header == "" || data == "" {
+		t.Fatalf("missing header or data in %q", view)
+	}
+	assertDeltaRightOfTrend(t, header)
+	cell = cellUnder(t, header, data, "delta")
+	return header, data, cell
 }

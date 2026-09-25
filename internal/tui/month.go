@@ -180,9 +180,15 @@ func (m monthModel) view(sheet []sheetDay, unit units.Unit, dbPath string, statu
 			}
 			note = row.Log.Note
 		}
+		var wkg *float64
+		if row.HasEntry {
+			wkg = row.Log.Weight
+		}
+		delta := formatDelta(wkg, row.Trend, row.HasTrend, unit)
 		plainWeight := weight
 		weight = visPad(p.weight.Render(weight), wWeight, true)
 		trend = visPad(p.trend.Render(trend), wTrend, true)
+		deltaCell := styleDelta(delta, p)
 		sleep = visPad(sleep, wSleep, true)
 		steps = visPad(steps, wSteps, true)
 		workout = visPad(workout, wWorkout, false)
@@ -205,6 +211,7 @@ func (m monthModel) view(sheet []sheetDay, unit units.Unit, dbPath string, statu
 			visPad(wd, wWeekday, false),
 			weight,
 			trend,
+			deltaCell,
 			sleep,
 			steps,
 			workout,
