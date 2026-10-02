@@ -61,6 +61,8 @@
 
 ### Fixed
 
+- Record the Grok spawn id for literacy-superpowers agents in
+  `AGENTS.md` (#69)
 - Chart PDF write failures name the step that failed, and the
   color-role constants say which colors-table keys they are (#65)
 - Drop the HARNESS.md pointer at a plugin spec this tree never vendored
