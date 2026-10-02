@@ -445,6 +445,72 @@ func TestMonthEscWhileEditingCancels(t *testing.T) {
 	assertNoDay(t, store, dateUTC(1990, 11, 4))
 }
 
+// The save command runs after the key. A later edit of the live cursor
+// must not redirect the write that Enter already accepted.
+func TestMonthEnterSnapshotIgnoresLaterCursor(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("80.0")
+	_, cmd := app.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("enter should attempt save")
+	}
+	app.month.day = 10
+	app.month.input.SetValue("99")
+	app.Update(cmd())
+	assertStoredWeight(t, store, dateUTC(1990, 11, 4), 80)
+	assertNoDay(t, store, dateUTC(1990, 11, 10))
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colWeight || app.month.day != 5 {
+		t.Fatalf("focus day %d col %d, want weight on day 5", app.month.day, app.month.col)
+	}
+}
+
+func TestMonthSecondVerticalKeyBeforeSaveDoesNotSkip(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("80.0")
+	_, first := app.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, second := app.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if first == nil || second == nil {
+		t.Fatal("enter and down should attempt save")
+	}
+	app.Update(first())
+	app.Update(second())
+	assertStoredWeight(t, store, dateUTC(1990, 11, 4), 80)
+	assertNoDay(t, store, dateUTC(1990, 11, 5))
+	assertNoDay(t, store, dateUTC(1990, 11, 6))
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colWeight || app.month.day != 5 {
+		t.Fatalf("focus day %d col %d, want weight on day 5, not a skipped day", app.month.day, app.month.col)
+	}
+}
+
+func TestMonthEscBeforeSaveCancels(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("80.0")
+	_, cmd := app.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("enter should attempt save")
+	}
+	app.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if msg := cmd(); msg != nil {
+		app.Update(msg)
+	}
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colWeight || app.month.day != 4 {
+		t.Fatalf("focus day %d col %d, want weight on day 4", app.month.day, app.month.col)
+	}
+	assertNoDay(t, store, dateUTC(1990, 11, 4))
+}
+
 func TestMonthLeftRightWhenNotEditingMoveColumn(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
