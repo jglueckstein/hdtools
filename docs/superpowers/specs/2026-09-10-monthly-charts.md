@@ -1,7 +1,7 @@
 # On-screen monthly weight chart
 
 **Date**: 2026-09-10
-**Status**: draft
+**Status**: approved
 **Issue**: [#34](https://github.com/jglueckstein/hdtools/issues/34)
 **Backlog**: [`idea.md`](../../../idea.md) (Monthly Log)
 
