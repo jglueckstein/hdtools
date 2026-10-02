@@ -12,6 +12,7 @@ import (
 	"unicode"
 )
 
+// Role names are the colors-table keys a config file may set.
 const (
 	RoleTitle     = "title"
 	RoleMuted     = "muted"
