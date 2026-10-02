@@ -4,6 +4,8 @@
 
 ### Added
 
+- While editing a month cell, Enter and Down accept the edit and move
+  down the column, and Up accepts and moves up (#67)
 - Weight−trend `delta` column on the daily list and month sheet
 - Goto Today (`t`) on the daily list and month sheet (does not create a log)
 - Daily list opens on the log row closest to today (not the first row)

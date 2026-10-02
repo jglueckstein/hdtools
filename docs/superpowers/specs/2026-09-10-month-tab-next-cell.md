@@ -6,9 +6,11 @@
 **Backlog**: [`idea.md`](../../../idea.md) (Monthly Log)
 
 The monthly sheet is for entering a month in one sitting. Enter while
-editing already saves the cell. Tab should save as well, then move to
-the next cell so a row can be filled without reaching for Enter and
-arrows.
+editing persists the cell (display unit, kilograms in the log). Tab
+repeats that persist step, then moves to the next cell so a row can
+be filled. A failed save does not move. Enter then moves vertically;
+that move belongs to
+[2026-10-01-month-sheet-edit-keys.md](2026-10-01-month-sheet-edit-keys.md).
 
 ## User stories
 
@@ -27,8 +29,10 @@ I am not editing, like Right arrow.
 
 1.  **Month sheet only.** Form Tab still moves between form fields
     without saving the whole form.
-2.  **Save then advance.** While editing, Tab does the same save as
-    Enter, then moves. A failed save does not advance.
+2.  **Save then advance.** While editing, Tab persists the cell the
+    same way Enter's save does (display unit, kilograms in the log),
+    then moves to the next cell. A failed save does not advance. Tab
+    does not take Enter's vertical move.
 3.  **Next cell is the next column**, wrapping to the next day's first
     column (weight). The last cell of the month does not wrap.
 4.  **Workout is a cell.** Tab lands on it; Space still toggles. Tab
@@ -76,8 +80,10 @@ the month
 
 ## Functional requirements
 
--   **FR1.** While editing a month cell, Tab saves that cell the same
-    way Enter does, then moves to the next cell.
+-   **FR1.** While editing a month cell, Tab persists that cell the
+    same way Enter's save does (display unit, kilograms in the log;
+    a failed save does not move), then moves to the next cell. Tab
+    does not follow Enter's vertical destination.
 -   **FR2.** If that save fails, focus and editing stay put.
 -   **FR3.** When not editing, Tab moves to the next cell without
     writing.
@@ -90,4 +96,6 @@ the month
 
 -   Shift+Tab
 -   Tab on the list screen
--   Changing Enter (it still saves without advancing)
+-   Enter's vertical move (owned by
+    [2026-10-01-month-sheet-edit-keys.md](2026-10-01-month-sheet-edit-keys.md)).
+    This spec covers Enter's persist step only.

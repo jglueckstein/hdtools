@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -57,6 +58,12 @@ type App struct {
 	// selectDay, when set, is the calendar day the next loadedMsg
 	// should land on (the day a form just wrote).
 	selectDay time.Time
+	// monthSaveCancel is bumped when Esc cancels an edit, so a
+	// vertical save command that has not run yet writes nothing.
+	// monthSaveEdit is bumped when that save's move is applied, so
+	// a second savedMsg from the same edit does not skip a day.
+	monthSaveCancel atomic.Uint64
+	monthSaveEdit   atomic.Uint64
 }
 
 type loadedMsg struct {
@@ -68,8 +75,13 @@ type loadErrMsg struct {
 }
 
 type savedMsg struct {
-	advance bool
-	day     time.Time // form save: the written day; zero for month-cell save
+	advance   bool
+	dayDelta  int       // month cell: +1 down, -1 up, 0 stay. Never combined with advance.
+	day       time.Time // form save: the written day; zero for month-cell save
+	origin    time.Time // vertical save: the day captured when the key was handled
+	cancelGen uint64
+	editGen   uint64
+	guard     bool // vertical save: drop the move if Esc or an earlier twin won
 }
 
 // DefaultDBPath is $XDG_DATA_HOME/hdtools/hdtools.db.
@@ -158,9 +170,22 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.err = nil
 		return a, nil
 	case savedMsg:
+		// A stale vertical save must not cancel a newer edit or
+		// move the cursor a second time.
+		if msg.guard && !a.verticalSaveCurrent(msg) {
+			return a, nil
+		}
 		a.month.cancelEdit()
 		if msg.advance {
 			a.month.nextCell()
+		} else if msg.dayDelta != 0 {
+			if !msg.origin.IsZero() {
+				a.month.year, a.month.month, a.month.day = msg.origin.Date()
+			}
+			a.month.moveDay(msg.dayDelta)
+			if msg.guard {
+				a.monthSaveEdit.Add(1)
+			}
 		}
 		if !msg.day.IsZero() {
 			a.selectDay = msg.day
@@ -297,9 +322,12 @@ func (a *App) updateMonth(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "esc":
 			a.month.cancelEdit()
+			a.monthSaveCancel.Add(1)
 			return a, nil
-		case "enter":
-			return a, a.saveMonthCell
+		case "enter", "down":
+			return a, a.beginVerticalMonthSave(1)
+		case "up":
+			return a, a.beginVerticalMonthSave(-1)
 		case "tab":
 			return a, a.saveMonthCellAndAdvance
 		case "ctrl+c":
@@ -359,39 +387,6 @@ func (a *App) updateMonth(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return a, nil
-}
-
-func (a *App) saveMonthCell() tea.Msg {
-	day := a.month.cursorDay()
-	log, err := a.store.Get(context.Background(), day)
-	if err != nil {
-		if !errors.Is(err, dailylog.ErrNotFound) {
-			return loadErrMsg{err: err}
-		}
-		log = dailylog.DailyLog{Day: day}
-	}
-	if a.month.col == colWorkout {
-		log.Workout = !log.Workout
-		log, err = dailylog.New(log.Day, log.Weight, log.SleepHours, log.Steps, log.Workout, log.Note)
-	} else {
-		log, err = patchCell(log, a.month.col, a.month.input.Value(), a.cfg.DisplayUnit)
-	}
-	if err != nil {
-		return loadErrMsg{err: err}
-	}
-	if err := a.store.Upsert(context.Background(), log); err != nil {
-		return loadErrMsg{err: err}
-	}
-	return savedMsg{}
-}
-
-func (a *App) saveMonthCellAndAdvance() tea.Msg {
-	msg := a.saveMonthCell()
-	if saved, ok := msg.(savedMsg); ok {
-		saved.advance = true
-		return saved
-	}
-	return msg
 }
 
 // View renders the list, the day form, the month sheet, or a chart.

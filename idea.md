@@ -102,7 +102,10 @@ spreadsheet: Tab already accepts and moves to the next cell. Enter
 and Down should accept the edit and move down in the current column.
 Up should accept the edit and move up in the current column. Left
 and Right should move the caret in the text being edited, not leave
-the cell. This is not the Goto Today slice.
+the cell.
+
+Change record:
+[docs/superpowers/specs/2026-10-01-month-sheet-edit-keys.md](docs/superpowers/specs/2026-10-01-month-sheet-edit-keys.md).
 
 The tool should be able to generate pdf of the monthly log sheets
 (filled in, not the blank sheets mentioned above), and pdfs of the
