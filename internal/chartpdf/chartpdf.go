@@ -87,7 +87,7 @@ func Write(path string, opts Options) error {
 func installOwnerOnly(path, dir string, data []byte) error {
 	tmp, err := os.CreateTemp(dir, ".hdtools-chart-*.pdf")
 	if err != nil {
-		return err
+		return fmt.Errorf("create temp chart: %w", err)
 	}
 	tmpName := tmp.Name()
 	cleanup := true
@@ -98,17 +98,17 @@ func installOwnerOnly(path, dir string, data []byte) error {
 	}()
 	if err := tmp.Chmod(0o600); err != nil {
 		_ = tmp.Close()
-		return err
+		return fmt.Errorf("chmod chart: %w", err)
 	}
 	if _, err := tmp.Write(data); err != nil {
 		_ = tmp.Close()
-		return err
+		return fmt.Errorf("write chart: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
-		return err
+		return fmt.Errorf("close chart: %w", err)
 	}
 	if err := os.Rename(tmpName, path); err != nil {
-		return err
+		return fmt.Errorf("rename chart: %w", err)
 	}
 	cleanup = false
 	return nil

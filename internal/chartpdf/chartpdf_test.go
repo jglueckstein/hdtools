@@ -41,6 +41,9 @@ func TestWritePDFFailedWriteLeavesOriginal(t *testing.T) {
 	if err == nil {
 		t.Fatal("want write error in a read-only directory")
 	}
+	if !strings.Contains(err.Error(), "create temp chart") {
+		t.Fatalf("error %q does not name the temp-file step", err)
+	}
 	got, readErr := os.ReadFile(path)
 	if readErr != nil {
 		t.Fatal(readErr)
