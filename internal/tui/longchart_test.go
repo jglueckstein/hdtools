@@ -123,19 +123,29 @@ func TestLongChartCyclesKinds(t *testing.T) {
 }
 
 func TestLongChartTwoLinesNoMarksOrStems(t *testing.T) {
+	enableChroma(t)
 	freezeToday(t, nov1990())
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "l")
-	view := visible(app.View())
-	if !strings.ContainsAny(view, `/\-`) {
-		t.Fatalf("missing path: %q", view)
-	}
+	view := app.View()
 	if plotHas(view, 'o') {
 		t.Fatalf("daily mark on long chart: %q", view)
 	}
 	if plotHas(view, '|') {
 		t.Fatalf("stem on long chart: %q", view)
+	}
+	rows := mustPlot(t, view)
+	mark, trend, shared := twoDaySeriesBins()
+	start := time.Date(1990, 9, 1, 0, 0, 0, 0, time.UTC)
+	nov1 := spanIndex(start, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC))
+	nov2 := spanIndex(start, time.Date(1990, 11, 2, 0, 0, 0, 0, time.UTC))
+	cell, _, ok := binRow(rows, nov1, shared, true)
+	sharedGood := ok && maskOf(cell.r)&sideBits(false) != 0 && cellHasFG(cell, 1)
+	pathsGood := hasBin(rows, nov2, mark) && hasLeftBin(rows, nov2, trend) && hasRightBin(rows, nov2, trend)
+	if !sharedGood || !pathsGood {
+		t.Fatalf("columns %q and %q, want braille dots for both paths and trend color on the shared cell",
+			columnGlyphs(rows, nov1), columnGlyphs(rows, nov2))
 	}
 }
 
@@ -530,5 +540,87 @@ func TestPlaceLongXLabelsModes(t *testing.T) {
 	}
 	if skip[0].col != 0 || !skip[0].two {
 		t.Fatalf("first %#v", skip[0])
+	}
+}
+
+func spanIndex(start, day time.Time) int {
+	return int(day.Sub(start).Hours() / 24)
+}
+
+func quarterlyView(t *testing.T, app *App) string {
+	t.Helper()
+	view := app.View()
+	vis := visible(view)
+	if !strings.Contains(vis, "Quarterly") || strings.Contains(vis, "daily log") {
+		t.Fatalf("quarterly chart not shown: %q", vis)
+	}
+	return view
+}
+
+func s6Quarterly(t *testing.T) *App {
+	t.Helper()
+	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	// 80 then 90 keeps the daily dot and the trend dot in different rows.
+	upsertKG(t, store, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), 80)
+	upsertKG(t, store, time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC), 90)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "l")
+	return app
+}
+
+func TestLongChartBrailleKeepsDayColumns(t *testing.T) {
+	app := s6Quarterly(t)
+	rows := mustPlot(t, quarterlyView(t, app))
+	if w := plotWidth(rows); w != 71 {
+		t.Fatalf("quarterly columns = %d, want 71 day columns", w)
+	}
+	nov10 := spanIndex(time.Date(1990, 9, 1, 0, 0, 0, 0, time.UTC), time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC))
+	if !columnHasBothSides(rows, nov10) {
+		t.Fatalf("10 November column %q, want a left and a right trend dot", columnGlyphs(rows, nov10))
+	}
+}
+
+func TestLongChartBrailleStaysBucketed(t *testing.T) {
+	freezeToday(t, time.Date(1990, 12, 15, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	upsertKG(t, store, time.Date(1990, 11, 30, 0, 0, 0, 0, time.UTC), 80)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "l")
+	rows := mustPlot(t, quarterlyView(t, app))
+	w := plotWidth(rows)
+	if w != 72 {
+		t.Fatalf("quarterly columns = %d, want 72 buckets", w)
+	}
+	if !columnHasBothSides(rows, w-1) {
+		t.Fatalf("30 November bucket %q, want a left and a right trend dot", columnGlyphs(rows, w-1))
+	}
+}
+
+func TestLongChartBrailleNoColorBoldTrend(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	app := s6Quarterly(t)
+	view := quarterlyView(t, app)
+	if hasChromaticSGR(view) {
+		t.Fatalf("chromatic SGR under NO_COLOR: %q", view)
+	}
+	rows := mustPlot(t, view)
+	boldDot, plainDot := false, false
+	for _, row := range rows {
+		for _, c := range row {
+			if !isBraille(c.r) || maskOf(c.r) == 0 {
+				continue
+			}
+			if c.bold {
+				boldDot = true
+			} else {
+				plainDot = true
+			}
+		}
+	}
+	if !boldDot || !plainDot {
+		t.Fatalf("bold trend dots %v, daily-only dots %v; first glyph %q", boldDot, plainDot, string(firstPlotGlyph(rows)))
 	}
 }

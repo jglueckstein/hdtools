@@ -99,21 +99,27 @@ func TestChartDailyMarksAndTrendPath(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
-	view := visible(app.View())
-	if !strings.Contains(view, "o") {
-		t.Fatalf("missing daily mark: %q", view)
-	}
-	if !strings.ContainsAny(view, "-/\\│─┌┐└┘") {
-		t.Fatalf("missing trend path: %q", view)
-	}
-	plotRows := 0
-	for _, line := range strings.Split(view, "\n") {
-		if strings.ContainsAny(line, "o-/\\") {
-			plotRows++
+	rows := mustPlot(t, app.View())
+	var left, right bool
+	for _, row := range rows {
+		for _, c := range row {
+			if c.r == ' ' {
+				continue
+			}
+			if !isBraille(c.r) {
+				t.Fatalf("plot paints %q, want braille dots for the mark and the trend", string(c.r))
+			}
+			m := maskOf(c.r)
+			if m&sideBits(true) != 0 {
+				left = true
+			}
+			if m&sideBits(false) != 0 {
+				right = true
+			}
 		}
 	}
-	if plotRows < 8 {
-		t.Fatalf("plot rows = %d, want at least 8", plotRows)
+	if !left || !right {
+		t.Fatalf("mark and trend dots missing: left %v right %v", left, right)
 	}
 }
 
@@ -154,11 +160,11 @@ func TestChartUsesWeightAndTrendColors(t *testing.T) {
 	if strings.Contains(visible(view), "daily log") {
 		t.Fatalf("chart missing: %q", view)
 	}
-	if !hasIndexedForeground(view, 2) {
-		t.Fatalf("missing green weight: %q", view)
+	if !hasFGOnBraille(view, 2) {
+		t.Fatalf("missing green weight on a braille cell")
 	}
-	if !hasIndexedForeground(view, 3) {
-		t.Fatalf("missing yellow trend: %q", view)
+	if !hasFGOnBraille(view, 3) {
+		t.Fatalf("missing yellow trend on a braille cell")
 	}
 }
 
@@ -175,8 +181,13 @@ func TestChartNoColorKeepsTwoSeries(t *testing.T) {
 		t.Fatalf("chromatic SGR under NO_COLOR: %q", view)
 	}
 	vis := visible(view)
-	if !strings.Contains(vis, "o") || !strings.ContainsAny(vis, "-/\\") {
-		t.Fatalf("series missing under NO_COLOR: %q", vis)
+	if !strings.Contains(vis, "November 1990") {
+		t.Fatalf("title missing under NO_COLOR: %q", vis)
+	}
+	mark, trend, _ := twoDaySeriesBins()
+	rows := mustPlot(t, view)
+	if !hasLeftBin(rows, 1, mark) || !hasRightBin(rows, 1, trend) {
+		t.Fatalf("series missing under NO_COLOR: day 2 column %q", columnGlyphs(rows, 1))
 	}
 }
 
@@ -524,11 +535,12 @@ func chartTitleLine(view string) string {
 func plotColumn(view string, dayIndex int) string {
 	var b strings.Builder
 	for _, line := range strings.Split(visible(view), "\n") {
-		if !strings.ContainsAny(line, "o-/\\|") {
+		// Day columns start after the "%5.1f-" gutter. A Braille line
+		// has no o-/\|, so the gutter is what marks the plot.
+		vis := []rune(line)
+		if !isPlotGutter(vis) {
 			continue
 		}
-		// Gutter is "%5.1f-" (6 runes); plot columns follow.
-		vis := []rune(line)
 		col := 6 + dayIndex
 		if col >= 0 && col < len(vis) {
 			b.WriteRune(vis[col])
@@ -587,13 +599,21 @@ func TestChartStemJoinsMarkToTrend(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
-	view := visible(app.View())
-	col := plotColumn(view, 1)
-	if !strings.Contains(col, "o") {
-		t.Fatalf("day 2 missing mark: %q (col %q)", view, col)
+	view := app.View()
+	rows := mustPlot(t, view)
+	mark, trend, _ := twoDaySeriesBins()
+	lo, hi := mark, trend
+	if lo > hi {
+		lo, hi = hi, lo
 	}
-	if !strings.Contains(col, "|") {
-		t.Fatalf("day 2 missing stem: %q (col %q)", view, col)
+	var missing []int
+	for b := lo + 1; b < hi; b++ {
+		if !hasLeftBin(rows, 1, b) {
+			missing = append(missing, b)
+		}
+	}
+	if len(missing) > 0 {
+		t.Fatalf("day 2 missing stem bins %v between %d and %d; plotColumn %q", missing, lo, hi, plotColumn(view, 1))
 	}
 }
 
@@ -611,13 +631,11 @@ func TestChartNoStemWhenMarkOnTrend(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "c")
-	view := visible(app.View())
-	col := plotColumn(view, 0)
-	if !strings.Contains(col, "o") {
-		t.Fatalf("coincident mark missing: %q (col %q)", view, col)
-	}
-	if strings.Contains(col, "|") {
-		t.Fatalf("stem on coincident day: %q (col %q)", view, col)
+	view := app.View()
+	rows := mustPlot(t, view)
+	left, right := leftBins(rows, 0), rightBins(rows, 0)
+	if len(left) != 1 || !sameSet(right, left...) {
+		t.Fatalf("coincident day left %v right %v, want one shared bin and no stem; plotColumn %q", left, right, plotColumn(view, 0))
 	}
 }
 
@@ -627,16 +645,28 @@ func TestChartStemGreen(t *testing.T) {
 	app := twoDayApp(t, store)
 	press(app, "c")
 	view := app.View()
-	if !strings.Contains(visible(view), "|") {
-		t.Fatalf("stem missing: %q", view)
+	rows := mustPlot(t, view)
+	found := false
+	for _, row := range rows {
+		for _, c := range row {
+			m := maskOf(c.r)
+			// A stem cell has left dots and no right dot. A mark in
+			// the same cell would take the weight role instead.
+			if !isBraille(c.r) || m&sideBits(true) == 0 || m&sideBits(false) != 0 {
+				continue
+			}
+			if cellHasFG(c, 2) {
+				found = true
+			}
+		}
 	}
-	if !hasIndexedForeground(view, 2) {
-		t.Fatalf("missing green stem: %q", view)
+	if !found {
+		t.Fatalf("no green stem braille cell without a mark dot; first glyph %q", string(firstPlotGlyph(rows)))
 	}
 }
 
 func TestChartDailyMarkWinsSharedCell(t *testing.T) {
-	t.Parallel()
+	enableChroma(t)
 	store := openStore(t)
 	w := 80.0
 	log, err := dailylog.New(time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), &w, 8, 0, false, "")
@@ -649,12 +679,26 @@ func TestChartDailyMarkWinsSharedCell(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "c")
-	view := visible(app.View())
-	if strings.Contains(view, "daily log") {
-		t.Fatalf("chart missing: %q", app.View())
+	view := app.View()
+	if strings.Contains(visible(view), "daily log") {
+		t.Fatalf("chart missing: %q", view)
 	}
-	if !strings.Contains(view, "o") {
-		t.Fatalf("daily mark missing on coincident day: %q", view)
+	rows := mustPlot(t, view)
+	found := false
+	for _, row := range rows {
+		c := row[0]
+		m := maskOf(c.r)
+		if !isBraille(c.r) || m&sideBits(true) == 0 {
+			continue
+		}
+		found = true
+		// Default weight role is blue. The mark wins this shared dot.
+		if !cellHasFG(c, 4) {
+			t.Fatalf("shared dot cell seq %q, want weight color", c.seq)
+		}
+	}
+	if !found {
+		t.Fatalf("shared dot missing; day 1 column %q", columnGlyphs(rows, 0))
 	}
 }
 
@@ -823,5 +867,135 @@ func TestGotoTodayIgnoredOnChart(t *testing.T) {
 	}
 	if len(logs) != 2 {
 		t.Fatalf("rows = %d, want 2", len(logs))
+	}
+}
+
+type kgOnDay struct {
+	day int
+	kg  float64
+}
+
+func openNovemberChart(t *testing.T, today time.Time, points ...kgOnDay) *App {
+	t.Helper()
+	freezeToday(t, today)
+	store := openStore(t)
+	for _, p := range points {
+		upsertKG(t, store, time.Date(1990, 11, p.day, 0, 0, 0, 0, time.UTC), p.kg)
+	}
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "c")
+	return app
+}
+
+func monthlyView(t *testing.T, app *App) string {
+	t.Helper()
+	view := app.View()
+	vis := visible(view)
+	if strings.Contains(vis, "arrows move") || strings.Contains(vis, "daily log") || !strings.Contains(vis, "November 1990") {
+		t.Fatalf("monthly chart not shown: %q", vis)
+	}
+	return view
+}
+
+func dec151990() time.Time {
+	return time.Date(1990, 12, 15, 12, 0, 0, 0, time.UTC)
+}
+
+func TestChartBrailleBothColumnsNovember(t *testing.T) {
+	app := openNovemberChart(t, dec151990(), kgOnDay{1, 80}, kgOnDay{30, 82})
+	rows := mustPlot(t, monthlyView(t, app))
+	if w := plotWidth(rows); w != 30 {
+		t.Fatalf("day columns = %d, want 30", w)
+	}
+	for day := 0; day < 30; day++ {
+		both := false
+		for _, row := range rows {
+			r := row[day].r
+			if r == ' ' {
+				continue
+			}
+			if !isBraille(r) {
+				t.Fatalf("day %d paints %q, want one braille rune with a left and a right dot", day+1, string(r))
+			}
+			m := maskOf(r)
+			if m&sideBits(true) != 0 && m&sideBits(false) != 0 {
+				both = true
+			}
+		}
+		if !both {
+			t.Fatalf("day %d has no braille rune with both dot columns; column %q", day+1, columnGlyphs(rows, day))
+		}
+	}
+}
+
+func TestChartBrailleCloseMarksBins(t *testing.T) {
+	app := openNovemberChart(t, dec151990(),
+		kgOnDay{1, 80}, kgOnDay{2, 80.55}, kgOnDay{3, 80.85}, kgOnDay{30, 82})
+	view := monthlyView(t, app)
+	ymin, ymax, ok := chartYBounds(view)
+	pad := yPad(units.Kilogram)
+	if !ok || ymin < 80-pad-0.06 || ymin > 80-pad+0.06 || ymax < 82+pad-0.06 || ymax > 82+pad+0.06 {
+		t.Fatalf("Y labels [%.2f, %.2f], want padded 80..82 kg", ymin, ymax)
+	}
+	rows := mustPlot(t, view)
+	if !hasLeftBin(rows, 1, 12) || !hasLeftBin(rows, 2, 14) || hasLeftBin(rows, 1, 14) {
+		t.Fatalf("day 2 left %v, day 3 left %v, want bins 12 and 14; day2 %q day3 %q",
+			leftBins(rows, 1), leftBins(rows, 2), columnGlyphs(rows, 1), columnGlyphs(rows, 2))
+	}
+}
+
+func TestChartBrailleEightByFour(t *testing.T) {
+	app := openNovemberChart(t, dec151990(),
+		kgOnDay{1, 80}, kgOnDay{2, 80.55}, kgOnDay{3, 80.85}, kgOnDay{30, 82})
+	rows := mustPlot(t, monthlyView(t, app))
+	painted := 0
+	for _, row := range rows {
+		for _, c := range row {
+			if c.r == ' ' {
+				continue
+			}
+			painted++
+			if !isBraille(c.r) {
+				t.Fatalf("plot cell %q is not a braille rune with 4 vertical dots", string(c.r))
+			}
+		}
+	}
+	if painted == 0 {
+		t.Fatal("plot has no braille cells for 8×4 bins")
+	}
+}
+
+func TestChartBrailleStemInsideRow(t *testing.T) {
+	app := openNovemberChart(t, dec151990(),
+		kgOnDay{1, 80}, kgOnDay{2, 80.50}, kgOnDay{30, 82})
+	rows := mustPlot(t, monthlyView(t, app))
+	if !sameSet(leftBins(rows, 1), 8, 9, 10, 11) || !sameSet(rightBins(rows, 1), 8) {
+		t.Fatalf("day 2 left %v right %v, want stem dots at 9 and 10 with mark 11 and trend 8 in one row; column %q",
+			leftBins(rows, 1), rightBins(rows, 1), columnGlyphs(rows, 1))
+	}
+	if !sameSet(leftBins(rows, 0), 7) || !sameSet(rightBins(rows, 0), 7) {
+		t.Fatalf("day 1 left %v right %v, want bin 7 and no stem; column %q",
+			leftBins(rows, 0), rightBins(rows, 0), columnGlyphs(rows, 0))
+	}
+}
+
+func TestChartBrailleNoColorKeepsDots(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	app := openNovemberChart(t, dec151990(),
+		kgOnDay{1, 80}, kgOnDay{2, 80.55}, kgOnDay{3, 80.85}, kgOnDay{30, 82})
+	view := monthlyView(t, app)
+	rows := mustPlot(t, view)
+	_, markRow, markOK := binRow(rows, 1, 12, true)
+	_, trendRow, trendOK := binRow(rows, 1, 8, false)
+	if !markOK || !trendOK || markRow == trendRow {
+		t.Fatalf("day 2 mark row %d ok %v, trend row %d ok %v, want different braille cells; column %q",
+			markRow, markOK, trendRow, trendOK, columnGlyphs(rows, 1))
+	}
+	if hasChromaticSGR(view) {
+		t.Fatalf("chromatic SGR under NO_COLOR: %q", view)
+	}
+	if !strings.Contains(visible(view), "November 1990") {
+		t.Fatalf("title missing: %q", visible(view))
 	}
 }

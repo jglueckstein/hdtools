@@ -28,6 +28,10 @@ charts when those exist.
     not replace the daily mark or the trend path. Daily mark still
     wins the shared cell. Under `NO_COLOR`, stems stay as a distinct
     glyph from mark and path.
+    Once high-resolution paint ships, "cell" in this decision means
+    a Braille dot, and the rune has one color. Until then it is one
+    character cell. See
+    [2026-10-02-high-resolution-charts.md](2026-10-02-high-resolution-charts.md).
 3.  **PDF.** When PDF monthly charts are built, they use this title
     box and these stems, not a plot without them.
 

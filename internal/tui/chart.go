@@ -5,13 +5,14 @@ package tui
 // each mark to the trend (floats and sinkers), the trend path, and
 // Monthly Loss and Daily Deficit from first and last trend of the
 // plotted span. Title-box and stem colours are Excel defaults, not
-// [colors] roles. Clip, empty, Y pad, and analysis live in
-// chartspan so the PDF cannot drift. p writes that picture through
-// chartpdf; this file does not import a PDF library.
+// [colors] roles. The dots are Braille runes from braille.go; this
+// file still owns the title, the Y labels, and the loss line. Clip,
+// empty, Y pad, and analysis live in chartspan so the PDF cannot
+// drift. p writes that picture through chartpdf; this file does not
+// import a PDF library.
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -176,80 +177,23 @@ func renderPlot(span chartspan.Span, unit units.Unit, p palette) string {
 	if !ok {
 		return ""
 	}
-	grid := make([][]rune, plotRows)
-	for r := range grid {
-		grid[r] = make([]rune, n)
-		for c := range grid[r] {
-			grid[r][c] = ' '
-		}
-	}
-	yToRow := func(y float64) int {
-		if ymax == ymin {
-			return plotRows / 2
-		}
-		t := (ymax - y) / (ymax - ymin)
-		r := int(math.Round(t * float64(plotRows-1)))
-		if r < 0 {
-			r = 0
-		}
-		if r >= plotRows {
-			r = plotRows - 1
-		}
-		return r
-	}
-	var prevRow int
-	var hasPrev bool
+	grid := newBrailleGrid(n, true)
 	for i, d := range span.Points {
-		if !d.HasTrend {
-			continue
-		}
-		y, err := units.FromKG(d.Trend, unit)
-		if err != nil {
-			continue
-		}
-		r := yToRow(y)
-		g := '-'
-		if hasPrev {
-			if r > prevRow {
-				g = '\\'
-			} else if r < prevRow {
-				g = '/'
+		var wy, ty float64
+		hw, ht := false, false
+		if d.Weight != nil {
+			y, err := units.FromKG(*d.Weight, unit)
+			if err == nil {
+				wy, hw = y, true
 			}
 		}
-		grid[r][i] = g
-		prevRow = r
-		hasPrev = true
-	}
-	for i, d := range span.Points {
-		if d.Weight == nil || !d.HasTrend {
-			continue
+		if d.HasTrend {
+			y, err := units.FromKG(d.Trend, unit)
+			if err == nil {
+				ty, ht = y, true
+			}
 		}
-		wy, errW := units.FromKG(*d.Weight, unit)
-		ty, errT := units.FromKG(d.Trend, unit)
-		if errW != nil || errT != nil {
-			continue
-		}
-		wr, tr := yToRow(wy), yToRow(ty)
-		if wr == tr {
-			continue
-		}
-		lo, hi := wr, tr
-		if lo > hi {
-			lo, hi = hi, lo
-		}
-		for r := lo + 1; r < hi; r++ {
-			grid[r][i] = '|'
-		}
-	}
-	for i, d := range span.Points {
-		if d.Weight == nil {
-			continue
-		}
-		y, err := units.FromKG(*d.Weight, unit)
-		if err != nil {
-			continue
-		}
-		grid[yToRow(y)][i] = 'o'
+		grid.plotMonthly(i, wy, hw, ty, ht, ymin, ymax)
 	}
 
 	var b strings.Builder
@@ -261,17 +205,7 @@ func renderPlot(span chartspan.Span, unit units.Unit, p palette) string {
 		labelY := ymax - frac*(ymax-ymin)
 		fmt.Fprintf(&b, "%5.1f-", labelY)
 		for c := 0; c < n; c++ {
-			ch := grid[r][c]
-			s := string(ch)
-			switch ch {
-			case 'o':
-				s = p.weight.Render(s)
-			case '-', '/', '\\':
-				s = p.trend.Render(s)
-			case '|':
-				s = stemCell(s)
-			}
-			b.WriteString(s)
+			b.WriteString(grid.paint(r, c, p))
 		}
 		b.WriteByte('\n')
 	}

@@ -3,12 +3,11 @@ package tui
 // The long-term chart is the book's WEIGHT-menu picture: quarterly,
 // semiannual, annual, or complete history, ending at the latest log.
 // Daily weight is a thin line only when one column per day fits;
-// otherwise the plot is trend-only. This file does not open SQLite
-// or edit the log.
+// otherwise the plot is trend-only. The columns are Braille runes
+// from braille.go. This file does not open SQLite or edit the log.
 
 import (
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -236,71 +235,24 @@ func renderLongPlot(orig, span []sheetDay, unit units.Unit, p palette, daily boo
 	if !ok {
 		return ""
 	}
-	grid := make([][]rune, plotRows)
-	styleDaily := make([][]bool, plotRows)
-	for r := range grid {
-		grid[r] = make([]rune, n)
-		styleDaily[r] = make([]bool, n)
-		for c := range grid[r] {
-			grid[r][c] = ' '
-		}
-	}
-	yToRow := func(y float64) int {
-		if ymax == ymin {
-			return plotRows / 2
-		}
-		t := (ymax - y) / (ymax - ymin)
-		r := int(math.Round(t * float64(plotRows-1)))
-		if r < 0 {
-			r = 0
-		}
-		if r >= plotRows {
-			r = plotRows - 1
-		}
-		return r
-	}
-	paintPath := func(useWeight bool) {
-		var prevRow int
-		var hasPrev bool
-		for i, d := range span {
-			var kg float64
-			if useWeight {
-				if d.Log.Weight == nil {
-					hasPrev = false
-					continue
-				}
-				kg = *d.Log.Weight
-			} else {
-				if !d.HasTrend {
-					hasPrev = false
-					continue
-				}
-				kg = d.Trend
+	grid := newBrailleGrid(n, false)
+	for i, d := range span {
+		var wy, ty float64
+		hw, ht := false, false
+		if daily && d.Log.Weight != nil {
+			y, err := units.FromKG(*d.Log.Weight, unit)
+			if err == nil {
+				wy, hw = y, true
 			}
-			y, err := units.FromKG(kg, unit)
-			if err != nil {
-				hasPrev = false
-				continue
-			}
-			r := yToRow(y)
-			g := '-'
-			if hasPrev {
-				if r > prevRow {
-					g = '\\'
-				} else if r < prevRow {
-					g = '/'
-				}
-			}
-			grid[r][i] = g
-			styleDaily[r][i] = useWeight
-			prevRow = r
-			hasPrev = true
 		}
+		if d.HasTrend {
+			y, err := units.FromKG(d.Trend, unit)
+			if err == nil {
+				ty, ht = y, true
+			}
+		}
+		grid.plotLong(i, wy, hw, ty, ht, ymin, ymax)
 	}
-	if daily {
-		paintPath(true)
-	}
-	paintPath(false)
 	var b strings.Builder
 	for r := 0; r < plotRows; r++ {
 		frac := 0.0
@@ -310,17 +262,7 @@ func renderLongPlot(orig, span []sheetDay, unit units.Unit, p palette, daily boo
 		labelY := ymax - frac*(ymax-ymin)
 		fmt.Fprintf(&b, "%5.1f-", labelY)
 		for c := 0; c < n; c++ {
-			ch := grid[r][c]
-			s := string(ch)
-			switch ch {
-			case '-', '/', '\\':
-				if styleDaily[r][c] {
-					s = p.weight.Render(s)
-				} else {
-					s = p.trend.Render(s)
-				}
-			}
-			b.WriteString(s)
+			b.WriteString(grid.paint(r, c, p))
 		}
 		b.WriteByte('\n')
 	}
