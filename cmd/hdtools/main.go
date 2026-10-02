@@ -78,7 +78,7 @@ func run(args []string) error {
 		err := exportChartPDF(store, cfg, *chartPDF, *outFlag)
 		closeErr := store.Close()
 		if err != nil {
-			return err
+			return fmt.Errorf("chart pdf: %w", err)
 		}
 		if closeErr != nil {
 			return fmt.Errorf("close store: %w", closeErr)

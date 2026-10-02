@@ -86,6 +86,9 @@ func TestChartPDFFlagWriteFailure(t *testing.T) {
 	if err == nil {
 		t.Fatal("want non-zero exit")
 	}
+	if !strings.Contains(err.Error(), "chart pdf:") {
+		t.Fatalf("error %q does not name the chart-pdf step in run", err)
+	}
 	info, statErr := os.Stat(out)
 	if statErr != nil {
 		t.Fatal(statErr)

@@ -59,6 +59,8 @@
 
 ### Fixed
 
+- Chart PDF write failures name the step that failed, and the
+  color-role constants say which colors-table keys they are (#65)
 - Drop the HARNESS.md pointer at a plugin spec this tree never vendored
 - Document that origin exists; stop telling agents to commit on `master`
 - App and View comments include the month sheet
