@@ -68,8 +68,9 @@ type loadErrMsg struct {
 }
 
 type savedMsg struct {
-	advance bool
-	day     time.Time // form save: the written day; zero for month-cell save
+	advance  bool
+	dayDelta int       // month cell: +1 down, -1 up, 0 stay. Never combined with advance.
+	day      time.Time // form save: the written day; zero for month-cell save
 }
 
 // DefaultDBPath is $XDG_DATA_HOME/hdtools/hdtools.db.
@@ -161,6 +162,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.month.cancelEdit()
 		if msg.advance {
 			a.month.nextCell()
+		} else if msg.dayDelta != 0 {
+			a.month.moveDay(msg.dayDelta)
 		}
 		if !msg.day.IsZero() {
 			a.selectDay = msg.day
@@ -298,8 +301,10 @@ func (a *App) updateMonth(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "esc":
 			a.month.cancelEdit()
 			return a, nil
-		case "enter":
-			return a, a.saveMonthCell
+		case "enter", "down":
+			return a, a.saveMonthCellAndMoveDown
+		case "up":
+			return a, a.saveMonthCellAndMoveUp
 		case "tab":
 			return a, a.saveMonthCellAndAdvance
 		case "ctrl+c":
@@ -386,12 +391,30 @@ func (a *App) saveMonthCell() tea.Msg {
 }
 
 func (a *App) saveMonthCellAndAdvance() tea.Msg {
+	return a.finishMonthSave(true, 0)
+}
+
+func (a *App) saveMonthCellAndMoveDown() tea.Msg {
+	return a.finishMonthSave(false, 1)
+}
+
+func (a *App) saveMonthCellAndMoveUp() tea.Msg {
+	return a.finishMonthSave(false, -1)
+}
+
+// finishMonthSave attaches the post-save move. Tab sets advance.
+// Enter, Down, and Up set dayDelta. A failed save returns unchanged
+// so the cell stays put. The two moves are never both set: vertical
+// movement must not call nextCell.
+func (a *App) finishMonthSave(advance bool, dayDelta int) tea.Msg {
 	msg := a.saveMonthCell()
-	if saved, ok := msg.(savedMsg); ok {
-		saved.advance = true
-		return saved
+	saved, ok := msg.(savedMsg)
+	if !ok {
+		return msg
 	}
-	return msg
+	saved.advance = advance
+	saved.dayDelta = dayDelta
+	return saved
 }
 
 // View renders the list, the day form, the month sheet, or a chart.

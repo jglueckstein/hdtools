@@ -89,6 +89,13 @@ func (m *monthModel) nextMonth() {
 	m.clamp()
 }
 
+// moveDay is the post-save vertical step. clamp pins the day inside
+// this month, so day 1 and the last day do not change month.
+func (m *monthModel) moveDay(delta int) {
+	m.day += delta
+	m.clamp()
+}
+
 // nextCell is Tab: next column, then the next day's weight. The last
 // cell of the month stays put so Tab cannot leave the sheet.
 func (m *monthModel) nextCell() {

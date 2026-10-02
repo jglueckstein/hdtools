@@ -12,7 +12,11 @@
 | Tab | form | next field |
 | Enter | form | save |
 | Esc | form, month, or chart | cancel / back |
-| Arrows | month | move cells |
+| Arrows | month (not editing) | move cells |
+| Enter | month (not editing) | open the day form |
+| Enter, Down | month (editing) | accept cell and move down the column |
+| Up | month (editing) | accept cell and move up the column |
+| Left, Right | month (editing) | move the caret |
 | Tab | month | accept cell (if editing) and move to the next |
 | `t` | list | select the log closest to today |
 | `t` | month (not editing) | today's month and day, weight column |
