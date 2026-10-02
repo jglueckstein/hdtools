@@ -29,6 +29,16 @@
 - `View()` emits chroma unless `NO_COLOR` is non-empty; the process does
   not consult the TTY. Tests that need color must `t.Setenv("NO_COLOR",
   "")`. Hex is `38;2;` on truecolor and downshifts on a 16-color profile.
+- On Grok 1.0.46, `spawn_subagent` rejects
+  `ai-literacy-superpowers:<name>` even when the error lists that
+  string as available. Plugin files are `agents/<name>.agent.md`, and
+  the spawn id is `ai-literacy-superpowers:<name>.agent`. Pass that
+  id. The five `.claude/agents/*.md` files (`code-reviewer`,
+  `integration-agent`, `orchestrator`, `spec-writer`, `tdd-agent`)
+  spawn under those short names. If the `.agent` id is itself
+  rejected, the host mapping has changed; use the id the error
+  accepts. Do not edit the installed plugin copy; a plugin update
+  overwrites it.
 
 ## ARCH_DECISIONS
 
