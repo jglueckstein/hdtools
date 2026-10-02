@@ -219,6 +219,339 @@ func TestMonthTabWhenNotEditingMoves(t *testing.T) {
 	}
 }
 
+func TestMonthEnterWhileEditingSavesAndMovesDown(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("80.0")
+	flushMonthKey(app, tea.KeyEnter)
+	assertStoredWeight(t, store, dateUTC(1990, 11, 4), 80)
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colWeight || app.month.day != 5 {
+		t.Fatalf("focus day %d col %d, want weight on day 5", app.month.day, app.month.col)
+	}
+}
+
+func TestMonthDownWhileEditingSavesAndMovesDown(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("80.0")
+	flushMonthKey(app, tea.KeyDown)
+	assertStoredWeight(t, store, dateUTC(1990, 11, 4), 80)
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colWeight || app.month.day != 5 {
+		t.Fatalf("focus day %d col %d, want weight on day 5", app.month.day, app.month.col)
+	}
+}
+
+func TestMonthUpWhileEditingSavesAndMovesUp(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("80.0")
+	flushMonthKey(app, tea.KeyUp)
+	assertStoredWeight(t, store, dateUTC(1990, 11, 4), 80)
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colWeight || app.month.day != 3 {
+		t.Fatalf("focus day %d col %d, want weight on day 3", app.month.day, app.month.col)
+	}
+}
+
+func TestMonthEnterInvalidDoesNotMove(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("nope")
+	flushMonthKey(app, tea.KeyEnter)
+	assertStillEditingWeight(t, app, 4)
+	assertNoDay(t, store, dateUTC(1990, 11, 4))
+}
+
+func TestMonthDownInvalidDoesNotMove(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("nope")
+	flushMonthKey(app, tea.KeyDown)
+	assertStillEditingWeight(t, app, 4)
+	assertNoDay(t, store, dateUTC(1990, 11, 4))
+}
+
+func TestMonthUpInvalidDoesNotMove(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("nope")
+	flushMonthKey(app, tea.KeyUp)
+	assertStillEditingWeight(t, app, 4)
+	assertNoDay(t, store, dateUTC(1990, 11, 4))
+}
+
+func TestMonthEnterOnLastDayStays(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 30, colWeight)
+	app.month.beginEdit("80.0")
+	flushMonthKey(app, tea.KeyEnter)
+	assertStoredWeight(t, store, dateUTC(1990, 11, 30), 80)
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colWeight || app.month.day != 30 {
+		t.Fatalf("focus day %d col %d, want weight on day 30", app.month.day, app.month.col)
+	}
+	assertNovember1990(t, app)
+}
+
+// Down is pressed while day 30 is still being edited, not after Enter has ended the edit.
+func TestMonthDownOnLastDayStays(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 30, colWeight)
+	app.month.beginEdit("80.0")
+	flushMonthKey(app, tea.KeyDown)
+	assertStoredWeight(t, store, dateUTC(1990, 11, 30), 80)
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colWeight || app.month.day != 30 {
+		t.Fatalf("focus day %d col %d, want weight on day 30", app.month.day, app.month.col)
+	}
+	assertNovember1990(t, app)
+}
+
+func TestMonthUpOnFirstDayStays(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 1, colWeight)
+	app.month.beginEdit("80.0")
+	flushMonthKey(app, tea.KeyUp)
+	assertStoredWeight(t, store, dateUTC(1990, 11, 1), 80)
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colWeight || app.month.day != 1 {
+		t.Fatalf("focus day %d col %d, want weight on day 1", app.month.day, app.month.col)
+	}
+	assertNovember1990(t, app)
+}
+
+func TestMonthLeftRightWhileEditingStayInCell(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("80.0")
+	end := app.month.input.Position()
+	// Do not flush: the text input's blink command sleeps.
+	app.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	if got := app.month.input.Position(); got >= end {
+		t.Fatalf("caret %d, want closer to the start than %d", got, end)
+	}
+	assertStillEditingWeight(t, app, 4)
+	assertNoDay(t, store, dateUTC(1990, 11, 4))
+
+	app.month.input.CursorStart()
+	start := app.month.input.Position()
+	app.Update(tea.KeyMsg{Type: tea.KeyRight})
+	if got := app.month.input.Position(); got <= start {
+		t.Fatalf("caret %d, want closer to the end than %d", got, start)
+	}
+	assertStillEditingWeight(t, app, 4)
+	assertNoDay(t, store, dateUTC(1990, 11, 4))
+}
+
+func TestMonthLeftAtStartRightAtEndStayInCell(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("80.0")
+	app.month.input.CursorStart()
+	app.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	if got := app.month.input.Position(); got != 0 {
+		t.Fatalf("caret %d, want 0", got)
+	}
+	assertStillEditingWeight(t, app, 4)
+	assertNoDay(t, store, dateUTC(1990, 11, 4))
+
+	app.month.input.CursorEnd()
+	end := app.month.input.Position()
+	app.Update(tea.KeyMsg{Type: tea.KeyRight})
+	if got := app.month.input.Position(); got != end {
+		t.Fatalf("caret %d, want %d", got, end)
+	}
+	assertStillEditingWeight(t, app, 4)
+	assertNoDay(t, store, dateUTC(1990, 11, 4))
+}
+
+func TestMonthEnterWhenNotEditingOpensForm(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	flushMonthKey(app, tea.KeyEnter)
+	assertFormOpenOn(t, app, dateUTC(1990, 11, 4))
+	assertNoDay(t, store, dateUTC(1990, 11, 4))
+}
+
+func TestMonthDownUpWhenNotEditingMoveDay(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	flushMonthKey(app, tea.KeyDown)
+	if app.month.editing {
+		t.Fatal("down started an edit")
+	}
+	if app.month.col != colWeight || app.month.day != 5 {
+		t.Fatalf("focus day %d col %d, want weight on day 5", app.month.day, app.month.col)
+	}
+	assertNoDay(t, store, dateUTC(1990, 11, 4))
+	assertNoDay(t, store, dateUTC(1990, 11, 5))
+
+	app.month.day = 4
+	flushMonthKey(app, tea.KeyUp)
+	if app.month.editing {
+		t.Fatal("up started an edit")
+	}
+	if app.month.col != colWeight || app.month.day != 3 {
+		t.Fatalf("focus day %d col %d, want weight on day 3", app.month.day, app.month.col)
+	}
+	assertNoDay(t, store, dateUTC(1990, 11, 3))
+}
+
+func TestMonthEnterPreservesColumn(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colSleep)
+	app.month.beginEdit("8")
+	flushMonthKey(app, tea.KeyEnter)
+	got, err := store.Get(context.Background(), dateUTC(1990, 11, 4))
+	if err != nil {
+		t.Fatalf("stored sleep: %v", err)
+	}
+	if got.SleepHours != 8 {
+		t.Fatalf("sleep = %v, want 8", got.SleepHours)
+	}
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colSleep || app.month.day != 5 {
+		t.Fatalf("focus day %d col %d, want sleep on day 5", app.month.day, app.month.col)
+	}
+}
+
+func TestMonthEscWhileEditingCancels(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("80.0")
+	flushMonthKey(app, tea.KeyEsc)
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colWeight || app.month.day != 4 {
+		t.Fatalf("focus day %d col %d, want weight on day 4", app.month.day, app.month.col)
+	}
+	assertNoDay(t, store, dateUTC(1990, 11, 4))
+}
+
+func TestMonthLeftRightWhenNotEditingMoveColumn(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	flushMonthKey(app, tea.KeyRight)
+	if app.month.editing {
+		t.Fatal("right started an edit")
+	}
+	if app.month.col != colSleep || app.month.day != 4 {
+		t.Fatalf("focus day %d col %d, want sleep on day 4", app.month.day, app.month.col)
+	}
+	assertNoDay(t, store, dateUTC(1990, 11, 4))
+
+	app.month.col = colSleep
+	flushMonthKey(app, tea.KeyLeft)
+	if app.month.editing {
+		t.Fatal("left started an edit")
+	}
+	if app.month.col != colWeight || app.month.day != 4 {
+		t.Fatalf("focus day %d col %d, want weight on day 4", app.month.day, app.month.col)
+	}
+	assertNoDay(t, store, dateUTC(1990, 11, 4))
+}
+
+func TestMonthSecondEnterAfterEnterOpensForm(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("80.0")
+	flushMonthKey(app, tea.KeyEnter)
+	assertStoredWeight(t, store, dateUTC(1990, 11, 4), 80)
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colWeight || app.month.day != 5 {
+		t.Fatalf("focus day %d col %d, want weight on day 5", app.month.day, app.month.col)
+	}
+	rows := countLogs(t, store)
+	flushMonthKey(app, tea.KeyEnter)
+	assertFormOpenOn(t, app, dateUTC(1990, 11, 5))
+	if got := countLogs(t, store); got != rows {
+		t.Fatalf("rows = %d, want %d (second enter wrote a row)", got, rows)
+	}
+	assertNoDay(t, store, dateUTC(1990, 11, 5))
+}
+
+func TestMonthEnterAfterDownOpensForm(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("80.0")
+	flushMonthKey(app, tea.KeyDown)
+	assertStoredWeight(t, store, dateUTC(1990, 11, 4), 80)
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colWeight || app.month.day != 5 {
+		t.Fatalf("focus day %d col %d, want weight on day 5", app.month.day, app.month.col)
+	}
+	rows := countLogs(t, store)
+	flushMonthKey(app, tea.KeyEnter)
+	assertFormOpenOn(t, app, dateUTC(1990, 11, 5))
+	if got := countLogs(t, store); got != rows {
+		t.Fatalf("rows = %d, want %d (enter wrote a row)", got, rows)
+	}
+	assertNoDay(t, store, dateUTC(1990, 11, 5))
+}
+
+func TestMonthEnterAfterUpOpensForm(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colWeight)
+	app.month.beginEdit("80.0")
+	flushMonthKey(app, tea.KeyUp)
+	assertStoredWeight(t, store, dateUTC(1990, 11, 4), 80)
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colWeight || app.month.day != 3 {
+		t.Fatalf("focus day %d col %d, want weight on day 3", app.month.day, app.month.col)
+	}
+	rows := countLogs(t, store)
+	flushMonthKey(app, tea.KeyEnter)
+	assertFormOpenOn(t, app, dateUTC(1990, 11, 3))
+	if got := countLogs(t, store); got != rows {
+		t.Fatalf("rows = %d, want %d (enter wrote a row)", got, rows)
+	}
+	assertNoDay(t, store, dateUTC(1990, 11, 3))
+}
+
+func TestMonthSecondEnterOnLastDayOpensForm(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 30, colWeight)
+	app.month.beginEdit("80.0")
+	flushMonthKey(app, tea.KeyEnter)
+	assertStoredWeight(t, store, dateUTC(1990, 11, 30), 80)
+	if app.month.editing {
+		t.Fatal("still editing")
+	}
+	if app.month.col != colWeight || app.month.day != 30 {
+		t.Fatalf("focus day %d col %d, want weight on day 30", app.month.day, app.month.col)
+	}
+	rows := countLogs(t, store)
+	flushMonthKey(app, tea.KeyEnter)
+	assertFormOpenOn(t, app, dateUTC(1990, 11, 30))
+	if got := countLogs(t, store); got != rows {
+		t.Fatalf("rows = %d, want %d (second enter wrote a row)", got, rows)
+	}
+	assertStoredWeight(t, store, dateUTC(1990, 11, 30), 80)
+}
+
 func TestQuitKeys(t *testing.T) {
 	t.Parallel()
 	app := New(nil, "", config.Default())
@@ -887,6 +1220,87 @@ delta-pos = "chartreuse"
 	if !hasIndexedForeground(line, 3) {
 		t.Fatalf("+0.5 not default yellow: %q", line)
 	}
+}
+
+// newNovemberSheet is the November 1990 sheet the edit-key scenarios
+// drive. afterSave stays on the month sheet so a later Enter is the
+// sheet's Enter, matching openMonth, not the list default.
+func newNovemberSheet(t *testing.T, day, col int) (*App, *dailylog.Store) {
+	t.Helper()
+	store := openStore(t)
+	app := New(store, "mem.db", config.Default())
+	app.screen = screenMonth
+	app.afterSave = screenMonth
+	app.month = newMonth(dateUTC(1990, 11, day))
+	app.month.col = col
+	return app, store
+}
+
+// flushMonthKey runs a save command when the key returns one. Left and
+// Right while editing must not use it: the text input's blink command
+// sleeps for the blink interval.
+func flushMonthKey(app *App, key tea.KeyType) {
+	_, cmd := app.Update(tea.KeyMsg{Type: key})
+	if cmd != nil {
+		app.Update(cmd())
+	}
+}
+
+func assertStoredWeight(t *testing.T, store *dailylog.Store, day time.Time, kg float64) {
+	t.Helper()
+	got, err := store.Get(context.Background(), day)
+	if err != nil {
+		t.Fatalf("stored weight: %v", err)
+	}
+	if got.Weight == nil || *got.Weight != kg {
+		t.Fatalf("stored %+v, want %v kg", got, kg)
+	}
+}
+
+func assertNoDay(t *testing.T, store *dailylog.Store, day time.Time) {
+	t.Helper()
+	_, err := store.Get(context.Background(), day)
+	if err == nil {
+		t.Fatalf("stored a row for %s", day.Format(time.DateOnly))
+	}
+	if !errors.Is(err, dailylog.ErrNotFound) {
+		t.Fatal(err)
+	}
+}
+
+func assertStillEditingWeight(t *testing.T, app *App, day int) {
+	t.Helper()
+	if !app.month.editing || app.month.col != colWeight || app.month.day != day {
+		t.Fatalf("editing=%v day=%d col=%d, want still editing weight on day %d", app.month.editing, app.month.day, app.month.col, day)
+	}
+}
+
+func assertNovember1990(t *testing.T, app *App) {
+	t.Helper()
+	if app.month.year != 1990 || app.month.month != time.November {
+		t.Fatalf("sheet = %s %d, want November 1990", app.month.month, app.month.year)
+	}
+}
+
+func assertFormOpenOn(t *testing.T, app *App, day time.Time) {
+	t.Helper()
+	if app.screen != screenForm {
+		t.Fatal("day form did not open")
+	}
+	got := app.form.inputs[fieldDate].Value()
+	want := day.Format(time.DateOnly)
+	if got != want {
+		t.Fatalf("form date = %q, want %q", got, want)
+	}
+}
+
+func countLogs(t *testing.T, store *dailylog.Store) int {
+	t.Helper()
+	logs, err := store.All(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return len(logs)
 }
 
 func openStore(t *testing.T) *dailylog.Store {
