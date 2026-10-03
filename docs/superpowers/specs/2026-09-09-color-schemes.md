@@ -1,7 +1,7 @@
 # Color schemes and NO_COLOR
 
 **Date**: 2026-09-09
-**Status**: draft
+**Status**: approved
 **Issue**: [#22](https://github.com/jglueckstein/hdtools/issues/22)
 **Backlog**: [`idea.md`](../../../idea.md) (TUI / color)
 
