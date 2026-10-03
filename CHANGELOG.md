@@ -4,6 +4,9 @@
 
 ### Added
 
+- On-screen monthly and long-term charts paint with Braille dots
+  inside each existing day or bucket column, so a mark, a stem, and
+  the trend can share a column (#71)
 - While editing a month cell, Enter and Down accept the edit and move
   down the column, and Up accepts and moves up (#67)
 - Weight−trend `delta` column on the daily list and month sheet

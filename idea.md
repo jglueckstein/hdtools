@@ -18,6 +18,12 @@ color-only encoding).
 one way to do that, since the app already uses Bubble Tea. Another
 styling library is fine if it fits the same stack.
 
+The app will move to Bubble Tea v2 and Lip Gloss v2
+(`charm.land/bubbletea/v2` and `charm.land/lipgloss/v2`).
+On-screen charts will then use ntcharts
+(`github.com/NimbleMarkets/ntcharts/v2`), which needs those
+two. This is not the high-resolution Braille slice.
+
 Color schemes should be user-configurable in the same config file as
 display units (`[colors]` table). The user names roles (`title`,
 `muted`, `header`, `help`, `weight`, `trend`, `selection`, `error`,
@@ -190,6 +196,12 @@ marks, stems, trend, Y margin, clip, Loss / Daily Deficit, `[colors]`,
 16-color floor, `NO_COLOR`. PDF stays vector. The TUI chart need not
 be a character-cell twin of the PDF. This is not the Goto Today
 slice.
+
+Change record (high-resolution on-screen charts):
+[docs/superpowers/specs/2026-10-02-high-resolution-charts.md](docs/superpowers/specs/2026-10-02-high-resolution-charts.md).
+
+A later change moves charts onto ntcharts, after Bubble Tea v2
+and Lip Gloss v2. That is not this slice.
 
 ## Meal Planning
 

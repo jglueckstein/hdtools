@@ -77,6 +77,11 @@ without me doing the arithmetic.
     the same cell, the **daily mark wins** (the book's diamond on the
     line). They remain distinct by glyph type across the chart, not
     by putting two glyphs in one cell.
+    Braille paint replaces this shared-cell rule with a shared dot
+    inside one rune. See
+    [2026-10-02-high-resolution-charts.md](2026-10-02-high-resolution-charts.md)
+    (approved). Until that slice ships, the sentences above are the
+    paint.
 5.  **Display unit.** Axis labels and the implied scale are in
     `display_unit`. Storage remains kilograms.
 6.  **Auto Y range.** The vertical scale is (min of plotted values)
@@ -92,6 +97,10 @@ without me doing the arithmetic.
     At least day 1 and the last plotted day are labeled under the
     plot. Days without a weight have no daily mark. A carried trend
     still plots on blank days **in the span**.
+    Paint inside the column is amended by
+    [2026-10-02-high-resolution-charts.md](2026-10-02-high-resolution-charts.md)
+    (approved). Until that slice ships, the sentences above are the
+    paint.
 8.  **`[` / `]` change month** on the chart, as on the sheet. They
     **share** year and month with the sheet. Esc to the sheet shows
     the month just viewed on the chart. Esc to the list leaves the
@@ -150,6 +159,10 @@ day, not editing
 **And** the two series use different glyphs, not colour alone
 **And** on a day where weight and trend share a cell, that cell shows
 the daily mark
+
+Braille paint, once it ships, reads "cell" here as a shared dot.
+Until then this scenario is one character cell. See
+[2026-10-02-high-resolution-charts.md](2026-10-02-high-resolution-charts.md).
 
 ### S4 — Colour roles
 
@@ -291,6 +304,9 @@ horizontal run of the same glyph (daily: `o` or equivalent). A
 **connected path** is a run of glyphs that join left-to-right across
 adjacent day columns (line-drawing or ASCII `-` / `/` / `\` / `|`).
 When both occupy one cell, the cell contains the daily mark.
+Braille paint, once it ships, decodes dots in the rune instead of
+this glyph test. Until then this paragraph is the observation. See
+[2026-10-02-high-resolution-charts.md](2026-10-02-high-resolution-charts.md).
 
 The plot is a grid: gutter (Y labels) then one character column per
 day in the plotted span. Day *N*'s column is gutter width + *N*. The
@@ -318,11 +334,15 @@ display unit; deficit is a signed integer followed by a calorie word
     month.
 -   **FR3.** The chart plots daily weight as discrete marks and trend as
     a connected path for each day of the plotted span. When both
-    series share a cell, the daily mark is shown.
+    series share a cell, the daily mark is shown. Braille paint
+    replaces that shared cell with a shared dot. Until that slice
+    ships, this sentence is the rule.
 -   **FR4.** Daily marks use the `weight` colour role; the trend path
     uses the `trend` colour role.
 -   **FR5.** Under `NO_COLOR`, chroma is off; marks and path stay
-    distinct by glyph (daily mark wins a shared cell).
+    distinct by glyph (daily mark wins a shared cell). Braille paint
+    keeps the rune under `NO_COLOR` and does not require three runes
+    in one cell. Until that slice ships, this sentence is the rule.
 -   **FR6.** Days without a weight have no daily mark. Carried trend
     still plots on blank days in the plotted span, not after today.
 -   **FR7.** Empty means no daily marks and no trend in the plotted
@@ -345,6 +365,8 @@ display unit; deficit is a signed integer followed by a calorie word
     span after a Y-label gutter, at least 8 rows when there is data,
     with day 1 and the last plotted day labeled. Tests locate day *N*
     in that column.
+    Finer on-screen paint is the high-resolution chart spec. These
+    sentences stay the paint until that slice ships.
 -   **FR15.** Ymin = min − *P*, Ymax = max + *P*, with *P* = 2 lb in
     `display_unit`. When min equals max, the span is 4 lb (or kg/st
     equivalent).

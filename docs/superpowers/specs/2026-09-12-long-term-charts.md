@@ -120,7 +120,11 @@ that window.
     `weight` colour role, not bold) and trend is a **thick
     connected path** (the `trend` colour role, bold). Glyphs may be
     the same `-` / `/` / `\` family as the monthly trend path. When
-    both series fall in the same cell, the **trend wins**. When
+    both series fall in the same cell, the **trend wins**. Braille
+    paint replaces that shared cell with a shared dot inside one
+    rune. See
+    [2026-10-02-high-resolution-charts.md](2026-10-02-high-resolution-charts.md)
+    (approved). Until that slice ships, this sentence is the rule. When
     *D* > *W*, **omit the daily path**; plot trend only (O8). There
     are **no** daily `o` marks and **no** `|` stems on this screen.
 6.  **X resolution fits the terminal.** Let *D* be the number of
@@ -135,6 +139,10 @@ that window.
     a decade still fits. **X labels** are month starts (`Aug 26`),
     not day numbers: see
     [2026-09-12-long-term-x-labels.md](2026-09-12-long-term-x-labels.md).
+    Paint inside each column is amended by
+    [2026-10-02-high-resolution-charts.md](2026-10-02-high-resolution-charts.md)
+    (approved). *D*, *W*, and the bucket rule stay as written here.
+    Finer paint does not add columns.
 7.  **Same loaded series.** Already-loaded, already-trended logs. No
     SQLite in the TUI. Carry-forward from before the window is
     included when `ApplyTrend` has seen those days.
@@ -220,6 +228,10 @@ load logs in 1990; then an annual title names December 1989–November
 **And** there is no daily mark glyph `o`
 **And** there is no stem glyph `|`
 **And** on a shared cell the trend glyph is shown
+
+Braille paint, once it ships, reads "cell" here as a shared dot.
+Until then this scenario is one character cell. See
+[2026-10-02-high-resolution-charts.md](2026-10-02-high-resolution-charts.md).
 
 ### S6 — Colour roles and thickness
 
@@ -337,6 +349,9 @@ A **connected path** is a run of `-` / `/` / `\` across adjacent
 columns. Daily and trend paths are distinguished by SGR (`weight` vs
 `trend`) and by bold (trend only). Shared cells contain the trend
 glyph. Tests must not require `o` or `|` on this screen.
+Braille paint, once it ships, decodes dots in the rune instead.
+Until then this paragraph is the observation. See
+[2026-10-02-high-resolution-charts.md](2026-10-02-high-resolution-charts.md).
 
 Default plot width is 72 columns plus gutter when no resize has
 been seen.
@@ -358,7 +373,9 @@ deficit is a signed integer followed by `cal` or `calories`.
     `[` / `]` cycle that list, wrapping.
 -   **FR4.** When *D* ≤ *W*, daily weight is a thin (not bold)
     connected path in the `weight` role; trend is a bold connected
-    path in the `trend` role; trend wins a shared cell. When *D* >
+    path in the `trend` role; trend wins a shared cell. Braille
+    paint replaces that shared cell with a shared dot. Until that
+    slice ships, this sentence is the rule. When *D* >
     *W*, plot trend only. No `o` marks, no `|` stems.
 -   **FR5.** Under `NO_COLOR`, chroma is off; plotted paths and the
     title remain; trend stays bold.
