@@ -143,9 +143,22 @@ func TestChartOmitsDailyMarkOnBlankDay(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "c")
-	view := visible(app.View())
+	raw := app.View()
+	view := visible(raw)
 	if !strings.Contains(view, "1") || !strings.Contains(view, "30") {
 		t.Fatalf("axis labels missing: %q", view)
+	}
+	// Days 2 and 3 have no weigh-in. They keep day 1's trend and
+	// must not grow a mark or a stem.
+	rows := mustPlot(t, raw)
+	pad := yPad(units.Kilogram)
+	trendBin := wantBrailleBin(80, 79-pad, 80+pad, brailleN)
+	for _, day := range []int{1, 2} {
+		left, right := leftBins(rows, day), rightBins(rows, day)
+		if !sameSet(left, trendBin) || !sameSet(right, trendBin) {
+			t.Fatalf("blank day %d left %v right %v, want only carried trend bin %d; column %q",
+				day+1, left, right, trendBin, columnGlyphs(rows, day))
+		}
 	}
 }
 
@@ -153,15 +166,23 @@ func TestChartUsesWeightAndTrendColors(t *testing.T) {
 	enableChroma(t)
 	store := openStore(t)
 	app := twoDayApp(t, store)
-	app.cfg = schemeCfg(map[string]string{"weight": "green", "trend": "yellow"})
+	app.cfg = schemeCfg(map[string]string{"weight": "magenta", "trend": "yellow"})
 	app.pal = newPalette(app.cfg)
 	press(app, "c")
 	view := app.View()
 	if strings.Contains(visible(view), "daily log") {
 		t.Fatalf("chart missing: %q", view)
 	}
-	if !hasFGOnBraille(view, 2) {
-		t.Fatalf("missing green weight on a braille cell")
+	rows := mustPlot(t, view)
+	// Day 1 sits on the trend, so that cell has a mark and no stem.
+	// Stem chrome is green; magenta is the weight role.
+	_, _, shared := twoDaySeriesBins()
+	mark, _, ok := binRow(rows, 0, shared, true)
+	if !ok || !cellHasFG(mark, 5) || cellHasFG(mark, 2) {
+		t.Fatalf("coincident mark seq %q, want magenta weight", mark.seq)
+	}
+	if !sameSet(leftBins(rows, 0), shared) || !sameSet(rightBins(rows, 0), shared) {
+		t.Fatalf("day 1 left %v right %v, want bin %d and no stem", leftBins(rows, 0), rightBins(rows, 0), shared)
 	}
 	if !hasFGOnBraille(view, 3) {
 		t.Fatalf("missing yellow trend on a braille cell")
@@ -650,8 +671,7 @@ func TestChartStemGreen(t *testing.T) {
 	for _, row := range rows {
 		for _, c := range row {
 			m := maskOf(c.r)
-			// A stem cell has left dots and no right dot. A mark in
-			// the same cell would take the weight role instead.
+			// A pure stem cell has left dots and no right dot.
 			if !isBraille(c.r) || m&sideBits(true) == 0 || m&sideBits(false) != 0 {
 				continue
 			}
@@ -945,6 +965,32 @@ func TestChartBrailleCloseMarksBins(t *testing.T) {
 	}
 }
 
+func TestChartBrailleStemIsGreen(t *testing.T) {
+	enableChroma(t)
+	app := openNovemberChart(t, dec151990(),
+		kgOnDay{1, 80}, kgOnDay{2, 80.55}, kgOnDay{3, 80.85}, kgOnDay{30, 82})
+	rows := mustPlot(t, monthlyView(t, app))
+	// Stems 9–11 share the trend's cell (bin 8). That rune is the
+	// stem, so it is green rather than the trend role.
+	stem, _, ok := binRow(rows, 1, 8, false)
+	if !ok || !cellHasFG(stem, 2) || cellHasFG(stem, 1) {
+		t.Fatalf("S2 day 2 stem cell seq %q, want stem green", stem.seq)
+	}
+	mark, _, ok := binRow(rows, 1, 12, true)
+	if !ok || !cellHasFG(mark, 4) {
+		t.Fatalf("S2 day 2 mark cell seq %q, want weight role", mark.seq)
+	}
+	for _, row := range rows {
+		c := row[10]
+		if !isBraille(c.r) || maskOf(c.r) == 0 {
+			continue
+		}
+		if !cellHasFG(c, 1) {
+			t.Fatalf("carry day cell seq %q, want trend role", c.seq)
+		}
+	}
+}
+
 func TestChartBrailleEightByFour(t *testing.T) {
 	app := openNovemberChart(t, dec151990(),
 		kgOnDay{1, 80}, kgOnDay{2, 80.55}, kgOnDay{3, 80.85}, kgOnDay{30, 82})
@@ -967,6 +1013,7 @@ func TestChartBrailleEightByFour(t *testing.T) {
 }
 
 func TestChartBrailleStemInsideRow(t *testing.T) {
+	enableChroma(t)
 	app := openNovemberChart(t, dec151990(),
 		kgOnDay{1, 80}, kgOnDay{2, 80.50}, kgOnDay{30, 82})
 	rows := mustPlot(t, monthlyView(t, app))
@@ -974,9 +1021,46 @@ func TestChartBrailleStemInsideRow(t *testing.T) {
 		t.Fatalf("day 2 left %v right %v, want stem dots at 9 and 10 with mark 11 and trend 8 in one row; column %q",
 			leftBins(rows, 1), rightBins(rows, 1), columnGlyphs(rows, 1))
 	}
+	// Bins 8 through 11 share one rune. The stem wins that cell.
+	shared, _, ok := binRow(rows, 1, 11, true)
+	if !ok || !cellHasFG(shared, 2) || cellHasFG(shared, 4) {
+		t.Fatalf("S4 shared cell seq %q, want stem green", shared.seq)
+	}
 	if !sameSet(leftBins(rows, 0), 7) || !sameSet(rightBins(rows, 0), 7) {
 		t.Fatalf("day 1 left %v right %v, want bin 7 and no stem; column %q",
 			leftBins(rows, 0), rightBins(rows, 0), columnGlyphs(rows, 0))
+	}
+}
+
+func TestChartBrailleNoColorCarryIsBold(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	app := openNovemberChart(t, dec151990(), kgOnDay{1, 80})
+	view := monthlyView(t, app)
+	if hasChromaticSGR(view) {
+		t.Fatalf("chromatic SGR under NO_COLOR: %q", view)
+	}
+	rows := mustPlot(t, view)
+	lit := func(day int) []cellStyle {
+		var out []cellStyle
+		for _, row := range rows {
+			c := row[day]
+			if isBraille(c.r) && maskOf(c.r) != 0 {
+				out = append(out, c)
+			}
+		}
+		return out
+	}
+	weighIn, carry := lit(0), lit(1)
+	if len(weighIn) != 1 || len(carry) != 1 {
+		t.Fatalf("weigh-in cells %d, carry cells %d, want one each; columns %q %q",
+			len(weighIn), len(carry), columnGlyphs(rows, 0), columnGlyphs(rows, 1))
+	}
+	got, want := maskOf(weighIn[0].r), maskOf(carry[0].r)
+	if got != want || got&sideBits(true) == 0 || got&sideBits(false) == 0 {
+		t.Fatalf("masks weigh-in %#x carry %#x, want the same two-dot rune", got, want)
+	}
+	if weighIn[0].bold || !carry[0].bold {
+		t.Fatalf("bold weigh-in %v carry %v, want the carry day only", weighIn[0].bold, carry[0].bold)
 	}
 }
 

@@ -4,7 +4,9 @@
 **Status**: approved
 **Objections**:
 [`high-resolution-charts.md`](../objections/high-resolution-charts.md)
-(O1–O3, O5, O6 accepted; O4 rejected).
+(O1–O3, O5, O6 accepted; O4 rejected). Code-mode:
+[`high-resolution-charts-code.md`](../objections/high-resolution-charts-code.md)
+(O1–O3 accepted).
 **Backlog**: [`idea.md`](../../../idea.md) (Monthly Log)
 **Amends**:
 [`2026-09-10-monthly-charts.md`](2026-09-10-monthly-charts.md)
@@ -85,15 +87,22 @@ bucket rule. No chart library is added. The plot stays in the TUI.
     daily mark wins and the long-term trend wins. The stem uses the
     mark's horizontal column.
 5.  **One color per cell.** A cell has one foreground color. Dots
-    do not. On the monthly chart, a cell that contains a mark dot
-    uses the `weight` role; otherwise a cell that contains a stem
-    dot uses the stem green (chart chrome, not a `[colors]` role);
-    otherwise the `trend` role. On the long-term chart, a cell that
-    contains a trend dot uses the `trend` role and is bold;
+    do not. On the monthly chart, a cell that contains a stem dot
+    uses the stem green (chart chrome, not a `[colors]` role),
+    including when that cell also holds a mark or a trend dot. The
+    stem is one colour along its length. Otherwise a mark dot uses
+    the `weight` role, and otherwise the `trend` role. On S2 day 2
+    the stem shares the trend's cell and that rune is stem green.
+    The mark sits in the next cell and keeps the weight role. A
+    day with no weigh-in keeps the trend role. On the long-term
+    chart, a trend dot uses the `trend` role and is bold;
     otherwise the `weight` role, not bold. Under `NO_COLOR`
-    chromatic color is off and the rune remains. Bold remains.
-    Mark, stem, and trend are told apart across the chart. A shared
-    cell is one rune, not three.
+    chromatic color is off and the rune remains. Bold stays on
+    the trend role, including a monthly carry day, and stays off
+    a coincident weigh-in. Those two days share one mask. The
+    same mask means the same dots. A filled mark cell and a pure
+    stem cell are the same picture and get no third style bit.
+    A shared cell is one rune, not three.
 6.  **Long-term fit is unchanged.** *D*, *W* (default 72 when the
     TUI has not seen a resize), and the equal-time buckets stay as
     in the long-term spec. Finer paint does not add character
@@ -265,6 +274,17 @@ with a left dot and a right dot set for the trend
 **Then** the last day column is 10 November, not 20 or 30
 **And** no Braille dot is placed after today
 
+### S11 — A coincident weigh-in without color
+
+**Given** `NO_COLOR` is set
+**And** today is 15 December 1990
+**And** November 1990 has one weight, 80 kg on day 1
+**When** the monthly chart is shown
+**Then** the view has no chromatic color
+**And** day 1 and day 2 paint the same Braille mask
+**And** day 1 is not bold
+**And** day 2 is bold
+
 ## Observing the chart
 
 Tests drive `App.Update` / `View` and must not require a TTY.
@@ -275,8 +295,9 @@ has no dots. Bin numbers are Decision 3 with *R* = 8 unless a
 scenario says otherwise.
 
 Color is observed as in the color-scheme spec: one foreground SGR
-for the whole rune. `NO_COLOR` leaves no chromatic SGR. Bold may
-remain on a long-term trend cell.
+for the whole rune. `NO_COLOR` leaves no chromatic SGR. Bold stays
+on a trend cell, including a monthly carry day, and stays off a
+coincident weigh-in that shares that cell's mask.
 
 The title, empty-state copy, Loss, and Daily Deficit stay the
 ANSI-stripped strings the monthly and long-term specs already
@@ -300,9 +321,13 @@ require.
     the trend bin. The monthly mark wins a shared dot. S4 is the
     worked example: stem dots at bins 9 and 10.
 -   **FR5.** A cell has one foreground color, chosen by Decision 5.
-    Under `NO_COLOR` the Braille remains, chromatic color is off,
-    and a long-term trend cell stays bold. Distinctness does not
-    require three runes in one cell.
+    A stem dot makes the cell stem green. Otherwise mark, then
+    trend. Under `NO_COLOR` the Braille remains and chromatic
+    color is off. Bold stays on the trend role, including a
+    monthly carry day, and stays off a coincident weigh-in that
+    shares its mask. The same mask means the same dots. A
+    stem-filled mark and a pure stem get no extra style bit.
+    Distinctness does not require three runes in one cell.
 -   **FR6.** Long-term *D* ≤ *W* still assigns one character column
     per day, and *D* > *W* still assigns *W* buckets and omits the
     daily path. Each of those columns is one Braille cell. Decision

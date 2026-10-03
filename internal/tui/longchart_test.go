@@ -360,6 +360,72 @@ func TestLongChartCompleteStartsAtFirstLog(t *testing.T) {
 	}
 }
 
+func TestLongChartBucketOmitsWeightDot(t *testing.T) {
+	freezeToday(t, time.Date(1990, 12, 15, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	upsertKG(t, store, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), 80)
+	upsertKG(t, store, time.Date(1990, 11, 30, 0, 0, 0, 0, time.UTC), 90)
+	app := New(store, "mem.db", config.Default())
+	app.Update(app.load())
+	press(app, "l", "]", "]")
+	view := app.View()
+	rows := mustPlot(t, view)
+	if w := plotWidth(rows); w != defaultLongCols {
+		t.Fatalf("annual columns = %d, want %d buckets", w, defaultLongCols)
+	}
+	ey, em, last, ok := app.longEnd()
+	if !ok {
+		t.Fatal("no long-term end")
+	}
+	start := longStart(longAnnual, ey, em, app.logs)
+	end := time.Date(ey, em, last, 0, 0, 0, 0, time.UTC)
+	span := sheetRange(app.logs, start, end)
+	cols := bucketSpan(span, defaultLongCols)
+	ymin, ymax, yok := longYRange(cols, app.cfg.DisplayUnit, false)
+	if !yok || len(cols) != defaultLongCols {
+		t.Fatalf("bucket Y range ok %v cols %d", yok, len(cols))
+	}
+	separated := false
+	for i, col := range cols {
+		if !col.HasTrend {
+			continue
+		}
+		ty, err := units.FromKG(col.Trend, app.cfg.DisplayUnit)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tb := brailleBin(ty, ymin, ymax, brailleN)
+		left, right := leftBins(rows, i), rightBins(rows, i)
+		if !sameSet(left, tb) || !sameSet(right, tb) {
+			t.Fatalf("bucket %d left %v right %v, want only trend bin %d", i, left, right, tb)
+		}
+		d := len(span)
+		lo := i * d / defaultLongCols
+		hi := (i + 1) * d / defaultLongCols
+		if hi <= lo {
+			hi = lo + 1
+		}
+		if hi > d {
+			hi = d
+		}
+		for _, s := range span[lo:hi] {
+			if s.Log.Weight == nil {
+				continue
+			}
+			wy, err := units.FromKG(*s.Log.Weight, app.cfg.DisplayUnit)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if brailleBin(wy, ymin, ymax, brailleN) != tb {
+				separated = true
+			}
+		}
+	}
+	if !separated {
+		t.Fatal("fixture weight bins all match their bucket trend bins")
+	}
+}
+
 func TestLongChartAnnualIsBucketed(t *testing.T) {
 	freezeToday(t, nov1990())
 	store := openStore(t)

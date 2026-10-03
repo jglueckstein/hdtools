@@ -4,7 +4,9 @@
 [`docs/superpowers/specs/2026-10-02-high-resolution-charts.md`](../specs/2026-10-02-high-resolution-charts.md)
 **Objections**:
 [`high-resolution-charts.md`](../objections/high-resolution-charts.md)
-(O1–O3, O5, O6 accepted; O4 rejected)
+(O1–O3, O5, O6 accepted; O4 rejected). Code-mode:
+[`high-resolution-charts-code.md`](../objections/high-resolution-charts-code.md)
+(O1–O3 accepted).
 **Status**: approved
 
 No production code until the spec's scenarios exist as failing tests.
@@ -54,15 +56,19 @@ Do not import a chart module. Do not change `internal/chartpdf`,
     dot at the trend bin in that column. Do not light dots in the
     columns between two days. On a shared dot the monthly mark
     wins and the long-term trend wins.
--   One foreground for the whole rune. Monthly: mark dot present
-    → `weight`; else stem dot present → stem green (the chrome
-    already used for `|`, not a new `[colors]` role); else
-    `trend`. Long-term: trend dot present → `trend` and bold; else
-    `weight`, not bold. S4's mark, stem, and trend share bin group
-    2, so that cell is the `weight` color, not stem green. A stem
-    cell with no mark dot is green.
+-   One foreground for the whole rune. Monthly: a stem dot paints
+    the cell stem green (the chrome already used for `|`, not a
+    new `[colors]` role), even when a mark or trend dot shares
+    it. Otherwise mark dot present → `weight`, else `trend`.
+    S4's cell is stem green because bins 9 and 10 are in it. A
+    cell with no stem keeps the mark, then the trend. Long-term:
+    trend dot present → `trend` and bold; else `weight`, not
+    bold.
 -   Under `NO_COLOR`, strip chromatic SGR and keep the rune. Bold
-    on a long-term trend cell stays.
+    stays on the trend role, including a monthly carry day, and
+    stays off a coincident weigh-in that shares that mask. A
+    stem-filled mark and a pure stem with the same mask are the
+    same picture. There is no third style bit.
 -   Y labels stay `%5.1f-`, eight of them, top label at Ymax.
     Gutter stays 6 runes. Day labels under the monthly plot stay
     day 1 and the last plotted day. Long-term X labels stay month
@@ -79,7 +85,7 @@ Do not import a chart module. Do not change `internal/chartpdf`,
 | FR2 | `TestChartBrailleEightByFour`, `TestBrailleBinLastIsYMax` |
 | FR3 | `TestChartBrailleCloseMarksBins`, `TestBrailleBinS2Marks` |
 | FR4 | `TestChartBrailleStemInsideRow`, `TestBrailleBinS4Stem`, updated `TestChartNoStemWhenMarkOnTrend` |
-| FR5 | `TestChartBrailleNoColorKeepsDots`, updated `TestChartStemGreen`, updated `TestChartDailyMarkWinsSharedCell`, `TestLongChartBrailleNoColorBoldTrend` |
+| FR5 | `TestChartBrailleNoColorKeepsDots`, `TestChartBrailleNoColorCarryIsBold`, `TestChartBrailleStemInsideRow`, updated `TestChartStemGreen`, updated `TestChartDailyMarkWinsSharedCell`, `TestLongChartBrailleNoColorBoldTrend` |
 | FR6 | `TestLongChartBrailleKeepsDayColumns`, `TestLongChartBrailleStaysBucketed` |
 | FR7 | Existing title, loss, Y-range, key, and help tests stay |
 | FR8 | Existing `TestChartEmptyMonth` stays and must not panic |
@@ -104,13 +110,16 @@ New tests. Any test that calls `freezeToday` stays off `t.Parallel`.
     No logs before November. Weights 80.00, 80.55, 80.85, 82.00 kg
     on days 1, 2, 3, and 30. Day 2's left dot is bin 12. Day 3's
     left dot is bin 14.
+-   `TestChartBrailleStemIsGreen` — the day-2 cell holding bin 8
+    is stem green. The mark in the next cell keeps the weight
+    role. A day with no weigh-in keeps the trend role.
 -   `TestChartBrailleEightByFour` — S3. That chart has 8 plot rows.
     Each row's rune has four vertical dot places.
 -   `TestChartBrailleStemInsideRow` — S4. Today 15 December 1990.
     Weights 80.00, 80.50, 82.00 on days 1, 2, and 30. Day 1 has no
     stem dot (bin 7 for both). Day 2's left column has stem dots at
     bins 9 and 10, and the mark and trend are bins 11 and 8, both
-    in group 2.
+    in group 2. That rune is stem green.
 -   `TestChartBrailleNoColorKeepsDots` — S5. `NO_COLOR` set on the
     S2 chart. No chromatic SGR. Day 2's mark and that day's trend
     are different plot rows. Both runes still have their dots.
@@ -124,16 +133,26 @@ New tests. Any test that calls `freezeToday` stays off `t.Parallel`.
     columns. The bucket that contains 30 November has a left trend
     dot and a right trend dot. No daily-mark-only pattern is
     required; the daily path is omitted.
+-   `TestLongChartBucketOmitsWeightDot` — annual buckets. A column
+    is only its trend bin. The 90 kg weigh-in does not add a dot
+    at a different bin.
 -   `TestLongChartBrailleNoColorBoldTrend` — S8. `NO_COLOR` on the
     S6 chart. No chromatic SGR. A cell with a trend dot is bold. A
     cell with only the daily path is not bold.
+-   `TestChartBrailleNoColorCarryIsBold` — S11. One weigh-in on
+    the trend and a later blank day. `NO_COLOR`. Same mask. The
+    weigh-in is not bold. The carry day is bold.
 
 Retarget, do not delete:
 
 -   `TestChartDailyMarksAndTrendPath` — 8 plot rows of Braille, not
     a search for `o` or `-/\\`.
--   `TestChartUsesWeightAndTrendColors` — green and yellow still
-    appear, on Braille cells.
+-   `TestChartOmitsDailyMarkOnBlankDay` — a blank day has the
+    carried trend's two dots and no mark dot. The digits 1 and 30
+    are not that check.
+-   `TestChartUsesWeightAndTrendColors` — weight is magenta on a
+    mark cell with no stem dot. Trend is yellow on a Braille
+    cell. Stem green is not the weight check.
 -   `TestChartNoColorKeepsTwoSeries` — no chroma; both series still
     present as dots.
 -   `TestChartStemJoinsMarkToTrend` — stem dots between mark and
@@ -141,8 +160,7 @@ Retarget, do not delete:
     becomes the same assertion.
 -   `TestChartNoStemWhenMarkOnTrend` — equal bins, left dot set, no
     interior stem dot.
--   `TestChartStemGreen` — a stem cell that has no mark dot is
-    green. Do not require the S4 shared cell to be green.
+-   `TestChartStemGreen` — a cell with only stem dots is green.
 -   `TestChartDailyMarkWinsSharedCell` — the shared dot is set, and
     that cell uses the weight color.
 -   `TestLongChartTwoLinesNoMarksOrStems` — no `o` and no `|` is

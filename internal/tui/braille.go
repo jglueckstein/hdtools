@@ -7,10 +7,12 @@ package tui
 // rule cannot drift, and so neither of those files absorbs the grid.
 //
 // Bin group 0 sits on the bottom row, toward Ymin, because weight
-// still has to increase upward. The monthly mark wins a shared cell;
-// on the long-term chart the trend wins, and that cell stays bold.
-// Stems are monthly only, and only in the mark's own column. This
-// file does not choose the Y pad, the span, the buckets, or the PDF.
+// still has to increase upward. On the monthly chart a stem dot
+// wins the cell, even when a mark or a trend dot shares it. A cell
+// with no stem keeps the mark, then the trend. On the long-term
+// chart the trend wins, and that cell stays bold. Stems are monthly
+// only, and only in the mark's own column. This file does not
+// choose the Y pad, the span, the buckets, or the PDF.
 
 import "math"
 
@@ -121,21 +123,22 @@ const (
 	toneTrend
 )
 
-// tone is the one-colour rule. Monthly: a mark dot beats a stem, and
-// a stem beats the trend, so the shared S4 cell stays the weight role
-// and a stem with no mark in its cell stays the green chrome. Long-term:
-// any trend dot takes the trend role (already bold on the palette);
-// a weight-only cell stays the weight role and is not bold.
+// tone is the one-colour rule. Monthly: any stem dot paints the
+// cell stem green, so the stem is one colour even when a mark or
+// a trend dot shares the cell. A cell with no stem keeps the mark,
+// then the trend. Long-term charts have no stem: a trend dot takes
+// the trend role (already bold on the palette), and a weight-only
+// cell stays the weight role and is not bold.
 func (d dotMasks) tone(monthly bool) int {
 	if d.mask() == 0 {
 		return toneBlank
 	}
 	if monthly {
-		if d.bits[dotMark] != 0 {
-			return toneWeight
-		}
 		if d.bits[dotStem] != 0 {
 			return toneStem
+		}
+		if d.bits[dotMark] != 0 {
+			return toneWeight
 		}
 		return toneTrend
 	}
