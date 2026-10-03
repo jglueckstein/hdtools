@@ -2,7 +2,7 @@
 date: 2026-10-03
 branch: spec/high-resolution-charts
 issue: "#70"
-pr: null
+pr: "#71"
 task_summary: Paint on-screen monthly and long-term charts with Braille dots inside the existing columns.
 progressed_slice: null
 stages_run: [spec-writer, tdd-agent, implementer, code-reviewer, integration-agent]
