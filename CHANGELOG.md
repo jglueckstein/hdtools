@@ -66,7 +66,7 @@
 
 - Mark the shipped color-scheme and monthly-chart specs approved.
   Their plans already said approved, and the status lines still
-  said draft
+  said draft (#73)
 - Record the Grok spawn id for literacy-superpowers agents in
   `AGENTS.md` (#69)
 - Chart PDF write failures name the step that failed, and the

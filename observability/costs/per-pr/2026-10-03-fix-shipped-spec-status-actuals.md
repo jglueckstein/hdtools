@@ -2,7 +2,7 @@
 date: 2026-10-03
 branch: fix-shipped-spec-status
 issue: "#72"
-pr: null
+pr: "#73"
 task_summary: Mark the shipped color-scheme and monthly-chart specs approved.
 progressed_slice: null
 stages_run: [integration-agent]
