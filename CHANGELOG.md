@@ -62,6 +62,12 @@
 - Convention: extract a helper when the same code is wrong in two places
   (`internal/tui/layout.go` is the model)
 
+### Changed
+
+- Monthly chart PDFs default to `$XDG_DATA_HOME/hdtools` (or
+  `pdf_dir` in the config file). CLI `-o` still names the file, and
+  a successful `-chart-pdf` prints that path.
+
 ### Fixed
 
 - Mark the shipped color-scheme and monthly-chart specs approved.

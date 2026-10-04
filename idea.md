@@ -129,8 +129,12 @@ sheets) should land in an XDG location, the same data tree as the
 database (`$XDG_DATA_HOME/hdtools`, default `~/.local/share/hdtools`),
 not the process working directory. The user should also be able to
 set that directory in the config file. CLI `-o` still overrides the
-output path. The shipped chart-PDF slice writes to cwd; this is a
-later change.
+output path.
+
+Change record (monthly chart PDF path):
+[docs/superpowers/specs/2026-10-03-pdf-destination.md](docs/superpowers/specs/2026-10-03-pdf-destination.md).
+Filled log sheets, long-term PDFs, and blank sheets are not in that
+slice. When they are added, they use this directory.
 
 The TUI should be able to display on screen the monthly charts and the
 long term charts. Every on-screen chart (monthly and all four
