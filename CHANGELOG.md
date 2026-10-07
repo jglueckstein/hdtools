@@ -66,7 +66,7 @@
 
 - Monthly chart PDFs default to `$XDG_DATA_HOME/hdtools` (or
   `pdf_dir` in the config file). CLI `-o` still names the file, and
-  a successful `-chart-pdf` prints that path.
+  a successful `-chart-pdf` prints that path (#75)
 
 ### Fixed
 

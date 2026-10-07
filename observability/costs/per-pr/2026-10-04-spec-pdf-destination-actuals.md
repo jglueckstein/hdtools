@@ -2,7 +2,7 @@
 date: 2026-10-04
 branch: spec/pdf-destination
 issue: "#74"
-pr: null
+pr: "#75"
 task_summary: Write monthly chart PDFs to the XDG data directory, with pdf_dir and -o.
 progressed_slice: null
 stages_run: [spec-writer, tdd-agent, implementer, code-reviewer, integration-agent]
