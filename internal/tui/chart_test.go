@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -723,38 +725,66 @@ func TestChartDailyMarkWinsSharedCell(t *testing.T) {
 }
 
 func TestChartPWritesPDF(t *testing.T) {
-	t.Chdir(t.TempDir())
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	dataDir, dataPDF := useDataHome(t)
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
 	applyP(t, app)
-	info, err := os.Stat("1990-11-chart.pdf")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.Mode().Perm() != 0o600 {
-		t.Fatalf("mode = %04o, want 0600", info.Mode().Perm())
-	}
+	assertPDFNotCwd(t, cwd, dataPDF)
 	view := visible(app.View())
-	if !strings.Contains(view, "1990-11-chart.pdf") {
-		t.Fatalf("status missing path: %q", view)
+	if !strings.Contains(view, dataDir) || !strings.Contains(view, chartPDFFile) {
+		t.Fatalf("status missing data directory path: %q", view)
 	}
 	if !strings.Contains(view, "November 1990") || strings.Contains(view, "arrows move") {
 		t.Fatalf("left the monthly chart: %q", view)
 	}
+	assertNoPDF(t, filepath.Join(cwd, chartPDFFile))
+}
+
+func TestChartPUsesPDFDir(t *testing.T) {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	_, dataPDF := useDataHome(t)
+	pdfDir := filepath.Join(t.TempDir(), "charts")
+	app := appWithConfig(t, configWithPDFDir(t, pdfDir))
+	press(app, "c")
+	applyP(t, app)
+	pdf := filepath.Join(pdfDir, chartPDFFile)
+	assertPDFNotCwd(t, cwd, pdf)
+	view := visible(app.View())
+	if !strings.Contains(view, pdfDir) || !strings.Contains(view, chartPDFFile) {
+		t.Fatalf("status missing pdf_dir path: %q", view)
+	}
+	if !strings.Contains(view, "November 1990") || strings.Contains(view, "arrows move") {
+		t.Fatalf("left the monthly chart: %q", view)
+	}
+	assertNoPDF(t, dataPDF)
+	assertNoPDF(t, filepath.Join(cwd, chartPDFFile))
 }
 
 func TestChartPWriteFailure(t *testing.T) {
-	t.Chdir(t.TempDir())
-	if err := os.Mkdir("1990-11-chart.pdf", 0o700); err != nil {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	_, dataPDF := useDataHome(t)
+	if err := os.MkdirAll(dataPDF, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
 	applyP(t, app)
+	assertNoPDF(t, filepath.Join(cwd, chartPDFFile))
+	info, err := os.Stat(dataPDF)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !info.IsDir() {
+		t.Fatal("destination directory was replaced")
+	}
 	view := visible(app.View())
-	if strings.Contains(view, "1990-11-chart.pdf") && !strings.Contains(strings.ToLower(view), "error") {
+	if strings.Contains(view, chartPDFFile) && !strings.Contains(strings.ToLower(view), "error") {
 		t.Fatalf("claimed saved path on write failure: %q", view)
 	}
 	if !strings.Contains(strings.ToLower(view), "error") && app.err == nil && !strings.Contains(strings.ToLower(app.status), "error") {
@@ -765,37 +795,78 @@ func TestChartPWriteFailure(t *testing.T) {
 	}
 }
 
-func TestChartPIgnoredOnList(t *testing.T) {
-	t.Chdir(t.TempDir())
-	store := openStore(t)
-	app := twoDayApp(t, store)
+func TestChartPPDFDirIsFile(t *testing.T) {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	_, dataPDF := useDataHome(t)
+	pdfDir := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(pdfDir, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	app := appWithConfig(t, configWithPDFDir(t, pdfDir))
+	press(app, "c")
+	if !strings.Contains(visible(app.View()), "November 1990") || strings.Contains(visible(app.View()), "arrows move") {
+		t.Fatalf("chart did not open: %q", app.View())
+	}
 	applyP(t, app)
-	if _, err := os.Stat("1990-11-chart.pdf"); err == nil {
-		t.Fatal("p on the list wrote a PDF")
+	assertNoPDF(t, filepath.Join(cwd, chartPDFFile))
+	assertNoPDF(t, dataPDF)
+	info, err := os.Stat(pdfDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.IsDir() {
+		t.Fatal("replaced the pdf_dir file with a directory")
+	}
+	view := visible(app.View())
+	if strings.Contains(view, chartPDFFile) && !strings.Contains(strings.ToLower(view), "error") {
+		t.Fatalf("claimed saved path on write failure: %q", view)
+	}
+	if !strings.Contains(strings.ToLower(view), "error") && app.err == nil {
+		t.Fatalf("missing error: %q", view)
+	}
+	if !strings.Contains(view, "November 1990") || strings.Contains(view, "arrows move") || strings.Contains(view, "daily log") {
+		t.Fatalf("left the monthly chart: %q", view)
+	}
+}
+
+func TestChartPIgnoredOnList(t *testing.T) {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	dataDir, _ := useDataHome(t)
+	pdfDir := filepath.Join(t.TempDir(), "pdfs")
+	app := appWithConfig(t, configWithPDFDir(t, pdfDir))
+	applyP(t, app)
+	assertNoPDFIn(t, cwd, dataDir, pdfDir)
+	if app.screen != screenList || !strings.Contains(visible(app.View()), "daily log") {
+		t.Fatalf("left the list: %q", app.View())
 	}
 	press(app, "m")
 	applyP(t, app)
-	if _, err := os.Stat("1990-11-chart.pdf"); err == nil {
-		t.Fatal("p on the month sheet wrote a PDF")
+	assertNoPDFIn(t, cwd, dataDir, pdfDir)
+	if app.screen != screenMonth || !app.month.editing || !strings.Contains(app.month.input.Value(), "p") {
+		t.Fatalf("p on the month sheet did not stay text, screen=%v editing=%v input=%q", app.screen, app.month.editing, app.month.input.Value())
 	}
 	press(app, "esc", "l")
 	applyP(t, app)
-	if _, err := os.Stat("1990-11-chart.pdf"); err == nil {
-		t.Fatal("p on the long-term chart wrote a PDF")
+	assertNoPDFIn(t, cwd, dataDir, pdfDir)
+	if app.screen != screenLong || !strings.Contains(visible(app.View()), "Quarterly") {
+		t.Fatalf("left the long-term chart: %q", app.View())
 	}
 }
 
 func TestChartPWhileEditingIsText(t *testing.T) {
-	t.Chdir(t.TempDir())
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	dataDir, _ := useDataHome(t)
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "m")
 	app.month.col = colNote
 	app.month.beginEdit("")
 	press(app, "p")
-	if _, err := os.Stat("1990-11-chart.pdf"); err == nil {
-		t.Fatal("p while editing wrote a PDF")
-	}
+	assertNoPDF(t, filepath.Join(cwd, chartPDFFile))
+	assertNoPDF(t, filepath.Join(dataDir, chartPDFFile))
 	if !strings.Contains(app.month.input.Value(), "p") {
 		t.Fatalf("input = %q, want p", app.month.input.Value())
 	}
@@ -804,21 +875,199 @@ func TestChartPWhileEditingIsText(t *testing.T) {
 	}
 }
 
-func TestChartPDoesNotWriteLogs(t *testing.T) {
-	t.Chdir(t.TempDir())
+func TestChartPIgnoredOnForm(t *testing.T) {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	dataDir, _ := useDataHome(t)
+	pdfDir := filepath.Join(t.TempDir(), "pdfs")
+	app := appWithConfig(t, configWithPDFDir(t, pdfDir))
+	press(app, "n")
+	if app.screen != screenForm {
+		t.Fatalf("screen = %v, want form", app.screen)
+	}
+	press(app, "tab", "tab", "tab", "tab", "tab")
+	applyP(t, app)
+	assertNoPDFIn(t, cwd, dataDir, pdfDir)
+	if app.screen != screenForm {
+		t.Fatalf("left the form: %q", app.View())
+	}
+	if !strings.Contains(app.form.inputs[4].Value(), "p") {
+		t.Fatalf("note = %q, want p", app.form.inputs[4].Value())
+	}
+}
+
+func TestChartPNonStringPDFDir(t *testing.T) {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	_, dataPDF := useDataHome(t)
+	app := appWithConfig(t, loadConfigTOML(t, "display_unit = \"kg\"\npdf_dir = 3\n"))
+	press(app, "c")
+	if !strings.Contains(visible(app.View()), "November 1990") || strings.Contains(visible(app.View()), "arrows move") {
+		t.Fatalf("chart did not open: %q", app.View())
+	}
+	applyP(t, app)
+	assertNoPDF(t, filepath.Join(cwd, chartPDFFile))
+	assertNoPDF(t, dataPDF)
+	view := visible(app.View())
+	if !strings.Contains(view, "pdf_dir") {
+		t.Fatalf("error does not name pdf_dir: %q", view)
+	}
+	if !strings.Contains(strings.ToLower(view), "error") {
+		t.Fatalf("missing error: %q", view)
+	}
+	if !strings.Contains(view, "November 1990") || strings.Contains(view, "arrows move") {
+		t.Fatalf("left the monthly chart: %q", view)
+	}
+}
+
+func TestChartPOverwrite(t *testing.T) {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	dataDir, dataPDF := useDataHome(t)
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
 	applyP(t, app)
-	if _, err := os.Stat("1990-11-chart.pdf"); err != nil {
-		t.Fatalf("pdf missing: %v", err)
+	applyP(t, app)
+	assertNoPDF(t, filepath.Join(cwd, chartPDFFile))
+	entries, err := os.ReadDir(dataDir)
+	if err != nil {
+		t.Fatal(err)
 	}
+	var names []string
+	for _, entry := range entries {
+		if strings.Contains(entry.Name(), "1990-11-chart") || strings.HasSuffix(entry.Name(), ".pdf") {
+			names = append(names, entry.Name())
+		}
+	}
+	if len(names) != 1 || names[0] != chartPDFFile {
+		t.Fatalf("chart files = %v, want [%s]", names, chartPDFFile)
+	}
+	info, err := os.Stat(dataPDF)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("mode = %04o, want 0600", info.Mode().Perm())
+	}
+}
+
+func TestChartPNoHomeFails(t *testing.T) {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	t.Setenv("HOME", "")
+	t.Setenv("XDG_DATA_HOME", "")
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	app.dbPath = filepath.Join(t.TempDir(), "explicit.db")
+	press(app, "c")
+	applyP(t, app)
+	assertNoPDF(t, filepath.Join(cwd, chartPDFFile))
+	view := visible(app.View())
+	if !strings.Contains(view, "home directory") {
+		t.Fatalf("error missing home directory: %q", view)
+	}
+	if strings.Contains(view, chartPDFFile) && !strings.Contains(strings.ToLower(view), "error") {
+		t.Fatalf("claimed saved path: %q", view)
+	}
+	if !strings.Contains(view, "November 1990") || strings.Contains(view, "arrows move") {
+		t.Fatalf("left the monthly chart: %q", view)
+	}
+}
+
+func TestChartPRelativeDataHomeFails(t *testing.T) {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_DATA_HOME", "data")
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	press(app, "c")
+	applyP(t, app)
+	assertNoPDF(t, filepath.Join(cwd, chartPDFFile))
+	assertNoPDF(t, filepath.Join(cwd, "data", "hdtools", chartPDFFile))
+	view := visible(app.View())
+	if !strings.Contains(view, "not absolute") {
+		t.Fatalf("error missing non-absolute directory: %q", view)
+	}
+	if !strings.Contains(strings.ToLower(view), "error") {
+		t.Fatalf("missing error: %q", view)
+	}
+	if !strings.Contains(view, "November 1990") || strings.Contains(view, "arrows move") {
+		t.Fatalf("left the monthly chart: %q", view)
+	}
+}
+
+func TestChartPDoesNotWriteLogs(t *testing.T) {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	_, dataPDF := useDataHome(t)
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	press(app, "c")
+	applyP(t, app)
+	assertPDFNotCwd(t, cwd, dataPDF)
 	logs, err := store.All(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(logs) != 2 {
 		t.Fatalf("rows = %d, want 2", len(logs))
+	}
+}
+
+const chartPDFFile = "1990-11-chart.pdf"
+
+func useDataHome(t *testing.T) (dir, pdf string) {
+	t.Helper()
+	t.Setenv("HOME", t.TempDir())
+	root := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", root)
+	dir = filepath.Join(root, "hdtools")
+	pdf = filepath.Join(dir, chartPDFFile)
+	return dir, pdf
+}
+
+func configWithPDFDir(t *testing.T, pdfDir string) config.Config {
+	t.Helper()
+	body := "display_unit = \"kg\"\npdf_dir = " + strconv.Quote(pdfDir) + "\n"
+	return loadConfigTOML(t, body)
+}
+
+func appWithConfig(t *testing.T, cfg config.Config) *App {
+	t.Helper()
+	app := twoDayApp(t, openStore(t))
+	app.cfg = cfg
+	return app
+}
+
+func assertNoPDF(t *testing.T, path string) {
+	t.Helper()
+	if _, err := os.Stat(path); err == nil {
+		t.Fatalf("wrote %s", path)
+	} else if !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+}
+
+func assertNoPDFIn(t *testing.T, dirs ...string) {
+	t.Helper()
+	for _, dir := range dirs {
+		assertNoPDF(t, filepath.Join(dir, chartPDFFile))
+	}
+}
+
+func assertPDFNotCwd(t *testing.T, cwd, path string) {
+	t.Helper()
+	if _, err := os.Stat(filepath.Join(cwd, chartPDFFile)); err == nil {
+		t.Fatalf("wrote %s in the working directory, want %s", chartPDFFile, path)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("mode = %04o, want 0600", info.Mode().Perm())
 	}
 }
 

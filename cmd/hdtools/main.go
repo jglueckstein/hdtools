@@ -35,7 +35,7 @@ func run(args []string) error {
 	dbFlag := fs.String("db", "", "SQLite database path (default $HDTOOLS_DB or $XDG_DATA_HOME/hdtools/hdtools.db)")
 	configFlag := fs.String("config", "", "config file path (default $HDTOOLS_CONFIG or $XDG_CONFIG_HOME/hdtools/config.toml)")
 	chartPDF := fs.String("chart-pdf", "", "write a monthly chart PDF for YYYY-MM and exit")
-	outFlag := fs.String("o", "", "output path for -chart-pdf (default YYYY-MM-chart.pdf)")
+	outFlag := fs.String("o", "", "output file for -chart-pdf (default YYYY-MM-chart.pdf in the data directory)")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
@@ -128,7 +128,11 @@ func exportChartPDF(store *dailylog.Store, cfg config.Config, monthStr, out stri
 		}
 	}
 	if out == "" {
-		out = fmt.Sprintf("%04d-%02d-chart.pdf", year, month)
+		dir, err := config.ResolvePDFDir(cfg)
+		if err != nil {
+			return fmt.Errorf("chart-pdf: %w", err)
+		}
+		out = filepath.Join(dir, fmt.Sprintf("%04d-%02d-chart.pdf", year, month))
 	}
 	now := time.Now()
 	if err := chartpdf.Write(out, chartpdf.Options{
@@ -141,6 +145,7 @@ func exportChartPDF(store *dailylog.Store, cfg config.Config, monthStr, out stri
 	}); err != nil {
 		return fmt.Errorf("chart-pdf: %w", err)
 	}
+	fmt.Println(out)
 	return nil
 }
 

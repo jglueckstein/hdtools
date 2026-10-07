@@ -382,3 +382,26 @@ func TestEnsureDoesNotOverwrite(t *testing.T) {
 		t.Fatalf("Ensure overwrote unit: %q", cfg.DisplayUnit)
 	}
 }
+
+func TestEnsureOmitsPDFDir(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := Ensure(path); err != nil {
+		t.Fatal(err)
+	}
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(body), "pdf_dir") {
+		t.Fatalf("first-run file contains pdf_dir: %s", body)
+	}
+}
+
+func TestPDFDirNonStringStillLoads(t *testing.T) {
+	t.Parallel()
+	path := writeTOML(t, "display_unit = \"kg\"\npdf_dir = 3\n")
+	if _, err := Load(path); err != nil {
+		t.Fatal(err)
+	}
+}

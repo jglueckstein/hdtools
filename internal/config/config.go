@@ -9,13 +9,18 @@
 //
 // [colors] is a sparse overlay of valid roles; invalid values fall back
 // silently so a typo cannot keep someone out of the log. Invalid
-// display_unit still fails. This package does not open the database.
+// display_unit still fails. pdf_dir is a directory for chart PDFs:
+// absolute, or a leading ~/ for the home directory. Any other relative
+// value fails the export, and a non-string value does not fail Load,
+// because a bad directory cannot store pounds as kilograms. This
+// package does not open the database and does not write the PDF.
 package config
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/jglueckstein/hdtools/internal/units"
 	"github.com/pelletier/go-toml/v2"
@@ -31,9 +36,16 @@ const (
 // fields later does not break older files.
 type Config struct {
 	DisplayUnit units.Unit `toml:"display_unit"`
+	// PDFDir is the chart-PDF directory. Empty means DataDir.
+	// A non-string value in the file leaves this empty and sets
+	// pdfDirBad so the export can fail without blocking Load.
+	PDFDir string `toml:"pdf_dir,omitempty"`
 	// Colors is the sparse overlay of valid [colors] roles. Omitted roles
 	// use the TUI built-in default. Load fills this from the file.
 	Colors map[string]string `toml:"colors,omitempty"`
+	// pdfDirBad is set when pdf_dir was present and not a string.
+	// It is not a file field: Write must not persist it.
+	pdfDirBad bool
 }
 
 // Default is first-run preferences: kilograms, matching storage.
@@ -84,8 +96,48 @@ func DefaultDBPath() (string, error) {
 	return filepath.Join(dir, dbFileName), nil
 }
 
+// ResolvePDFDir chooses the directory for a chart PDF when -o is empty.
+// An absolute pdf_dir is used as written. A leading ~/ expands to the
+// home directory and nothing else is expanded, so a stored path does
+// not follow the directory the process was started from. Any other
+// relative value is an error. An empty pdf_dir is DataDir. A result
+// that is not absolute fails here, without rewriting DataDir, so a
+// relative base cannot create the chart under the working directory.
+func ResolvePDFDir(cfg Config) (string, error) {
+	dir, err := chosenPDFDir(cfg)
+	if err != nil {
+		return "", err
+	}
+	if !filepath.IsAbs(dir) {
+		return "", fmt.Errorf("pdf directory %q is not absolute", dir)
+	}
+	return dir, nil
+}
+
+func chosenPDFDir(cfg Config) (string, error) {
+	if cfg.pdfDirBad {
+		return "", fmt.Errorf("pdf_dir must be a string")
+	}
+	dir := strings.TrimSpace(cfg.PDFDir)
+	if dir == "" {
+		return DataDir()
+	}
+	if filepath.IsAbs(dir) {
+		return dir, nil
+	}
+	if rest, ok := strings.CutPrefix(dir, "~/"); ok {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("home directory: %w", err)
+		}
+		return filepath.Join(home, rest), nil
+	}
+	return "", fmt.Errorf("pdf_dir %q must be absolute or start with ~/", dir)
+}
+
 // Load reads path. A missing file returns Default. An invalid display_unit
-// fails so we never treat "lbs" as kilograms.
+// fails so we never treat "lbs" as kilograms. pdf_dir is decoded as a
+// raw value so a number does not fail the whole file.
 func Load(path string) (Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -97,6 +149,7 @@ func Load(path string) (Config, error) {
 	var raw struct {
 		DisplayUnit string `toml:"display_unit"`
 		Colors      any    `toml:"colors"`
+		PDFDir      any    `toml:"pdf_dir"`
 	}
 	if err := toml.Unmarshal(data, &raw); err != nil {
 		return Config{}, fmt.Errorf("parse config %s: %w", path, err)
@@ -110,6 +163,13 @@ func Load(path string) (Config, error) {
 		cfg.DisplayUnit = u
 	}
 	cfg.Colors = parseColorOverlay(raw.Colors)
+	switch v := raw.PDFDir.(type) {
+	case nil:
+	case string:
+		cfg.PDFDir = strings.TrimSpace(v)
+	default:
+		cfg.pdfDirBad = true
+	}
 	return cfg, nil
 }
 

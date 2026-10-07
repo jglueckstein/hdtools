@@ -17,6 +17,20 @@ Unknown keys are ignored.
 
 Any other value fails the load. Storage is always kilograms.
 
+## `pdf_dir`
+
+Optional directory for chart PDFs. Omitted, empty, or whitespace
+means `$XDG_DATA_HOME/hdtools` (otherwise `~/.local/share/hdtools`).
+That is where the database file lives when `-db` and `$HDTOOLS_DB`
+are unset. Those two do not move the PDF. An absolute path is used
+as written. A value that begins with `~/` uses the home directory
+for that prefix. Any other relative value fails the export and
+writes nothing. A directory that is not absolute after that
+resolution fails the export and writes nothing. `$` is not expanded.
+A value that is not a string does not fail the load; an export that
+would use it fails and names `pdf_dir`. `-o` is a file path and
+ignores this key. The first-run file does not contain `pdf_dir`.
+
 ## `[colors]`
 
 Optional table. Keys are roles. Values are a 16-color name (case

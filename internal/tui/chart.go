@@ -8,8 +8,9 @@ package tui
 // [colors] roles. The dots are Braille runes from braille.go; this
 // file still owns the title, the Y labels, and the loss line. Clip,
 // empty, Y pad, and analysis live in chartspan so the PDF cannot
-// drift. p writes that picture through chartpdf; this file does not
-// import a PDF library.
+// drift. p writes that picture through chartpdf into the configured
+// PDF directory, not the process working directory. This file does
+// not import a PDF library.
 
 import (
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jglueckstein/hdtools/internal/chartpdf"
 	"github.com/jglueckstein/hdtools/internal/chartspan"
+	"github.com/jglueckstein/hdtools/internal/config"
 	"github.com/jglueckstein/hdtools/internal/units"
 )
 
@@ -65,15 +67,18 @@ func (a *App) updateChart(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
+// writeChartPDF uses the same directory as an empty -o. A failed
+// resolve or write leaves the chart on screen and does not fall
+// back to the working directory.
 func (a *App) writeChartPDF() {
-	cwd, err := os.Getwd()
+	dir, err := config.ResolvePDFDir(a.cfg)
 	if err != nil {
 		a.err = fmt.Errorf("write chart pdf: %w", err)
 		a.status = ""
 		return
 	}
 	name := fmt.Sprintf("%04d-%02d-chart.pdf", a.month.year, a.month.month)
-	path := filepath.Join(cwd, name)
+	path := filepath.Join(dir, name)
 	err = chartpdf.Write(path, chartpdf.Options{
 		Year:   a.month.year,
 		Month:  a.month.month,
