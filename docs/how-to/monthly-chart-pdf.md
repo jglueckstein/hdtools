@@ -11,13 +11,15 @@ hdtools -chart-pdf 1990-11
 ```
 
 writes `1990-11-chart.pdf` under `$XDG_DATA_HOME/hdtools` (otherwise
-`~/.local/share/hdtools`) and does not start the TUI. The command
-prints that path as one line. Set `pdf_dir` in the config file to
-choose another directory. An absolute path is used as written. A
-value that begins with `~/` uses the home directory. Any other
-relative `pdf_dir` fails the export and writes nothing. `-o path`
-names the file and ignores `pdf_dir`. `-db` and `-config` work as
-usual. A failed export prints no path.
+`~/.local/share/hdtools`) and does not start the TUI. That is the
+default database directory. `-db` and `$HDTOOLS_DB` do not move the
+PDF. The command prints that path as one line. Set `pdf_dir` in the
+config file to choose another directory. An absolute path is used as
+written. A value that begins with `~/` uses the home directory. Any
+other relative `pdf_dir` fails the export and writes nothing. A
+directory that is not absolute after that resolution fails the same
+way. `-o path` names the file and ignores `pdf_dir`. `-config` still
+selects the config file. A failed export prints no path.
 
 A bad month (`1990-13`, `banana`) exits non-zero and writes no file.
 

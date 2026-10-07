@@ -82,9 +82,14 @@ export does not change where the next one goes.
     and `charts`, fails the export: the TUI still opens, nothing is
     written, and there is no working-directory fallback. If the home
     directory is unavailable, a `~/` value fails the export the same
-    way and writes nothing. `-o` and `-db` stay working-directory
-    relative when their own paths are relative. That rule is for
-    those flags, not for `pdf_dir`.
+    way and writes nothing. A resolved directory that is not absolute
+    fails the export and writes nothing (code-mode O1). That includes
+    a relative `XDG_DATA_HOME` when `pdf_dir` is empty, and `~/…` when
+    `HOME` is relative. The value is not made absolute against the
+    working directory. The database directory helper is unchanged.
+    `-o` and `-db` stay working-directory relative when their own
+    paths are relative. That rule is for those flags, not for
+    `pdf_dir`.
 6.  **`-o` is still a file path, not a directory.** When non-empty it
     wins completely. It is not joined onto `pdf_dir` or the data
     directory. `-o out.pdf` is the working directory. `-o /tmp/out.pdf`
@@ -480,7 +485,9 @@ does not quit
     home directory. `$` is not expanded. Any other relative value,
     including `"."` and `"charts"`, fails the export, writes nothing,
     and does not stop the TUI from opening. `"~/charts"` with no home
-    directory fails the same way.
+    directory fails the same way. A resolved directory that is not
+    absolute fails the export and writes nothing. The database
+    directory helper is unchanged.
 -   **FR5.** A non-empty `-o` is the whole file path. It is not joined
     to `pdf_dir` or the data directory. Relative `-o` is the working
     directory. Absolute `-o` is that path. `pdf_dir` is ignored, and
@@ -500,7 +507,8 @@ does not quit
     `XDG_DATA_HOME` is empty; `pdf_dir` is relative and does not
     begin with `~/`; `pdf_dir` begins with `~/` and the home
     directory is unavailable; `pdf_dir` is not a string and the
-    export would use it. The CLI exits non-zero and does not start
+    export would use it; the resolved directory is not absolute.
+    The CLI exits non-zero and does not start
     the TUI. TUI `p` shows an error, stays on the monthly chart, does
     not quit, and does not claim the file was saved. A missing or
     unwritable directory, a relative `pdf_dir`, or a non-string

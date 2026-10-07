@@ -975,6 +975,29 @@ func TestChartPNoHomeFails(t *testing.T) {
 	}
 }
 
+func TestChartPRelativeDataHomeFails(t *testing.T) {
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_DATA_HOME", "data")
+	store := openStore(t)
+	app := twoDayApp(t, store)
+	press(app, "c")
+	applyP(t, app)
+	assertNoPDF(t, filepath.Join(cwd, chartPDFFile))
+	assertNoPDF(t, filepath.Join(cwd, "data", "hdtools", chartPDFFile))
+	view := visible(app.View())
+	if !strings.Contains(view, "not absolute") {
+		t.Fatalf("error missing non-absolute directory: %q", view)
+	}
+	if !strings.Contains(strings.ToLower(view), "error") {
+		t.Fatalf("missing error: %q", view)
+	}
+	if !strings.Contains(view, "November 1990") || strings.Contains(view, "arrows move") {
+		t.Fatalf("left the monthly chart: %q", view)
+	}
+}
+
 func TestChartPDoesNotWriteLogs(t *testing.T) {
 	cwd := t.TempDir()
 	t.Chdir(cwd)

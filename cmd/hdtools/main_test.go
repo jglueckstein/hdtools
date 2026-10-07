@@ -724,3 +724,42 @@ func TestChartPDFHomePrefixNoHome(t *testing.T) {
 	assertNoFile(t, filepath.Join(cwd, chartPDFName))
 	assertNoFile(t, filepath.Join(cwd, "charts", chartPDFName))
 }
+
+func TestChartPDFRelativeDataHomeFails(t *testing.T) {
+	cwd := isolateCLI(t)
+	t.Setenv("XDG_DATA_HOME", "data")
+	dbPath := filepath.Join(cwd, "t.db")
+	cfgPath := filepath.Join(cwd, "config.toml")
+	writeConfigFile(t, cfgPath, "display_unit = \"kg\"\n")
+	seedNovember(t, dbPath)
+	stdout, err := runCLIOutput(t, "-chart-pdf", "1990-11", "-db", dbPath, "-config", cfgPath)
+	if err == nil {
+		t.Fatalf("export succeeded, want error; stdout %q", stdout)
+	}
+	if !strings.Contains(err.Error(), "not absolute") {
+		t.Fatalf("error = %q, want a non-absolute directory", err)
+	}
+	wantNoStdoutPath(t, stdout)
+	assertNoFile(t, filepath.Join(cwd, chartPDFName))
+	assertNoFile(t, filepath.Join(cwd, "data", "hdtools", chartPDFName))
+}
+
+func TestChartPDFHomePrefixRelativeHomeFails(t *testing.T) {
+	cwd := isolateCLI(t)
+	t.Setenv("HOME", "home")
+	t.Setenv("XDG_DATA_HOME", "")
+	dbPath := filepath.Join(cwd, "t.db")
+	cfgPath := filepath.Join(cwd, "config.toml")
+	writeConfigFile(t, cfgPath, "display_unit = \"kg\"\npdf_dir = \"~/charts\"\n")
+	seedNovember(t, dbPath)
+	stdout, err := runCLIOutput(t, "-chart-pdf", "1990-11", "-db", dbPath, "-config", cfgPath)
+	if err == nil {
+		t.Fatalf("export succeeded, want error; stdout %q", stdout)
+	}
+	if !strings.Contains(err.Error(), "not absolute") {
+		t.Fatalf("error = %q, want a non-absolute directory", err)
+	}
+	wantNoStdoutPath(t, stdout)
+	assertNoFile(t, filepath.Join(cwd, chartPDFName))
+	assertNoFile(t, filepath.Join(cwd, "home", "charts", chartPDFName))
+}

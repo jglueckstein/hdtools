@@ -100,8 +100,21 @@ func DefaultDBPath() (string, error) {
 // An absolute pdf_dir is used as written. A leading ~/ expands to the
 // home directory and nothing else is expanded, so a stored path does
 // not follow the directory the process was started from. Any other
-// relative value is an error. An empty pdf_dir is DataDir.
+// relative value is an error. An empty pdf_dir is DataDir. A result
+// that is not absolute fails here, without rewriting DataDir, so a
+// relative base cannot create the chart under the working directory.
 func ResolvePDFDir(cfg Config) (string, error) {
+	dir, err := chosenPDFDir(cfg)
+	if err != nil {
+		return "", err
+	}
+	if !filepath.IsAbs(dir) {
+		return "", fmt.Errorf("pdf directory %q is not absolute", dir)
+	}
+	return dir, nil
+}
+
+func chosenPDFDir(cfg Config) (string, error) {
 	if cfg.pdfDirBad {
 		return "", fmt.Errorf("pdf_dir must be a string")
 	}
