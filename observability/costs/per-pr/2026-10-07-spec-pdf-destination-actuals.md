@@ -1,5 +1,5 @@
 ---
-date: 2026-10-04
+date: 2026-10-07
 branch: spec/pdf-destination
 issue: "#74"
 pr: "#75"
