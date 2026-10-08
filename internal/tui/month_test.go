@@ -240,7 +240,7 @@ func TestMonthDeltaBlankWithoutWeight(t *testing.T) {
 	app.Update(app.load())
 	press(app, "m")
 	app.month.day = 2
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	header := headerLine(view)
 	data := cursorRow(view)
 	if header == "" || data == "" {
@@ -259,7 +259,7 @@ func TestMonthDeltaMatchesList(t *testing.T) {
 	t.Parallel()
 	app := listWithPair(t, 80.5, 80.0, config.Default())
 	press(app, "m")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	header := headerLine(view)
 	data := cursorRow(view)
 	if header == "" || data == "" {
@@ -283,7 +283,7 @@ selection = "yellow"
 	app := listWithPair(t, 80.5, 80.0, cfg)
 	press(app, "m")
 	app.month.col = colWeight
-	view := app.View()
+	view := app.View().Content
 	var line string
 	for _, l := range strings.Split(view, "\n") {
 		if strings.Contains(visible(l), "+0.5") {
@@ -294,7 +294,7 @@ selection = "yellow"
 	if line == "" {
 		t.Fatalf("no +0.5 month row: %q", visible(view))
 	}
-	if !hasIndexedForeground(line, 5) {
+	if !hasIndexedForeground(writtenANSI(t, line), 5) {
 		t.Fatalf("month delta missing magenta role: %q", line)
 	}
 }

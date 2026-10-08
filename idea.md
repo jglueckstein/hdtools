@@ -18,11 +18,22 @@ color-only encoding).
 one way to do that, since the app already uses Bubble Tea. Another
 styling library is fine if it fits the same stack.
 
-The app will move to Bubble Tea v2 and Lip Gloss v2
-(`charm.land/bubbletea/v2` and `charm.land/lipgloss/v2`).
+The app will move to Bubble Tea v2, Lip Gloss v2, and bubbles v2
+(`charm.land/bubbletea/v2`, `charm.land/lipgloss/v2`, and
+`charm.land/bubbles/v2`).
 On-screen charts will then use ntcharts
 (`github.com/NimbleMarkets/ntcharts/v2`), which needs those
-two. This is not the high-resolution Braille slice.
+modules. This is not the high-resolution Braille slice.
+
+Change record (Charm v2 only):
+[docs/superpowers/specs/2026-10-07-charm-v2-upgrade.md](docs/superpowers/specs/2026-10-07-charm-v2-upgrade.md).
+This slice is the Charm v2 upgrade only. The three modules are
+`charm.land/bubbletea/v2`, `charm.land/lipgloss/v2`, and
+`charm.land/bubbles/v2`. On-screen charts stay the Braille-cell
+charts. ntcharts is the later work
+([#77](https://github.com/jglueckstein/hdtools/issues/77),
+[#79](https://github.com/jglueckstein/hdtools/issues/79),
+[#78](https://github.com/jglueckstein/hdtools/issues/78)).
 
 Color schemes should be user-configurable in the same config file as
 display units (`[colors]` table). The user names roles (`title`,

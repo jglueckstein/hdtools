@@ -11,7 +11,7 @@ import (
 	"errors"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 )
 

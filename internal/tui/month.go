@@ -12,8 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 	"github.com/jglueckstein/hdtools/internal/units"
 )
@@ -51,8 +52,9 @@ type monthModel struct {
 func newMonth(day time.Time) monthModel {
 	ti := textinput.New()
 	ti.Prompt = ""
-	ti.Width = 24
+	ti.SetWidth(24)
 	ti.CharLimit = 200
+	quietInput(&ti)
 	y, m, d := day.Date()
 	return monthModel{year: y, month: m, day: d, input: ti}
 }
@@ -241,6 +243,36 @@ func highlightCell(value string, editing bool, input textinput.Model, width int,
 		inner = strings.TrimSpace(input.View())
 	}
 	return visPad(p.selected.Render(inner), width, right)
+}
+
+// paste routes a bracketed paste. v2 does not deliver it as a key,
+// so Update hands the message here. The day form inserts into the
+// focused field. An open month cell inserts. An idle non-workout
+// cell starts an edit only for one rune, the same gate as a typed
+// character. A longer idle paste does nothing. The list and the
+// charts have nowhere to put a paste.
+func (a *App) paste(msg tea.PasteMsg) (tea.Model, tea.Cmd) {
+	if a.screen == screenForm {
+		return a, a.form.update(msg)
+	}
+	if a.screen == screenMonth {
+		return a, a.month.paste(msg.Content)
+	}
+	return a, nil
+}
+
+// paste applies a bracketed paste to this sheet. An open cell inserts
+// the text. An idle non-workout cell starts an edit only for one rune.
+func (m *monthModel) paste(content string) tea.Cmd {
+	if m.editing {
+		var cmd tea.Cmd
+		m.input, cmd = m.input.Update(tea.PasteMsg{Content: content})
+		return cmd
+	}
+	if m.col != colWorkout && len([]rune(content)) == 1 {
+		m.beginEdit(content)
+	}
+	return nil
 }
 
 func (m *monthModel) beginEdit(initial string) {

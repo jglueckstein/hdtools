@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/jglueckstein/hdtools/internal/config"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 	"github.com/jglueckstein/hdtools/internal/units"
@@ -20,18 +20,20 @@ func press(app *App, keys ...string) {
 	for _, k := range keys {
 		switch k {
 		case "esc":
-			app.Update(tea.KeyMsg{Type: tea.KeyEsc})
+			app.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 		case "tab":
-			app.Update(tea.KeyMsg{Type: tea.KeyTab})
+			app.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 		case "enter":
-			app.Update(tea.KeyMsg{Type: tea.KeyEnter})
+			app.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		case "[":
-			app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'['}})
+			app.Update(tea.KeyPressMsg{Code: '[', Text: "["})
 		case "]":
-			app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{']'}})
+			app.Update(tea.KeyPressMsg{Code: ']', Text: "]"})
+		case " ":
+			app.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
 		default:
 			for _, r := range k {
-				app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+				app.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 			}
 		}
 	}
@@ -49,16 +51,16 @@ func TestChartOpensFromMonthAndEscapes(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "m", "c")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "November 1990") {
-		t.Fatalf("chart title missing: %q", app.View())
+		t.Fatalf("chart title missing: %q", app.View().Content)
 	}
 	if strings.Contains(view, "arrows move") {
 		t.Fatalf("still on month sheet: %q", view)
 	}
 	press(app, "esc")
-	if !strings.Contains(visible(app.View()), "arrows move") {
-		t.Fatalf("esc did not return to month sheet: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "arrows move") {
+		t.Fatalf("esc did not return to month sheet: %q", app.View().Content)
 	}
 }
 
@@ -67,13 +69,13 @@ func TestChartOpensFromListAndEscapes(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "November 1990") {
-		t.Fatalf("chart title missing: %q", app.View())
+		t.Fatalf("chart title missing: %q", app.View().Content)
 	}
 	press(app, "esc")
-	if !strings.Contains(visible(app.View()), "daily log") {
-		t.Fatalf("esc did not return to list: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "daily log") {
+		t.Fatalf("esc did not return to list: %q", app.View().Content)
 	}
 }
 
@@ -87,12 +89,12 @@ func TestChartFollowsSelectedRow(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "c")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "November 1990") {
-		t.Fatalf("chart title missing November 1990: %q", app.View())
+		t.Fatalf("chart title missing November 1990: %q", app.View().Content)
 	}
 	if strings.Contains(view, "June 1990") {
-		t.Fatalf("chart still on June 1990: %q", app.View())
+		t.Fatalf("chart still on June 1990: %q", app.View().Content)
 	}
 }
 
@@ -101,7 +103,7 @@ func TestChartDailyMarksAndTrendPath(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
-	rows := mustPlot(t, app.View())
+	rows := mustPlot(t, app.View().Content)
 	var left, right bool
 	for _, row := range rows {
 		for _, c := range row {
@@ -145,7 +147,7 @@ func TestChartOmitsDailyMarkOnBlankDay(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "c")
-	raw := app.View()
+	raw := app.View().Content
 	view := visible(raw)
 	if !strings.Contains(view, "1") || !strings.Contains(view, "30") {
 		t.Fatalf("axis labels missing: %q", view)
@@ -171,7 +173,7 @@ func TestChartUsesWeightAndTrendColors(t *testing.T) {
 	app.cfg = schemeCfg(map[string]string{"weight": "magenta", "trend": "yellow"})
 	app.pal = newPalette(app.cfg)
 	press(app, "c")
-	view := app.View()
+	view := app.View().Content
 	if strings.Contains(visible(view), "daily log") {
 		t.Fatalf("chart missing: %q", view)
 	}
@@ -196,7 +198,7 @@ func TestChartNoColorKeepsTwoSeries(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
-	view := app.View()
+	view := app.View().Content
 	if strings.Contains(visible(view), "daily log") {
 		t.Fatalf("chart missing: %q", view)
 	}
@@ -219,12 +221,12 @@ func TestChartEmptyMonth(t *testing.T) {
 	store := openStore(t)
 	app := New(store, "mem.db", config.Default())
 	press(app, "c")
-	view := strings.ToLower(visible(app.View()))
+	view := strings.ToLower(visible(app.View().Content))
 	if !strings.Contains(view, "empty") {
-		t.Fatalf("empty state missing: %q", app.View())
+		t.Fatalf("empty state missing: %q", app.View().Content)
 	}
 	if strings.Contains(view, "deficit") || strings.Contains(view, " cal") {
-		t.Fatalf("analysis shown on empty month: %q", app.View())
+		t.Fatalf("analysis shown on empty month: %q", app.View().Content)
 	}
 }
 
@@ -242,7 +244,7 @@ func TestChartCarryOnlyIsNotEmpty(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "m", "]", "c")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if strings.Contains(view, "arrows move") {
 		t.Fatalf("still on month sheet: %q", view)
 	}
@@ -259,12 +261,12 @@ func TestChartBracketChangesMonth(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c", "[")
-	if !strings.Contains(visible(app.View()), "October 1990") {
-		t.Fatalf("after [: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "October 1990") {
+		t.Fatalf("after [: %q", app.View().Content)
 	}
 	press(app, "]")
-	if !strings.Contains(visible(app.View()), "November 1990") {
-		t.Fatalf("after ]: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "November 1990") {
+		t.Fatalf("after ]: %q", app.View().Content)
 	}
 }
 
@@ -273,8 +275,8 @@ func TestChartEscKeepsBrowsedMonth(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "m", "c", "[", "esc")
-	if !strings.Contains(visible(app.View()), "October 1990") {
-		t.Fatalf("sheet after esc: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "October 1990") {
+		t.Fatalf("sheet after esc: %q", app.View().Content)
 	}
 }
 
@@ -286,7 +288,7 @@ func TestChartCWhileEditingIsText(t *testing.T) {
 	app.month.col = colNote
 	app.month.beginEdit("")
 	press(app, "c")
-	if strings.Contains(visible(app.View()), "November 1990") && !strings.Contains(visible(app.View()), "arrows move") {
+	if strings.Contains(visible(app.View().Content), "November 1990") && !strings.Contains(visible(app.View().Content), "arrows move") {
 		t.Fatal("c opened the chart while editing")
 	}
 	if !strings.Contains(app.month.input.Value(), "c") {
@@ -310,7 +312,7 @@ func TestChartAxisUsesDisplayUnit(t *testing.T) {
 	app := New(store, "mem.db", cfg)
 	app.Update(app.load())
 	press(app, "c")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if strings.Contains(view, "80.0") {
 		t.Fatalf("still showing kg: %q", view)
 	}
@@ -324,8 +326,8 @@ func TestChartKeysDoNotWrite(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c", "x")
-	app.Update(tea.KeyMsg{Type: tea.KeyTab})
-	app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+	app.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	app.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
 	logs, err := store.All(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -340,9 +342,9 @@ func TestChartShowsMonthlyLossAndDeficit(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
-	view := strings.ToLower(visible(app.View()))
+	view := strings.ToLower(visible(app.View().Content))
 	if !strings.Contains(view, "loss") || !strings.Contains(view, "cal") {
-		t.Fatalf("analysis missing: %q", app.View())
+		t.Fatalf("analysis missing: %q", app.View().Content)
 	}
 }
 
@@ -365,7 +367,7 @@ func TestChartLossUsesDisplayUnit(t *testing.T) {
 	app := New(store, "mem.db", cfg)
 	app.Update(app.load())
 	press(app, "c")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "cal") {
 		t.Fatalf("deficit missing: %q", view)
 	}
@@ -391,9 +393,9 @@ func TestChartCurrentMonthDividesByElapsedDays(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "c")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "November 1990") || strings.Contains(view, "arrows move") {
-		t.Fatalf("chart missing: %q", app.View())
+		t.Fatalf("chart missing: %q", app.View().Content)
 	}
 	if strings.Contains(view, " 11") && strings.Contains(view, " 30") {
 		t.Fatalf("future days plotted: %q", view)
@@ -414,9 +416,9 @@ func TestChartFlatSeriesHasScale(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "c")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "November 1990") {
-		t.Fatalf("chart missing: %q", app.View())
+		t.Fatalf("chart missing: %q", app.View().Content)
 	}
 	lo, hi, ok := chartYBounds(view)
 	if !ok {
@@ -475,17 +477,17 @@ func TestChartYRangePounds(t *testing.T) {
 	app := New(store, "mem.db", cfg)
 	app.Update(app.load())
 	press(app, "c")
-	ymin, ymax, ok := chartYBounds(app.View())
+	ymin, ymax, ok := chartYBounds(app.View().Content)
 	if !ok {
-		t.Fatalf("no Y scale: %q", app.View())
+		t.Fatalf("no Y scale: %q", app.View().Content)
 	}
 	if ymin < 167.9 || ymin > 168.2 || ymax < 176.8 || ymax > 177.2 {
 		t.Fatalf("monthly Y = [%.2f, %.2f], want [168, 177]", ymin, ymax)
 	}
 	press(app, "l")
-	ymin, ymax, ok = chartYBounds(app.View())
+	ymin, ymax, ok = chartYBounds(app.View().Content)
 	if !ok {
-		t.Fatalf("long-term no Y scale: %q", app.View())
+		t.Fatalf("long-term no Y scale: %q", app.View().Content)
 	}
 	if ymin < 167.9 || ymin > 168.2 || ymax < 176.8 || ymax > 177.2 {
 		t.Fatalf("long-term Y = [%.2f, %.2f], want [168, 177]", ymin, ymax)
@@ -501,7 +503,7 @@ func TestChartYRangeKilograms(t *testing.T) {
 	app.Update(app.load())
 	press(app, "c")
 	p := yPad(units.Kilogram)
-	ymin, ymax, ok := chartYBounds(app.View())
+	ymin, ymax, ok := chartYBounds(app.View().Content)
 	if !ok {
 		t.Fatal("no Y scale")
 	}
@@ -509,7 +511,7 @@ func TestChartYRangeKilograms(t *testing.T) {
 		t.Fatalf("monthly Y = [%.3f, %.3f], want [%.3f, %.3f]", ymin, ymax, 80-p, 81+p)
 	}
 	press(app, "l")
-	ymin, ymax, ok = chartYBounds(app.View())
+	ymin, ymax, ok = chartYBounds(app.View().Content)
 	if !ok {
 		t.Fatal("long-term no Y scale")
 	}
@@ -537,7 +539,7 @@ func TestChartYRangeStone(t *testing.T) {
 	app.Update(app.load())
 	press(app, "c")
 	p := yPad(units.Stone)
-	ymin, ymax, ok := chartYBounds(app.View())
+	ymin, ymax, ok := chartYBounds(app.View().Content)
 	if !ok {
 		t.Fatal("no Y scale")
 	}
@@ -577,7 +579,7 @@ func TestChartTitleIsMonthYear(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
-	line := chartTitleLine(app.View())
+	line := chartTitleLine(app.View().Content)
 	if line == "" || strings.Contains(line, "hdtools") {
 		t.Fatalf("title line = %q, want November 1990 without hdtools —", line)
 	}
@@ -591,15 +593,16 @@ func TestChartTitleBoxColours(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
-	view := app.View()
+	view := app.View().Content
 	if chartTitleLine(view) == "" {
 		t.Fatalf("title missing: %q", view)
 	}
-	if !hasIndexedForeground(view, 3) {
-		t.Fatalf("missing yellow title foreground: %q", view)
+	written := writtenANSI(t, view)
+	if !hasIndexedForeground(written, 3) {
+		t.Fatalf("missing yellow title foreground: %q", written)
 	}
-	if !hasSGRCode(view, 44) {
-		t.Fatalf("missing blue title background: %q", view)
+	if !hasSGRCode(written, 44) {
+		t.Fatalf("missing blue title background: %q", written)
 	}
 }
 
@@ -608,7 +611,7 @@ func TestChartTitleSurvivesNoColor(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
-	view := app.View()
+	view := app.View().Content
 	if chartTitleLine(view) == "" {
 		t.Fatalf("title missing under NO_COLOR: %q", view)
 	}
@@ -622,7 +625,7 @@ func TestChartStemJoinsMarkToTrend(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
-	view := app.View()
+	view := app.View().Content
 	rows := mustPlot(t, view)
 	mark, trend, _ := twoDaySeriesBins()
 	lo, hi := mark, trend
@@ -654,7 +657,7 @@ func TestChartNoStemWhenMarkOnTrend(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "c")
-	view := app.View()
+	view := app.View().Content
 	rows := mustPlot(t, view)
 	left, right := leftBins(rows, 0), rightBins(rows, 0)
 	if len(left) != 1 || !sameSet(right, left...) {
@@ -667,7 +670,7 @@ func TestChartStemGreen(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
-	view := app.View()
+	view := app.View().Content
 	rows := mustPlot(t, view)
 	found := false
 	for _, row := range rows {
@@ -701,7 +704,7 @@ func TestChartDailyMarkWinsSharedCell(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "c")
-	view := app.View()
+	view := app.View().Content
 	if strings.Contains(visible(view), "daily log") {
 		t.Fatalf("chart missing: %q", view)
 	}
@@ -733,7 +736,7 @@ func TestChartPWritesPDF(t *testing.T) {
 	press(app, "c")
 	applyP(t, app)
 	assertPDFNotCwd(t, cwd, dataPDF)
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, dataDir) || !strings.Contains(view, chartPDFFile) {
 		t.Fatalf("status missing data directory path: %q", view)
 	}
@@ -753,7 +756,7 @@ func TestChartPUsesPDFDir(t *testing.T) {
 	applyP(t, app)
 	pdf := filepath.Join(pdfDir, chartPDFFile)
 	assertPDFNotCwd(t, cwd, pdf)
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, pdfDir) || !strings.Contains(view, chartPDFFile) {
 		t.Fatalf("status missing pdf_dir path: %q", view)
 	}
@@ -783,7 +786,7 @@ func TestChartPWriteFailure(t *testing.T) {
 	if !info.IsDir() {
 		t.Fatal("destination directory was replaced")
 	}
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if strings.Contains(view, chartPDFFile) && !strings.Contains(strings.ToLower(view), "error") {
 		t.Fatalf("claimed saved path on write failure: %q", view)
 	}
@@ -805,8 +808,8 @@ func TestChartPPDFDirIsFile(t *testing.T) {
 	}
 	app := appWithConfig(t, configWithPDFDir(t, pdfDir))
 	press(app, "c")
-	if !strings.Contains(visible(app.View()), "November 1990") || strings.Contains(visible(app.View()), "arrows move") {
-		t.Fatalf("chart did not open: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "November 1990") || strings.Contains(visible(app.View().Content), "arrows move") {
+		t.Fatalf("chart did not open: %q", app.View().Content)
 	}
 	applyP(t, app)
 	assertNoPDF(t, filepath.Join(cwd, chartPDFFile))
@@ -818,7 +821,7 @@ func TestChartPPDFDirIsFile(t *testing.T) {
 	if info.IsDir() {
 		t.Fatal("replaced the pdf_dir file with a directory")
 	}
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if strings.Contains(view, chartPDFFile) && !strings.Contains(strings.ToLower(view), "error") {
 		t.Fatalf("claimed saved path on write failure: %q", view)
 	}
@@ -838,8 +841,8 @@ func TestChartPIgnoredOnList(t *testing.T) {
 	app := appWithConfig(t, configWithPDFDir(t, pdfDir))
 	applyP(t, app)
 	assertNoPDFIn(t, cwd, dataDir, pdfDir)
-	if app.screen != screenList || !strings.Contains(visible(app.View()), "daily log") {
-		t.Fatalf("left the list: %q", app.View())
+	if app.screen != screenList || !strings.Contains(visible(app.View().Content), "daily log") {
+		t.Fatalf("left the list: %q", app.View().Content)
 	}
 	press(app, "m")
 	applyP(t, app)
@@ -850,8 +853,8 @@ func TestChartPIgnoredOnList(t *testing.T) {
 	press(app, "esc", "l")
 	applyP(t, app)
 	assertNoPDFIn(t, cwd, dataDir, pdfDir)
-	if app.screen != screenLong || !strings.Contains(visible(app.View()), "Quarterly") {
-		t.Fatalf("left the long-term chart: %q", app.View())
+	if app.screen != screenLong || !strings.Contains(visible(app.View().Content), "Quarterly") {
+		t.Fatalf("left the long-term chart: %q", app.View().Content)
 	}
 }
 
@@ -870,7 +873,7 @@ func TestChartPWhileEditingIsText(t *testing.T) {
 	if !strings.Contains(app.month.input.Value(), "p") {
 		t.Fatalf("input = %q, want p", app.month.input.Value())
 	}
-	if strings.Contains(visible(app.View()), "November 1990") && !strings.Contains(visible(app.View()), "arrows move") {
+	if strings.Contains(visible(app.View().Content), "November 1990") && !strings.Contains(visible(app.View().Content), "arrows move") {
 		t.Fatal("p opened the chart while editing")
 	}
 }
@@ -889,7 +892,7 @@ func TestChartPIgnoredOnForm(t *testing.T) {
 	applyP(t, app)
 	assertNoPDFIn(t, cwd, dataDir, pdfDir)
 	if app.screen != screenForm {
-		t.Fatalf("left the form: %q", app.View())
+		t.Fatalf("left the form: %q", app.View().Content)
 	}
 	if !strings.Contains(app.form.inputs[4].Value(), "p") {
 		t.Fatalf("note = %q, want p", app.form.inputs[4].Value())
@@ -902,13 +905,13 @@ func TestChartPNonStringPDFDir(t *testing.T) {
 	_, dataPDF := useDataHome(t)
 	app := appWithConfig(t, loadConfigTOML(t, "display_unit = \"kg\"\npdf_dir = 3\n"))
 	press(app, "c")
-	if !strings.Contains(visible(app.View()), "November 1990") || strings.Contains(visible(app.View()), "arrows move") {
-		t.Fatalf("chart did not open: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "November 1990") || strings.Contains(visible(app.View().Content), "arrows move") {
+		t.Fatalf("chart did not open: %q", app.View().Content)
 	}
 	applyP(t, app)
 	assertNoPDF(t, filepath.Join(cwd, chartPDFFile))
 	assertNoPDF(t, dataPDF)
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "pdf_dir") {
 		t.Fatalf("error does not name pdf_dir: %q", view)
 	}
@@ -963,7 +966,7 @@ func TestChartPNoHomeFails(t *testing.T) {
 	press(app, "c")
 	applyP(t, app)
 	assertNoPDF(t, filepath.Join(cwd, chartPDFFile))
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "home directory") {
 		t.Fatalf("error missing home directory: %q", view)
 	}
@@ -986,7 +989,7 @@ func TestChartPRelativeDataHomeFails(t *testing.T) {
 	applyP(t, app)
 	assertNoPDF(t, filepath.Join(cwd, chartPDFFile))
 	assertNoPDF(t, filepath.Join(cwd, "data", "hdtools", chartPDFFile))
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "not absolute") {
 		t.Fatalf("error missing non-absolute directory: %q", view)
 	}
@@ -1073,7 +1076,7 @@ func assertPDFNotCwd(t *testing.T, cwd, path string) {
 
 func applyP(t *testing.T, app *App) {
 	t.Helper()
-	_, cmd := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+	_, cmd := app.Update(tea.KeyPressMsg{Code: 'p', Text: "p"})
 	if cmd == nil {
 		return
 	}
@@ -1102,7 +1105,7 @@ func TestGotoTodayIgnoredOnChart(t *testing.T) {
 	if app.month.month != time.October {
 		t.Fatalf("chart month = %s, want October", app.month.month)
 	}
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if strings.Contains(view, "daily log") || strings.Contains(view, "arrows move") {
 		t.Fatalf("left the monthly chart: %q", view)
 	}
@@ -1127,8 +1130,8 @@ func TestGotoTodayIgnoredOnChart(t *testing.T) {
 	if app.longKind != kind {
 		t.Fatalf("longKind = %v, want %v", app.longKind, kind)
 	}
-	if !strings.Contains(visible(app.View()), app.longKind.name()) {
-		t.Fatalf("left the long-term chart: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), app.longKind.name()) {
+		t.Fatalf("left the long-term chart: %q", app.View().Content)
 	}
 	logs, err = store.All(context.Background())
 	if err != nil {
@@ -1159,7 +1162,7 @@ func openNovemberChart(t *testing.T, today time.Time, points ...kgOnDay) *App {
 
 func monthlyView(t *testing.T, app *App) string {
 	t.Helper()
-	view := app.View()
+	view := app.View().Content
 	vis := visible(view)
 	if strings.Contains(vis, "arrows move") || strings.Contains(vis, "daily log") || !strings.Contains(vis, "November 1990") {
 		t.Fatalf("monthly chart not shown: %q", vis)

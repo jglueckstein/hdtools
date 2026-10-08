@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/jglueckstein/hdtools/internal/chartpdf"
 	"github.com/jglueckstein/hdtools/internal/config"
 	"github.com/jglueckstein/hdtools/internal/dailylog"

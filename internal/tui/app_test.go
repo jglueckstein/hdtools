@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/jglueckstein/hdtools/internal/config"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 	"github.com/jglueckstein/hdtools/internal/units"
@@ -34,7 +34,7 @@ func TestViewEmptyStore(t *testing.T) {
 	t.Parallel()
 	store := openStore(t)
 	app := New(store, "/tmp/test.db", config.Default())
-	view := app.View()
+	view := app.View().Content
 	if !strings.Contains(view, "no entries yet") {
 		t.Fatalf("View = %q", view)
 	}
@@ -64,7 +64,7 @@ func TestViewListsTrendedLogs(t *testing.T) {
 		t.Fatalf("load() = %T, want loadedMsg", msg)
 	}
 	model, _ := app.Update(loaded)
-	view := model.View()
+	view := model.View().Content
 	if !strings.Contains(view, "1990-11-01") || !strings.Contains(view, "172.5") {
 		t.Fatalf("View = %q", view)
 	}
@@ -74,8 +74,8 @@ func TestNewOpensForm(t *testing.T) {
 	t.Parallel()
 	store := openStore(t)
 	app := New(store, "mem.db", config.Default())
-	model, _ := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
-	view := model.View()
+	model, _ := app.Update(tea.KeyPressMsg{Code: 'n', Text: "n"})
+	view := model.View().Content
 	if !strings.Contains(view, "day form") {
 		t.Fatalf("View = %q", view)
 	}
@@ -101,7 +101,7 @@ func TestListShowsPoundsWhenConfigured(t *testing.T) {
 		t.Fatalf("load() = %T", msg)
 	}
 	model, _ := app.Update(loaded)
-	view := model.View()
+	view := model.View().Content
 	lb, err := units.FromKG(80, units.Pound)
 	if err != nil {
 		t.Fatal(err)
@@ -128,8 +128,8 @@ func TestMOpensMonthSheet(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	loaded := app.load()
 	app.Update(loaded)
-	model, _ := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}})
-	view := model.View()
+	model, _ := app.Update(tea.KeyPressMsg{Code: 'm', Text: "m"})
+	view := model.View().Content
 	if !strings.Contains(view, "November 1990") {
 		t.Fatalf("View = %q", view)
 	}
@@ -166,7 +166,7 @@ func TestMonthTabWhileEditingSavesAndAdvances(t *testing.T) {
 	app.month = newMonth(time.Date(1990, 11, 4, 0, 0, 0, 0, time.UTC))
 	app.month.col = colWeight
 	app.month.beginEdit("80.0")
-	_, cmd := app.Update(tea.KeyMsg{Type: tea.KeyTab})
+	_, cmd := app.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	if cmd == nil {
 		t.Fatal("tab while editing should save")
 	}
@@ -194,7 +194,7 @@ func TestMonthTabInvalidDoesNotAdvance(t *testing.T) {
 	app.month = newMonth(time.Date(1990, 11, 4, 0, 0, 0, 0, time.UTC))
 	app.month.col = colWeight
 	app.month.beginEdit("nope")
-	_, cmd := app.Update(tea.KeyMsg{Type: tea.KeyTab})
+	_, cmd := app.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	if cmd == nil {
 		t.Fatal("tab should attempt save")
 	}
@@ -213,7 +213,7 @@ func TestMonthTabWhenNotEditingMoves(t *testing.T) {
 	app.screen = screenMonth
 	app.month = newMonth(time.Date(1990, 11, 4, 0, 0, 0, 0, time.UTC))
 	app.month.col = colWeight
-	app.Update(tea.KeyMsg{Type: tea.KeyTab})
+	app.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	if app.month.col != colSleep {
 		t.Fatalf("col = %d, want sleep", app.month.col)
 	}
@@ -223,7 +223,7 @@ func TestMonthEnterWhileEditingSavesAndMovesDown(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
 	app.month.beginEdit("80.0")
-	flushMonthKey(app, tea.KeyEnter)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyEnter})
 	assertStoredWeight(t, store, dateUTC(1990, 11, 4), 80)
 	if app.month.editing {
 		t.Fatal("still editing")
@@ -237,7 +237,7 @@ func TestMonthDownWhileEditingSavesAndMovesDown(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
 	app.month.beginEdit("80.0")
-	flushMonthKey(app, tea.KeyDown)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyDown})
 	assertStoredWeight(t, store, dateUTC(1990, 11, 4), 80)
 	if app.month.editing {
 		t.Fatal("still editing")
@@ -251,7 +251,7 @@ func TestMonthUpWhileEditingSavesAndMovesUp(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
 	app.month.beginEdit("80.0")
-	flushMonthKey(app, tea.KeyUp)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyUp})
 	assertStoredWeight(t, store, dateUTC(1990, 11, 4), 80)
 	if app.month.editing {
 		t.Fatal("still editing")
@@ -265,7 +265,7 @@ func TestMonthEnterInvalidDoesNotMove(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
 	app.month.beginEdit("nope")
-	flushMonthKey(app, tea.KeyEnter)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyEnter})
 	assertStillEditingWeight(t, app, 4)
 	assertNoDay(t, store, dateUTC(1990, 11, 4))
 }
@@ -274,7 +274,7 @@ func TestMonthDownInvalidDoesNotMove(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
 	app.month.beginEdit("nope")
-	flushMonthKey(app, tea.KeyDown)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyDown})
 	assertStillEditingWeight(t, app, 4)
 	assertNoDay(t, store, dateUTC(1990, 11, 4))
 }
@@ -283,7 +283,7 @@ func TestMonthUpInvalidDoesNotMove(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
 	app.month.beginEdit("nope")
-	flushMonthKey(app, tea.KeyUp)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyUp})
 	assertStillEditingWeight(t, app, 4)
 	assertNoDay(t, store, dateUTC(1990, 11, 4))
 }
@@ -292,7 +292,7 @@ func TestMonthEnterOnLastDayStays(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 30, colWeight)
 	app.month.beginEdit("80.0")
-	flushMonthKey(app, tea.KeyEnter)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyEnter})
 	assertStoredWeight(t, store, dateUTC(1990, 11, 30), 80)
 	if app.month.editing {
 		t.Fatal("still editing")
@@ -308,7 +308,7 @@ func TestMonthDownOnLastDayStays(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 30, colWeight)
 	app.month.beginEdit("80.0")
-	flushMonthKey(app, tea.KeyDown)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyDown})
 	assertStoredWeight(t, store, dateUTC(1990, 11, 30), 80)
 	if app.month.editing {
 		t.Fatal("still editing")
@@ -323,7 +323,7 @@ func TestMonthUpOnFirstDayStays(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 1, colWeight)
 	app.month.beginEdit("80.0")
-	flushMonthKey(app, tea.KeyUp)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyUp})
 	assertStoredWeight(t, store, dateUTC(1990, 11, 1), 80)
 	if app.month.editing {
 		t.Fatal("still editing")
@@ -340,7 +340,7 @@ func TestMonthLeftRightWhileEditingStayInCell(t *testing.T) {
 	app.month.beginEdit("80.0")
 	end := app.month.input.Position()
 	// Do not flush: the text input's blink command sleeps.
-	app.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	app.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
 	if got := app.month.input.Position(); got >= end {
 		t.Fatalf("caret %d, want closer to the start than %d", got, end)
 	}
@@ -349,7 +349,7 @@ func TestMonthLeftRightWhileEditingStayInCell(t *testing.T) {
 
 	app.month.input.CursorStart()
 	start := app.month.input.Position()
-	app.Update(tea.KeyMsg{Type: tea.KeyRight})
+	app.Update(tea.KeyPressMsg{Code: tea.KeyRight})
 	if got := app.month.input.Position(); got <= start {
 		t.Fatalf("caret %d, want closer to the end than %d", got, start)
 	}
@@ -362,7 +362,7 @@ func TestMonthLeftAtStartRightAtEndStayInCell(t *testing.T) {
 	app, store := newNovemberSheet(t, 4, colWeight)
 	app.month.beginEdit("80.0")
 	app.month.input.CursorStart()
-	app.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	app.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
 	if got := app.month.input.Position(); got != 0 {
 		t.Fatalf("caret %d, want 0", got)
 	}
@@ -371,7 +371,7 @@ func TestMonthLeftAtStartRightAtEndStayInCell(t *testing.T) {
 
 	app.month.input.CursorEnd()
 	end := app.month.input.Position()
-	app.Update(tea.KeyMsg{Type: tea.KeyRight})
+	app.Update(tea.KeyPressMsg{Code: tea.KeyRight})
 	if got := app.month.input.Position(); got != end {
 		t.Fatalf("caret %d, want %d", got, end)
 	}
@@ -382,7 +382,7 @@ func TestMonthLeftAtStartRightAtEndStayInCell(t *testing.T) {
 func TestMonthEnterWhenNotEditingOpensForm(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
-	flushMonthKey(app, tea.KeyEnter)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyEnter})
 	assertFormOpenOn(t, app, dateUTC(1990, 11, 4))
 	assertNoDay(t, store, dateUTC(1990, 11, 4))
 }
@@ -390,7 +390,7 @@ func TestMonthEnterWhenNotEditingOpensForm(t *testing.T) {
 func TestMonthDownUpWhenNotEditingMoveDay(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
-	flushMonthKey(app, tea.KeyDown)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyDown})
 	if app.month.editing {
 		t.Fatal("down started an edit")
 	}
@@ -401,7 +401,7 @@ func TestMonthDownUpWhenNotEditingMoveDay(t *testing.T) {
 	assertNoDay(t, store, dateUTC(1990, 11, 5))
 
 	app.month.day = 4
-	flushMonthKey(app, tea.KeyUp)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyUp})
 	if app.month.editing {
 		t.Fatal("up started an edit")
 	}
@@ -415,7 +415,7 @@ func TestMonthEnterPreservesColumn(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colSleep)
 	app.month.beginEdit("8")
-	flushMonthKey(app, tea.KeyEnter)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyEnter})
 	got, err := store.Get(context.Background(), dateUTC(1990, 11, 4))
 	if err != nil {
 		t.Fatalf("stored sleep: %v", err)
@@ -435,7 +435,7 @@ func TestMonthEscWhileEditingCancels(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
 	app.month.beginEdit("80.0")
-	flushMonthKey(app, tea.KeyEsc)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyEsc})
 	if app.month.editing {
 		t.Fatal("still editing")
 	}
@@ -451,7 +451,7 @@ func TestMonthEnterSnapshotIgnoresLaterCursor(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
 	app.month.beginEdit("80.0")
-	_, cmd := app.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := app.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if cmd == nil {
 		t.Fatal("enter should attempt save")
 	}
@@ -472,8 +472,8 @@ func TestMonthSecondVerticalKeyBeforeSaveDoesNotSkip(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
 	app.month.beginEdit("80.0")
-	_, first := app.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	_, second := app.Update(tea.KeyMsg{Type: tea.KeyDown})
+	_, first := app.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	_, second := app.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	if first == nil || second == nil {
 		t.Fatal("enter and down should attempt save")
 	}
@@ -494,11 +494,11 @@ func TestMonthEscBeforeSaveCancels(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
 	app.month.beginEdit("80.0")
-	_, cmd := app.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := app.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if cmd == nil {
 		t.Fatal("enter should attempt save")
 	}
-	app.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	app.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	if msg := cmd(); msg != nil {
 		app.Update(msg)
 	}
@@ -514,7 +514,7 @@ func TestMonthEscBeforeSaveCancels(t *testing.T) {
 func TestMonthLeftRightWhenNotEditingMoveColumn(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
-	flushMonthKey(app, tea.KeyRight)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyRight})
 	if app.month.editing {
 		t.Fatal("right started an edit")
 	}
@@ -524,7 +524,7 @@ func TestMonthLeftRightWhenNotEditingMoveColumn(t *testing.T) {
 	assertNoDay(t, store, dateUTC(1990, 11, 4))
 
 	app.month.col = colSleep
-	flushMonthKey(app, tea.KeyLeft)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyLeft})
 	if app.month.editing {
 		t.Fatal("left started an edit")
 	}
@@ -538,7 +538,7 @@ func TestMonthSecondEnterAfterEnterOpensForm(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
 	app.month.beginEdit("80.0")
-	flushMonthKey(app, tea.KeyEnter)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyEnter})
 	assertStoredWeight(t, store, dateUTC(1990, 11, 4), 80)
 	if app.month.editing {
 		t.Fatal("still editing")
@@ -547,7 +547,7 @@ func TestMonthSecondEnterAfterEnterOpensForm(t *testing.T) {
 		t.Fatalf("focus day %d col %d, want weight on day 5", app.month.day, app.month.col)
 	}
 	rows := countLogs(t, store)
-	flushMonthKey(app, tea.KeyEnter)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyEnter})
 	assertFormOpenOn(t, app, dateUTC(1990, 11, 5))
 	if got := countLogs(t, store); got != rows {
 		t.Fatalf("rows = %d, want %d (second enter wrote a row)", got, rows)
@@ -559,7 +559,7 @@ func TestMonthEnterAfterDownOpensForm(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
 	app.month.beginEdit("80.0")
-	flushMonthKey(app, tea.KeyDown)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyDown})
 	assertStoredWeight(t, store, dateUTC(1990, 11, 4), 80)
 	if app.month.editing {
 		t.Fatal("still editing")
@@ -568,7 +568,7 @@ func TestMonthEnterAfterDownOpensForm(t *testing.T) {
 		t.Fatalf("focus day %d col %d, want weight on day 5", app.month.day, app.month.col)
 	}
 	rows := countLogs(t, store)
-	flushMonthKey(app, tea.KeyEnter)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyEnter})
 	assertFormOpenOn(t, app, dateUTC(1990, 11, 5))
 	if got := countLogs(t, store); got != rows {
 		t.Fatalf("rows = %d, want %d (enter wrote a row)", got, rows)
@@ -580,7 +580,7 @@ func TestMonthEnterAfterUpOpensForm(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 4, colWeight)
 	app.month.beginEdit("80.0")
-	flushMonthKey(app, tea.KeyUp)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyUp})
 	assertStoredWeight(t, store, dateUTC(1990, 11, 4), 80)
 	if app.month.editing {
 		t.Fatal("still editing")
@@ -589,7 +589,7 @@ func TestMonthEnterAfterUpOpensForm(t *testing.T) {
 		t.Fatalf("focus day %d col %d, want weight on day 3", app.month.day, app.month.col)
 	}
 	rows := countLogs(t, store)
-	flushMonthKey(app, tea.KeyEnter)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyEnter})
 	assertFormOpenOn(t, app, dateUTC(1990, 11, 3))
 	if got := countLogs(t, store); got != rows {
 		t.Fatalf("rows = %d, want %d (enter wrote a row)", got, rows)
@@ -601,7 +601,7 @@ func TestMonthSecondEnterOnLastDayOpensForm(t *testing.T) {
 	t.Parallel()
 	app, store := newNovemberSheet(t, 30, colWeight)
 	app.month.beginEdit("80.0")
-	flushMonthKey(app, tea.KeyEnter)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyEnter})
 	assertStoredWeight(t, store, dateUTC(1990, 11, 30), 80)
 	if app.month.editing {
 		t.Fatal("still editing")
@@ -610,7 +610,7 @@ func TestMonthSecondEnterOnLastDayOpensForm(t *testing.T) {
 		t.Fatalf("focus day %d col %d, want weight on day 30", app.month.day, app.month.col)
 	}
 	rows := countLogs(t, store)
-	flushMonthKey(app, tea.KeyEnter)
+	flushMonthKey(app, tea.KeyPressMsg{Code: tea.KeyEnter})
 	assertFormOpenOn(t, app, dateUTC(1990, 11, 30))
 	if got := countLogs(t, store); got != rows {
 		t.Fatalf("rows = %d, want %d (second enter wrote a row)", got, rows)
@@ -618,10 +618,304 @@ func TestMonthSecondEnterOnLastDayOpensForm(t *testing.T) {
 	assertStoredWeight(t, store, dateUTC(1990, 11, 30), 80)
 }
 
+// TestSpaceBarStaysSpace is S4 through S9 on the November 1990 sheet.
+// The key's printed name is "space"; its code and text are one space.
+// A text field must gain that character, not the word. A text-field
+// blink is not a save and is not run: that command sleeps.
+func TestSpaceBarStaysSpace(t *testing.T) {
+	t.Parallel()
+	space := tea.KeyPressMsg{Code: tea.KeySpace, Text: " "}
+	if space.String() != "space" {
+		t.Fatalf("space bar printed name = %q, want space", space.String())
+	}
+	digit := tea.KeyPressMsg{Code: '8', Text: "8"}
+
+	t.Run("S4 workout space flips the stored flag and stays", func(t *testing.T) {
+		t.Parallel()
+		app, store := newNovemberSheet(t, 4, colWorkout)
+		day := dateUTC(1990, 11, 4)
+		seedWeighIn(t, store, day, 80)
+		before, err := store.Get(context.Background(), day)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if before.Workout {
+			t.Fatal("fixture workout = true, want false")
+		}
+		_, cmd := app.Update(space)
+		if cmd != nil {
+			app.Update(cmd())
+		}
+		got, err := store.Get(context.Background(), day)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !got.Workout {
+			t.Fatal("workout flag did not flip")
+		}
+		if got.Weight == nil || *got.Weight != 80 {
+			t.Fatalf("stored %+v, want 80 kg and workout flipped", got)
+		}
+		if app.month.editing {
+			t.Fatal("left the cell editing")
+		}
+		if app.month.day != 4 || app.month.col != colWorkout {
+			t.Fatalf("focus day %d col %d, want workout on day 4", app.month.day, app.month.col)
+		}
+		if app.screen != screenMonth {
+			t.Fatal("left the month sheet")
+		}
+		assertNovember1990(t, app)
+	})
+
+	t.Run("S5 idle space on a non-workout cell does not edit or write", func(t *testing.T) {
+		t.Parallel()
+		for _, col := range []int{colWeight, colSleep, colSteps, colNote} {
+			app, store := newNovemberSheet(t, 4, col)
+			day := dateUTC(1990, 11, 4)
+			_, cmd := app.Update(space)
+			if cmd != nil {
+				app.Update(cmd())
+			}
+			if app.month.editing {
+				t.Fatalf("col %d started an edit", col)
+			}
+			if app.month.day != 4 || app.month.col != col {
+				t.Fatalf("focus day %d col %d, want day 4 col %d", app.month.day, app.month.col, col)
+			}
+			if app.screen != screenMonth {
+				t.Fatalf("col %d left the month sheet", col)
+			}
+			assertNoDay(t, store, day)
+		}
+	})
+
+	t.Run("S6 character 8 on a weight cell starts an edit", func(t *testing.T) {
+		t.Parallel()
+		app, store := newNovemberSheet(t, 4, colWeight)
+		day := dateUTC(1990, 11, 4)
+		_, cmd := app.Update(digit)
+		if cmd != nil {
+			app.Update(cmd())
+		}
+		if !app.month.editing {
+			t.Fatal("edit did not start")
+		}
+		if got := app.month.input.Value(); got != "8" {
+			t.Fatalf("text = %q, want 8", got)
+		}
+		if app.month.day != 4 || app.month.col != colWeight {
+			t.Fatalf("focus day %d col %d, want weight on day 4", app.month.day, app.month.col)
+		}
+		if app.screen != screenMonth {
+			t.Fatal("left the month sheet")
+		}
+		assertNoDay(t, store, day)
+	})
+
+	t.Run("S7 space while editing inserts one space and does not write", func(t *testing.T) {
+		t.Parallel()
+		app, store := newNovemberSheet(t, 4, colWeight)
+		day := dateUTC(1990, 11, 4)
+		app.month.beginEdit("8")
+		app.Update(space)
+		if got := app.month.input.Value(); got != "8 " {
+			t.Fatalf("text = %q, want one space, not the word %q", got, "space")
+		}
+		if !app.month.editing {
+			t.Fatal("edit closed")
+		}
+		if app.month.day != 4 || app.month.col != colWeight {
+			t.Fatalf("focus day %d col %d, want weight on day 4", app.month.day, app.month.col)
+		}
+		if app.screen != screenMonth {
+			t.Fatal("left the month sheet")
+		}
+		assertNoDay(t, store, day)
+	})
+
+	t.Run("S8 day-form text space inserts one space and leaves workout alone", func(t *testing.T) {
+		t.Parallel()
+		app, store := newNovemberSheet(t, 4, colWeight)
+		day := dateUTC(1990, 11, 4)
+		app.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		if app.screen != screenForm {
+			t.Fatal("day form did not open")
+		}
+		// Date is already at its character limit. Weight is the next
+		// text field and has room for one space.
+		app.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+		if app.form.focus != fieldWeight {
+			t.Fatalf("focus = %d, want weight", app.form.focus)
+		}
+		if app.form.workout {
+			t.Fatal("workout started yes")
+		}
+		app.Update(space)
+		if got := app.form.inputs[fieldWeight].Value(); got != " " {
+			t.Fatalf("weight = %q, want one space, not the word %q", got, "space")
+		}
+		if app.form.workout {
+			t.Fatal("workout flipped")
+		}
+		if app.form.focus != fieldWeight {
+			t.Fatal("left the weight field")
+		}
+		if app.screen != screenForm {
+			t.Fatal("left the day form")
+		}
+		assertNoDay(t, store, day)
+	})
+
+	t.Run("S9 day-form workout space flips yes/no and does not write", func(t *testing.T) {
+		t.Parallel()
+		app, store := newNovemberSheet(t, 4, colWeight)
+		day := dateUTC(1990, 11, 4)
+		app.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		if app.screen != screenForm {
+			t.Fatal("day form did not open")
+		}
+		for i := 0; i < fieldWorkout; i++ {
+			app.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+		}
+		if app.form.focus != fieldWorkout {
+			t.Fatalf("focus = %d, want workout", app.form.focus)
+		}
+		before := workoutChoice(visible(app.View().Content))
+		_, cmd := app.Update(space)
+		if cmd != nil {
+			app.Update(cmd())
+		}
+		after := workoutChoice(visible(app.View().Content))
+		if before == "" || after == "" || before == after {
+			t.Fatalf("workout %q -> %q, want a flip", before, after)
+		}
+		if app.form.focus != fieldWorkout {
+			t.Fatal("left workout")
+		}
+		if app.screen != screenForm {
+			t.Fatal("left the day form")
+		}
+		assertNoDay(t, store, day)
+	})
+}
+
+func workoutChoice(view string) string {
+	for _, line := range strings.Split(view, "\n") {
+		if !strings.Contains(line, "workout") {
+			continue
+		}
+		switch {
+		case strings.Contains(line, "yes"):
+			return "yes"
+		case strings.Contains(line, "no"):
+			return "no"
+		}
+	}
+	return ""
+}
+
+// TestPasteReachesOpenFields is bracketed paste. v2 delivers it as
+// PasteMsg, not a key. An open field inserts the text. An idle note
+// cell starts an edit only when the paste is one rune.
+func TestPasteReachesOpenFields(t *testing.T) {
+	t.Parallel()
+
+	t.Run("day form weight field inserts the paste", func(t *testing.T) {
+		t.Parallel()
+		app, store := newNovemberSheet(t, 4, colWeight)
+		day := dateUTC(1990, 11, 4)
+		app.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		app.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+		if app.form.focus != fieldWeight {
+			t.Fatalf("focus = %d, want weight", app.form.focus)
+		}
+		app.Update(tea.PasteMsg{Content: "80.5"})
+		if got := app.form.inputs[fieldWeight].Value(); got != "80.5" {
+			t.Fatalf("weight = %q, want 80.5", got)
+		}
+		if app.screen != screenForm {
+			t.Fatal("left the day form")
+		}
+		assertNoDay(t, store, day)
+	})
+
+	t.Run("idle note cell starts an edit on one pasted rune", func(t *testing.T) {
+		t.Parallel()
+		app, store := newNovemberSheet(t, 4, colNote)
+		day := dateUTC(1990, 11, 4)
+		app.Update(tea.PasteMsg{Content: "é"})
+		if !app.month.editing {
+			t.Fatal("edit did not start")
+		}
+		if got := app.month.input.Value(); got != "é" {
+			t.Fatalf("text = %q, want é", got)
+		}
+		if app.month.day != 4 || app.month.col != colNote {
+			t.Fatalf("focus day %d col %d, want note on day 4", app.month.day, app.month.col)
+		}
+		assertNoDay(t, store, day)
+	})
+
+	t.Run("idle note cell ignores a longer paste", func(t *testing.T) {
+		t.Parallel()
+		app, store := newNovemberSheet(t, 4, colNote)
+		day := dateUTC(1990, 11, 4)
+		app.Update(tea.PasteMsg{Content: "hello"})
+		if app.month.editing {
+			t.Fatal("a longer paste started an edit")
+		}
+		if app.month.day != 4 || app.month.col != colNote {
+			t.Fatal("focus moved")
+		}
+		assertNoDay(t, store, day)
+	})
+
+	t.Run("editing month cell inserts the paste", func(t *testing.T) {
+		t.Parallel()
+		app, store := newNovemberSheet(t, 4, colWeight)
+		day := dateUTC(1990, 11, 4)
+		app.month.beginEdit("8")
+		app.Update(tea.PasteMsg{Content: "0.5"})
+		if got := app.month.input.Value(); got != "80.5" {
+			t.Fatalf("text = %q, want 80.5", got)
+		}
+		if !app.month.editing {
+			t.Fatal("edit closed")
+		}
+		assertNoDay(t, store, day)
+	})
+}
+
+// TestIdleCellOpensOnOneRune is the typed-character gate. v1 counted
+// runes. A byte length treats é as two characters and never opens the cell.
+func TestIdleCellOpensOnOneRune(t *testing.T) {
+	t.Parallel()
+	app, store := newNovemberSheet(t, 4, colNote)
+	day := dateUTC(1990, 11, 4)
+	app.Update(tea.KeyPressMsg{Text: "é"})
+	if !app.month.editing {
+		t.Fatal("edit did not start")
+	}
+	if got := app.month.input.Value(); got != "é" {
+		t.Fatalf("text = %q, want é", got)
+	}
+	if app.month.day != 4 || app.month.col != colNote {
+		t.Fatalf("focus day %d col %d, want note on day 4", app.month.day, app.month.col)
+	}
+	assertNoDay(t, store, day)
+
+	two, _ := newNovemberSheet(t, 4, colNote)
+	two.Update(tea.KeyPressMsg{Text: "e\u0301"})
+	if two.month.editing {
+		t.Fatal("a two-rune sequence started an edit")
+	}
+}
+
 func TestQuitKeys(t *testing.T) {
 	t.Parallel()
 	app := New(nil, "", config.Default())
-	_, cmd := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	_, cmd := app.Update(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	if cmd == nil {
 		t.Fatal("q should quit")
 	}
@@ -684,7 +978,7 @@ func TestLoadEmptyHasNoSelection(t *testing.T) {
 	if len(app.logs) != 0 {
 		t.Fatalf("logs = %d, want empty", len(app.logs))
 	}
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "no entries yet") {
 		t.Fatalf("View = %q", view)
 	}
@@ -917,10 +1211,10 @@ func TestGotoTodayListEmptyDoesNothing(t *testing.T) {
 	if len(app.logs) != 0 {
 		t.Fatalf("logs = %d, want empty", len(app.logs))
 	}
-	if !strings.Contains(visible(app.View()), "no entries yet") {
-		t.Fatalf("View = %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "no entries yet") {
+		t.Fatalf("View = %q", app.View().Content)
 	}
-	if !helpHasKey(visible(app.View()), "t") {
+	if !helpHasKey(visible(app.View().Content), "t") {
 		t.Fatal("empty-list help does not mention t")
 	}
 	logs, err := store.All(context.Background())
@@ -983,11 +1277,11 @@ func TestGotoTodayHelpMentionsT(t *testing.T) {
 	seedDays(t, store, time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC))
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
-	if !helpHasKey(visible(app.View()), "t") {
+	if !helpHasKey(visible(app.View().Content), "t") {
 		t.Fatal("list help does not mention t")
 	}
 	press(app, "m")
-	if !helpHasKey(visible(app.View()), "t") {
+	if !helpHasKey(visible(app.View().Content), "t") {
 		t.Fatal("month help does not mention t")
 	}
 }
@@ -1046,7 +1340,7 @@ func TestListDeltaHalfwayMatchesPaintedCells(t *testing.T) {
 	t.Parallel()
 	// 80.05 kg: %.1f is 80.0, math.Round is 80.1. Delta must match paint.
 	app := listWithPair(t, 80.05, 80.00, config.Default())
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "80.0") {
 		t.Fatalf("missing painted 80.0: %q", view)
 	}
@@ -1074,7 +1368,7 @@ func TestListDeltaFirstWeighInIsZero(t *testing.T) {
 func TestListDeltaDisplayedCellsAddUp(t *testing.T) {
 	t.Parallel()
 	app := listWithPair(t, 80.0, 79.9, config.Config{DisplayUnit: units.Pound})
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "176.4") || !strings.Contains(view, "176.1") {
 		t.Fatalf("list missing displayed lb cells: %q", view)
 	}
@@ -1097,7 +1391,7 @@ func TestListDeltaFirstWeighInLBIsDisplayedSubtraction(t *testing.T) {
 	seedWeighIn(t, store, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), kg)
 	app := New(store, "mem.db", config.Config{DisplayUnit: units.Pound})
 	app.Update(app.load())
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "176.5") {
 		t.Fatalf("missing painted 176.5: %q", view)
 	}
@@ -1110,7 +1404,7 @@ func TestListDeltaFirstWeighInLBIsDisplayedSubtraction(t *testing.T) {
 func TestListDeltaNOCOLORKeepsSign(t *testing.T) {
 	t.Setenv("NO_COLOR", "1")
 	app := listWithPair(t, 80.5, 80.0, config.Default())
-	view := app.View()
+	view := app.View().Content
 	vis := visible(view)
 	if !strings.Contains(vis, "+0.5") {
 		t.Fatalf("NO_COLOR dropped signed delta: %q", vis)
@@ -1136,7 +1430,7 @@ func TestListDeltaCustomColorPainted(t *testing.T) {
 delta-pos = "magenta"
 `)
 	app := listWithPair(t, 80.5, 80.0, cfg)
-	view := app.View()
+	view := app.View().Content
 	vis := visible(view)
 	if !strings.Contains(vis, "+0.5") {
 		t.Fatalf("visible missing +0.5: %q", vis)
@@ -1148,10 +1442,10 @@ delta-pos = "magenta"
 			break
 		}
 	}
-	if !hasIndexedForeground(line, 5) {
+	if !hasIndexedForeground(writtenANSI(t, line), 5) {
 		t.Fatalf("+0.5 not magenta: %q", line)
 	}
-	if hasIndexedForeground(line, 3) {
+	if hasIndexedForeground(writtenANSI(t, line), 3) {
 		t.Fatalf("+0.5 still default yellow: %q", line)
 	}
 }
@@ -1164,7 +1458,7 @@ func TestListDeltaCustomNegColorPainted(t *testing.T) {
 delta-neg = "magenta"
 `)
 	app := listWithPair(t, 79.5, 80.0, cfg)
-	view := app.View()
+	view := app.View().Content
 	if !strings.Contains(visible(view), "-0.5") {
 		t.Fatalf("visible missing -0.5: %q", visible(view))
 	}
@@ -1175,7 +1469,7 @@ delta-neg = "magenta"
 			break
 		}
 	}
-	if !hasIndexedForeground(line, 5) {
+	if !hasIndexedForeground(writtenANSI(t, line), 5) {
 		t.Fatalf("-0.5 not magenta: %q", line)
 	}
 }
@@ -1188,7 +1482,7 @@ func TestListDeltaCustomZeroColorPainted(t *testing.T) {
 delta-zero = "magenta"
 `)
 	app := listWithPair(t, 80.0, 80.0, cfg)
-	view := app.View()
+	view := app.View().Content
 	if !strings.Contains(visible(view), "0.0") {
 		t.Fatalf("visible missing 0.0: %q", visible(view))
 	}
@@ -1202,7 +1496,7 @@ delta-zero = "magenta"
 	if line == "" {
 		t.Fatalf("no data row: %q", visible(view))
 	}
-	if !hasIndexedForeground(line, 5) {
+	if !hasIndexedForeground(writtenANSI(t, line), 5) {
 		t.Fatalf("0.0 not magenta: %q", line)
 	}
 }
@@ -1218,7 +1512,7 @@ delta-neg = "chartreuse"
 	if app.err != nil {
 		t.Fatalf("TUI did not open: %v", app.err)
 	}
-	view := app.View()
+	view := app.View().Content
 	vis := visible(view)
 	if !strings.Contains(vis, "-0.5") {
 		t.Fatalf("visible missing -0.5: %q", vis)
@@ -1230,7 +1524,7 @@ delta-neg = "chartreuse"
 			break
 		}
 	}
-	if !hasIndexedForeground(line, 2) {
+	if !hasIndexedForeground(writtenANSI(t, line), 2) {
 		t.Fatalf("-0.5 not default green: %q", line)
 	}
 }
@@ -1238,7 +1532,7 @@ delta-neg = "chartreuse"
 func TestListDeltaSelectionIncludesReverse(t *testing.T) {
 	t.Setenv("NO_COLOR", "")
 	app := listWithPair(t, 80.5, 80.0, config.Default())
-	view := app.View()
+	view := app.View().Content
 	var line string
 	for _, l := range strings.Split(view, "\n") {
 		if strings.Contains(visible(l), "+0.5") {
@@ -1265,7 +1559,7 @@ delta-pos = "chartreuse"
 	if app.err != nil {
 		t.Fatalf("TUI did not open: %v", app.err)
 	}
-	view := app.View()
+	view := app.View().Content
 	vis := visible(view)
 	if strings.Contains(vis, "error:") {
 		t.Fatalf("TUI error: %q", vis)
@@ -1283,7 +1577,7 @@ delta-pos = "chartreuse"
 			break
 		}
 	}
-	if !hasIndexedForeground(line, 3) {
+	if !hasIndexedForeground(writtenANSI(t, line), 3) {
 		t.Fatalf("+0.5 not default yellow: %q", line)
 	}
 }
@@ -1305,8 +1599,8 @@ func newNovemberSheet(t *testing.T, day, col int) (*App, *dailylog.Store) {
 // flushMonthKey runs a save command when the key returns one. Left and
 // Right while editing must not use it: the text input's blink command
 // sleeps for the blink interval.
-func flushMonthKey(app *App, key tea.KeyType) {
-	_, cmd := app.Update(tea.KeyMsg{Type: key})
+func flushMonthKey(app *App, key tea.KeyPressMsg) {
+	_, cmd := app.Update(key)
 	if cmd != nil {
 		app.Update(cmd())
 	}
@@ -1482,7 +1776,7 @@ func loadConfigTOML(t *testing.T, body string) config.Config {
 
 func listDeltaCell(t *testing.T, app *App, day string) (header, data, cell string) {
 	t.Helper()
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	header = headerLine(view)
 	data = dataRow(view, day)
 	if header == "" || data == "" {

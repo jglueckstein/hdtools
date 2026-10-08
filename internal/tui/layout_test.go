@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/jglueckstein/hdtools/internal/config"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 )
@@ -39,7 +39,7 @@ func TestListHeaderAlignsWithWeightAndTrend(t *testing.T) {
 	t.Parallel()
 	store := openStore(t)
 	app := twoDayApp(t, store)
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	lines := strings.Split(view, "\n")
 	var header, data string
 	for _, line := range lines {
@@ -61,8 +61,8 @@ func TestMonthHeaderAlignsWithWeightAndTrend(t *testing.T) {
 	t.Parallel()
 	store := openStore(t)
 	app := twoDayApp(t, store)
-	app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}})
-	view := visible(app.View())
+	app.Update(tea.KeyPressMsg{Code: 'm', Text: "m"})
+	view := visible(app.View().Content)
 	lines := strings.Split(view, "\n")
 	var header, data string
 	for _, line := range lines {
@@ -83,7 +83,7 @@ func TestMonthHeaderAlignsWithWeightAndTrend(t *testing.T) {
 func TestDeltaColumnAligns(t *testing.T) {
 	t.Parallel()
 	app := listWithPair(t, 80.5, 80.0, config.Default())
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	header := headerLine(view)
 	data := dataRow(view, "1990-11-02")
 	if header == "" || data == "" {

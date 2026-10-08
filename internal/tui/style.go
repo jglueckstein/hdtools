@@ -3,14 +3,18 @@ package tui
 // Palette turns the config overlay into lipgloss styles. Package-level
 // vars cannot honour a per-process scheme or NO_COLOR, so each App
 // builds one palette at New. Bold and reverse stay here, not in
-// config. This file does not parse TOML.
+// config. Widget text fields call quietInput because their default
+// greys are not palette roles, and a non-empty NO_COLOR still has to
+// leave the model text without chromatic colour. This file does not
+// parse TOML and does not choose key behaviour.
 
 import (
+	"image/color"
 	"os"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/lipgloss/v2"
 	"github.com/jglueckstein/hdtools/internal/config"
-	"github.com/muesli/termenv"
 )
 
 type palette struct {
@@ -46,11 +50,9 @@ var defaultColors = map[string]string{
 }
 
 func newPalette(cfg config.Config) palette {
-	// Ascii emits no SGR at all, including reverse and bold. Tests and
-	// non-TTY View() still need chroma (or attributes under NO_COLOR).
-	if lipgloss.ColorProfile() == termenv.Ascii {
-		lipgloss.SetColorProfile(termenv.ANSI)
-	}
+	// Render leaves full-fidelity colour in the model text. The
+	// terminal writer downsamples once on the way out. A second
+	// conversion here would paint the screen string twice.
 	noColor := os.Getenv("NO_COLOR") != ""
 	fg := func(role string, bold bool) lipgloss.Style {
 		s := lipgloss.NewStyle()
@@ -95,7 +97,36 @@ func roleColor(cfg config.Config, role string) string {
 	return defaultColors[role]
 }
 
-func lipglossColor(canon string) lipgloss.Color {
+// quietInput drops the widget's default foregrounds when NO_COLOR is
+// set. Those defaults are 256-color greys on the placeholder and the
+// blurred value, and they are painted into View before the palette
+// runs. An empty NO_COLOR leaves the defaults, which is the coloured
+// field the screens already had.
+func quietInput(ti *textinput.Model) {
+	if os.Getenv("NO_COLOR") == "" {
+		return
+	}
+	ti.SetStyles(plainInputStyles())
+}
+
+func plainInputStyles() textinput.Styles {
+	s := textinput.DefaultDarkStyles()
+	plain := lipgloss.NewStyle()
+	s.Focused.Text = plain
+	s.Focused.Placeholder = plain
+	s.Focused.Suggestion = plain
+	s.Focused.Prompt = plain
+	s.Blurred.Text = plain
+	s.Blurred.Placeholder = plain
+	s.Blurred.Suggestion = plain
+	s.Blurred.Prompt = plain
+	// The virtual cursor copies this colour into the model text.
+	// NoColor keeps the reverse block and drops the grey.
+	s.Cursor.Color = lipgloss.NoColor{}
+	return s
+}
+
+func lipglossColor(canon string) color.Color {
 	if len(canon) > 0 && canon[0] == '#' {
 		return lipgloss.Color(canon)
 	}

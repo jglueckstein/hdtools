@@ -20,7 +20,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/jglueckstein/hdtools/internal/config"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 	"github.com/jglueckstein/hdtools/internal/units"
@@ -213,7 +213,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		a.termCols = msg.Width
 		return a, nil
-	case tea.KeyMsg:
+	case tea.PasteMsg:
+		return a.paste(msg)
+	case tea.KeyPressMsg:
 		switch a.screen {
 		case screenForm:
 			return a.updateForm(msg)
@@ -230,7 +232,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
-func (a *App) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (a *App) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "q", "ctrl+c":
 		return a, tea.Quit
@@ -270,7 +272,7 @@ func (a *App) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
-func (a *App) updateForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (a *App) updateForm(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		a.screen = a.afterSave
@@ -317,7 +319,14 @@ func (a *App) openMonth() {
 	a.err = nil
 }
 
-func (a *App) updateMonth(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+// spaceBar is the space bar. Its printed name is "space"; the text is
+// still one space. Matching either the word or the old name " " would
+// miss the key or insert the word into a field.
+func spaceBar(msg tea.KeyPressMsg) bool {
+	return msg.Code == tea.KeySpace || msg.Text == " "
+}
+
+func (a *App) updateMonth(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if a.month.editing {
 		switch msg.String() {
 		case "esc":
@@ -336,6 +345,14 @@ func (a *App) updateMonth(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		a.month.input, cmd = a.month.input.Update(msg)
 		return a, cmd
+	}
+	// A space bar's text is one character. Check it before a typed
+	// character starts an edit, or an idle weight cell would open.
+	if spaceBar(msg) {
+		if a.month.col == colWorkout {
+			return a, a.saveMonthCell
+		}
+		return a, nil
 	}
 	switch msg.String() {
 	case "esc":
@@ -377,32 +394,32 @@ func (a *App) updateMonth(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "n":
 		a.openForm(a.month.cursorDay(), screenMonth)
 		return a, nil
-	case " ":
-		if a.month.col == colWorkout {
-			return a, a.saveMonthCell
-		}
 	default:
-		if a.month.col != colWorkout && len(msg.Runes) == 1 && msg.Type == tea.KeyRunes {
-			a.month.beginEdit(string(msg.Runes))
+		// len is bytes. é is one character and two bytes, and the
+		// previous gate counted runes.
+		if a.month.col != colWorkout && len([]rune(msg.Text)) == 1 {
+			a.month.beginEdit(msg.Text)
 		}
 	}
 	return a, nil
 }
 
 // View renders the list, the day form, the month sheet, or a chart.
-func (a *App) View() string {
+// Content is that text. Colour in it may stay full fidelity; the
+// program writer downsamples once.
+func (a *App) View() tea.View {
 	switch a.screen {
 	case screenForm:
-		return a.form.view(a.pal)
+		return tea.NewView(a.form.view(a.pal))
 	case screenMonth:
 		sheet := buildMonthSheet(a.logs, a.month.year, a.month.month)
-		return a.month.view(sheet, a.cfg.DisplayUnit, a.dbPath, a.status, a.pal)
+		return tea.NewView(a.month.view(sheet, a.cfg.DisplayUnit, a.dbPath, a.status, a.pal))
 	case screenChart:
-		return a.chartView()
+		return tea.NewView(a.chartView())
 	case screenLong:
-		return a.longView()
+		return tea.NewView(a.longView())
 	default:
-		return a.listView()
+		return tea.NewView(a.listView())
 	}
 }
 
