@@ -49,13 +49,13 @@ func TestLongChartOpensFromListAndEscapes(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "l")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "Quarterly") {
 		t.Fatalf("want quarterly: %q", view)
 	}
 	press(app, "esc")
-	if !strings.Contains(visible(app.View()), "daily log") {
-		t.Fatalf("esc not list: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "daily log") {
+		t.Fatalf("esc not list: %q", app.View().Content)
 	}
 }
 
@@ -64,12 +64,12 @@ func TestLongChartOpensFromMonthAndEscapes(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "m", "l")
-	if !strings.Contains(visible(app.View()), "Quarterly") {
-		t.Fatalf("want quarterly: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "Quarterly") {
+		t.Fatalf("want quarterly: %q", app.View().Content)
 	}
 	press(app, "esc")
-	if !strings.Contains(visible(app.View()), "November 1990") || strings.Contains(visible(app.View()), "Quarterly") {
-		t.Fatalf("esc not month sheet: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "November 1990") || strings.Contains(visible(app.View().Content), "Quarterly") {
+		t.Fatalf("esc not month sheet: %q", app.View().Content)
 	}
 }
 
@@ -81,7 +81,7 @@ func TestLongChartLWhileEditingIsText(t *testing.T) {
 	app.month.col = colNote
 	app.month.beginEdit("")
 	press(app, "l")
-	if strings.Contains(visible(app.View()), "Quarterly") {
+	if strings.Contains(visible(app.View().Content), "Quarterly") {
 		t.Fatal("l opened long chart while editing")
 	}
 	if !strings.Contains(app.month.input.Value(), "l") {
@@ -94,13 +94,13 @@ func TestLongChartOpensFromMonthlyChartAndEscapes(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c", "l")
-	if !strings.Contains(visible(app.View()), "Quarterly") {
-		t.Fatalf("want quarterly: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "Quarterly") {
+		t.Fatalf("want quarterly: %q", app.View().Content)
 	}
 	press(app, "esc")
-	v := visible(app.View())
+	v := visible(app.View().Content)
 	if !strings.Contains(v, "November 1990") || strings.Contains(v, "Quarterly") {
-		t.Fatalf("esc not monthly chart: %q", app.View())
+		t.Fatalf("esc not monthly chart: %q", app.View().Content)
 	}
 }
 
@@ -112,13 +112,13 @@ func TestLongChartCyclesKinds(t *testing.T) {
 	want := []string{"Semiannual", "Annual", "Complete", "Quarterly"}
 	for _, kind := range want {
 		press(app, "]")
-		if !strings.Contains(visible(app.View()), kind) {
-			t.Fatalf("after ] want %s: %q", kind, app.View())
+		if !strings.Contains(visible(app.View().Content), kind) {
+			t.Fatalf("after ] want %s: %q", kind, app.View().Content)
 		}
 	}
 	press(app, "[")
-	if !strings.Contains(visible(app.View()), "Complete") {
-		t.Fatalf("after [ want Complete: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "Complete") {
+		t.Fatalf("after [ want Complete: %q", app.View().Content)
 	}
 }
 
@@ -128,7 +128,7 @@ func TestLongChartTwoLinesNoMarksOrStems(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "l")
-	view := app.View()
+	view := app.View().Content
 	if plotHas(view, 'o') {
 		t.Fatalf("daily mark on long chart: %q", view)
 	}
@@ -174,12 +174,13 @@ func TestLongChartWeightAndTrendColors(t *testing.T) {
 	app := New(store, "mem.db", cfg)
 	app.Update(app.load())
 	press(app, "l")
-	view := app.View()
-	if !hasIndexedForeground(view, 2) {
-		t.Fatalf("missing green daily: %q", view)
+	view := app.View().Content
+	written := writtenANSI(t, view)
+	if !hasIndexedForeground(written, 2) {
+		t.Fatalf("missing green daily: %q", written)
 	}
-	if !hasIndexedForeground(view, 3) {
-		t.Fatalf("missing yellow trend: %q", view)
+	if !hasIndexedForeground(written, 3) {
+		t.Fatalf("missing yellow trend: %q", written)
 	}
 	if !hasSGRCode(view, 1) {
 		t.Fatalf("missing bold trend: %q", view)
@@ -192,7 +193,7 @@ func TestLongChartNoColorKeepsTwoLines(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "l")
-	view := app.View()
+	view := app.View().Content
 	vis := visible(view)
 	if !strings.ContainsAny(vis, `/\-`) {
 		t.Fatalf("missing path: %q", view)
@@ -211,7 +212,7 @@ func TestLongChartEmpty(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "l")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "empty") {
 		t.Fatalf("empty copy missing: %q", view)
 	}
@@ -233,7 +234,7 @@ func TestLongChartQuarterlyEmptyDespiteLogs(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "l")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "empty") {
 		t.Fatalf("want empty quarterly: %q", view)
 	}
@@ -247,7 +248,7 @@ func TestLongChartBracketsDoNotChangeSheetMonth(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "m", "l", "]", "esc")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "November 1990") {
 		t.Fatalf("sheet month moved: %q", view)
 	}
@@ -269,8 +270,8 @@ func TestLongChartAxisUsesDisplayUnit(t *testing.T) {
 	app := New(store, "mem.db", cfg)
 	app.Update(app.load())
 	press(app, "l")
-	if !strings.Contains(visible(app.View()), "lb") {
-		t.Fatalf("axis not lb: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "lb") {
+		t.Fatalf("axis not lb: %q", app.View().Content)
 	}
 }
 
@@ -309,7 +310,7 @@ func TestLongChartLossAndDeficit(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "l")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "Loss:") {
 		t.Fatalf("missing Loss: %q", view)
 	}
@@ -326,7 +327,7 @@ func TestLongChartTitleKindAndSpan(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "l", "]", "]")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "Annual") {
 		t.Fatalf("want Annual: %q", view)
 	}
@@ -351,7 +352,7 @@ func TestLongChartCompleteStartsAtFirstLog(t *testing.T) {
 	}
 	app := twoDayApp(t, store)
 	press(app, "l", "]", "]", "]")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "Complete") {
 		t.Fatalf("want Complete: %q", view)
 	}
@@ -368,7 +369,7 @@ func TestLongChartBucketOmitsWeightDot(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "l", "]", "]")
-	view := app.View()
+	view := app.View().Content
 	rows := mustPlot(t, view)
 	if w := plotWidth(rows); w != defaultLongCols {
 		t.Fatalf("annual columns = %d, want %d buckets", w, defaultLongCols)
@@ -431,7 +432,7 @@ func TestLongChartAnnualIsBucketed(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "l", "]", "]")
-	view := app.View()
+	view := app.View().Content
 	n := longPlotCols(view)
 	if n != 72 {
 		t.Fatalf("plot cols = %d, want 72\n%s", n, visible(view))
@@ -446,7 +447,7 @@ func TestLongChartQuarterlyClipsAtToday(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "l")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "September 1990") || !strings.Contains(view, "November 1990") {
 		t.Fatalf("quarterly span: %q", view)
 	}
@@ -457,7 +458,7 @@ func TestLongChartPastDatabaseUsesLatestLog(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "l")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if strings.Contains(view, "empty") {
 		t.Fatalf("empty in 2026: %q", view)
 	}
@@ -471,8 +472,8 @@ func TestLongChartHelpSaysKind(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "l")
-	if !strings.Contains(visible(app.View()), "[ ] kind") {
-		t.Fatalf("help cue missing: %q", app.View())
+	if !strings.Contains(visible(app.View().Content), "[ ] kind") {
+		t.Fatalf("help cue missing: %q", app.View().Content)
 	}
 }
 
@@ -481,7 +482,7 @@ func TestLongChartXLabelsQuarterlyOneLine(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "l")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	for _, want := range []string{"Sep 90", "Oct 90", "Nov 90"} {
 		if !strings.Contains(view, want) {
 			t.Fatalf("missing %q in %q", want, view)
@@ -502,7 +503,7 @@ func TestLongChartXLabelsCompleteTwoLine(t *testing.T) {
 	}
 	app := twoDayApp(t, store)
 	press(app, "l", "]", "]", "]")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if strings.Contains(view, "Apr 89") {
 		t.Fatalf("one-line label on dense complete: %q", view)
 	}
@@ -558,7 +559,7 @@ func TestLongChartXLabelsMidMonthStart(t *testing.T) {
 	}
 	app := twoDayApp(t, store)
 	press(app, "l", "]", "]", "]")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	if !strings.Contains(view, "Apr") || !strings.Contains(view, "89") {
 		t.Fatalf("want Apr 89 at start: %q", view)
 	}
@@ -569,7 +570,7 @@ func TestLongChartEmptyHasNoMonthXLabels(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "l")
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	for _, m := range []string{"Jan ", "Feb ", "Mar ", "Apr ", "May ", "Jun ", "Jul ", "Aug ", "Sep ", "Oct ", "Nov ", "Dec "} {
 		if strings.Contains(view, m) {
 			t.Fatalf("X label %q on empty: %q", m, view)
@@ -615,7 +616,7 @@ func spanIndex(start, day time.Time) int {
 
 func quarterlyView(t *testing.T, app *App) string {
 	t.Helper()
-	view := app.View()
+	view := app.View().Content
 	vis := visible(view)
 	if !strings.Contains(vis, "Quarterly") || strings.Contains(vis, "daily log") {
 		t.Fatalf("quarterly chart not shown: %q", vis)

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"regexp"
@@ -8,12 +9,11 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/jglueckstein/hdtools/internal/config"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 	"github.com/jglueckstein/hdtools/internal/units"
-	"github.com/muesli/termenv"
 )
 
 func hasSGRCode(s string, code int) bool {
@@ -37,6 +37,28 @@ func hasTruecolorForeground(s string, r, g, b int) bool {
 
 func hasChromaticSGR(s string) bool {
 	return regexp.MustCompile(`\x1b\[(?:3[0-7]|9[0-7]|4[0-7]|10[0-7]|38;|48;)`).MatchString(s)
+}
+
+// writtenColor is the SGR a terminal of that profile would show.
+// The model text may stay full fidelity; this writer downsamples once.
+func writtenColor(t *testing.T, s string, profile colorprofile.Profile) string {
+	t.Helper()
+	var buf bytes.Buffer
+	w := colorprofile.Writer{Forward: &buf, Profile: profile}
+	if _, err := w.WriteString(s); err != nil {
+		t.Fatalf("write color profile: %v", err)
+	}
+	return buf.String()
+}
+
+func writtenANSI(t *testing.T, s string) string {
+	t.Helper()
+	return writtenColor(t, s, colorprofile.ANSI)
+}
+
+func writtenTrueColor(t *testing.T, s string) string {
+	t.Helper()
+	return writtenColor(t, s, colorprofile.TrueColor)
 }
 
 func schemeCfg(colors map[string]string) config.Config {
@@ -80,14 +102,14 @@ func TestViewUsesSchemeOnList(t *testing.T) {
 		"weight": "green",
 		"trend":  "yellow",
 	}))
-	view := app.View()
-	if !hasIndexedForeground(view, 2) {
+	view := app.View().Content
+	if !hasIndexedForeground(writtenANSI(t, view), 2) {
 		t.Fatalf("list missing green weight SGR: %q", view)
 	}
-	if !hasIndexedForeground(view, 3) {
+	if !hasIndexedForeground(writtenANSI(t, view), 3) {
 		t.Fatalf("list missing yellow trend SGR: %q", view)
 	}
-	if !hasIndexedForeground(view, 7) {
+	if !hasIndexedForeground(writtenANSI(t, view), 7) {
 		t.Fatalf("list missing default white header SGR: %q", view)
 	}
 }
@@ -98,12 +120,12 @@ func TestViewUsesSchemeOnMonth(t *testing.T) {
 		"weight": "green",
 		"trend":  "yellow",
 	}))
-	app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}})
-	view := app.View()
-	if !hasIndexedForeground(view, 2) {
+	app.Update(tea.KeyPressMsg{Code: 'm', Text: "m"})
+	view := app.View().Content
+	if !hasIndexedForeground(writtenANSI(t, view), 2) {
 		t.Fatalf("month missing green weight SGR: %q", view)
 	}
-	if !hasIndexedForeground(view, 3) {
+	if !hasIndexedForeground(writtenANSI(t, view), 3) {
 		t.Fatalf("month missing yellow trend SGR: %q", view)
 	}
 }
@@ -111,9 +133,9 @@ func TestViewUsesSchemeOnMonth(t *testing.T) {
 func TestFormLabelsUseTitleRole(t *testing.T) {
 	enableChroma(t)
 	app := weighedList(t, schemeCfg(map[string]string{"title": "magenta"}))
-	model, _ := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
-	view := model.View()
-	if !hasIndexedForeground(view, 5) {
+	model, _ := app.Update(tea.KeyPressMsg{Code: 'n', Text: "n"})
+	view := model.View().Content
+	if !hasIndexedForeground(writtenANSI(t, view), 5) {
 		t.Fatalf("form missing magenta title SGR: %q", view)
 	}
 	if !strings.Contains(visible(view), ">") {
@@ -127,14 +149,14 @@ func TestSelectionReverseWithOptionalForeground(t *testing.T) {
 		"weight":    "green",
 		"selection": "yellow",
 	}))
-	line := selectedLine(app.View())
+	line := selectedLine(app.View().Content)
 	if line == "" {
-		t.Fatalf("no selected weight line in %q", app.View())
+		t.Fatalf("no selected weight line in %q", app.View().Content)
 	}
 	if !hasSGRCode(line, 7) {
 		t.Fatalf("selected row missing reverse: %q", line)
 	}
-	if !hasIndexedForeground(line, 3) {
+	if !hasIndexedForeground(writtenANSI(t, line), 3) {
 		t.Fatalf("selected row missing yellow foreground: %q", line)
 	}
 	if !strings.Contains(visible(line), ">") {
@@ -149,8 +171,8 @@ func TestMonthSelectionRestylesFocusedCellOnly(t *testing.T) {
 		"trend":     "cyan",
 		"selection": "yellow",
 	}))
-	app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}})
-	view := app.View()
+	app.Update(tea.KeyPressMsg{Code: 'm', Text: "m"})
+	view := app.View().Content
 	var line string
 	for _, l := range strings.Split(view, "\n") {
 		if strings.Contains(visible(l), ">") && strings.Contains(visible(l), "171.5") {
@@ -164,10 +186,10 @@ func TestMonthSelectionRestylesFocusedCellOnly(t *testing.T) {
 	if !hasSGRCode(line, 7) {
 		t.Fatalf("focused cell missing reverse: %q", line)
 	}
-	if !hasIndexedForeground(line, 3) {
+	if !hasIndexedForeground(writtenANSI(t, line), 3) {
 		t.Fatalf("focused weight missing yellow: %q", line)
 	}
-	if !hasIndexedForeground(line, 6) {
+	if !hasIndexedForeground(writtenANSI(t, line), 6) {
 		t.Fatalf("trend cell missing cyan: %q", line)
 	}
 }
@@ -178,9 +200,9 @@ func TestFormFocusNotSelectionRole(t *testing.T) {
 		"title":     "magenta",
 		"selection": "yellow",
 	}))
-	model, _ := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
-	view := model.View()
-	if !hasIndexedForeground(view, 5) {
+	model, _ := app.Update(tea.KeyPressMsg{Code: 'n', Text: "n"})
+	view := model.View().Content
+	if !hasIndexedForeground(writtenANSI(t, view), 5) {
 		t.Fatalf("form labels missing magenta: %q", view)
 	}
 	for _, line := range strings.Split(view, "\n") {
@@ -200,7 +222,7 @@ func TestNoColorStripsChromaKeepsStructure(t *testing.T) {
 		"weight": "green",
 		"trend":  "yellow",
 	}))
-	view := app.View()
+	view := app.View().Content
 	if hasChromaticSGR(view) {
 		t.Fatalf("NO_COLOR left chromatic SGR: %q", view)
 	}
@@ -216,14 +238,61 @@ func TestNoColorStripsChromaKeepsStructure(t *testing.T) {
 	}
 }
 
+// TestNoColorStripsFieldChroma is the day form and the month cell.
+// The palette does not paint those widgets. Their default greys are
+// still chromatic model text, and S13 forbids that under NO_COLOR.
+func TestNoColorStripsFieldChroma(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	app, _ := newNovemberSheet(t, 4, colNote)
+	app.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if app.screen != screenForm {
+		t.Fatal("day form did not open")
+	}
+	view := app.View().Content
+	if hasChromaticSGR(view) {
+		t.Fatalf("NO_COLOR left field chroma: %q", view)
+	}
+	vis := visible(view)
+	if !strings.Contains(vis, "weight") || !strings.Contains(vis, ">") {
+		t.Fatalf("NO_COLOR dropped the form: %q", vis)
+	}
+	app.form.inputs[fieldWeight].SetValue("80")
+	view = app.View().Content
+	if hasChromaticSGR(view) {
+		t.Fatalf("NO_COLOR left blurred field chroma: %q", view)
+	}
+	if !strings.Contains(visible(view), "80") || !strings.Contains(visible(view), ">") {
+		t.Fatalf("NO_COLOR dropped the blurred value: %q", visible(view))
+	}
+
+	sheet, _ := newNovemberSheet(t, 4, colNote)
+	sheet.month.beginEdit("café")
+	view = sheet.View().Content
+	if hasChromaticSGR(view) {
+		t.Fatalf("NO_COLOR left month-cell chroma: %q", view)
+	}
+	if !strings.Contains(visible(view), "café") {
+		t.Fatalf("NO_COLOR dropped the month cell: %q", visible(view))
+	}
+}
+
+func TestFormKeepsWidgetColorWhenNoColorEmpty(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
+	app, _ := newNovemberSheet(t, 4, colNote)
+	app.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if !hasChromaticSGR(app.View().Content) {
+		t.Fatal("empty NO_COLOR stripped the field colour")
+	}
+}
+
 func TestEmptyNoColorKeepsDefaultChroma(t *testing.T) {
 	t.Setenv("NO_COLOR", "")
 	app := weighedList(t, config.Default())
-	view := app.View()
-	if !hasIndexedForeground(view, 4) {
+	view := app.View().Content
+	if !hasIndexedForeground(writtenANSI(t, view), 4) {
 		t.Fatalf("empty NO_COLOR missing default blue weight: %q", view)
 	}
-	if !hasIndexedForeground(view, 1) {
+	if !hasIndexedForeground(writtenANSI(t, view), 1) {
 		t.Fatalf("empty NO_COLOR missing default red trend: %q", view)
 	}
 }
@@ -231,13 +300,13 @@ func TestEmptyNoColorKeepsDefaultChroma(t *testing.T) {
 func TestTrendIsBoldWithAndWithoutColor(t *testing.T) {
 	enableChroma(t)
 	app := weighedList(t, config.Default())
-	if !hasSGRCode(app.View(), 1) {
-		t.Fatalf("trend not bold with color: %q", app.View())
+	if !hasSGRCode(app.View().Content, 1) {
+		t.Fatalf("trend not bold with color: %q", app.View().Content)
 	}
 	t.Setenv("NO_COLOR", "1")
 	app = weighedList(t, config.Default())
-	if !hasSGRCode(app.View(), 1) {
-		t.Fatalf("trend not bold under NO_COLOR: %q", app.View())
+	if !hasSGRCode(app.View().Content, 1) {
+		t.Fatalf("trend not bold under NO_COLOR: %q", app.View().Content)
 	}
 }
 
@@ -247,7 +316,7 @@ func TestListAlignsWithCustomWeightColor(t *testing.T) {
 		"weight": "green",
 		"trend":  "yellow",
 	}))
-	view := visible(app.View())
+	view := visible(app.View().Content)
 	var header, data string
 	for _, line := range strings.Split(view, "\n") {
 		if strings.Contains(line, "weight") && strings.Contains(line, "trend") {
@@ -265,48 +334,42 @@ func TestListAlignsWithCustomWeightColor(t *testing.T) {
 
 func TestViewUsesHexOnTruecolor(t *testing.T) {
 	enableChroma(t)
-	lipgloss.SetColorProfile(termenv.TrueColor)
-	t.Cleanup(func() { lipgloss.SetColorProfile(termenv.ANSI) })
 	app := weighedList(t, schemeCfg(map[string]string{
 		"weight": "#00ff00",
 		"trend":  "#0D47A1",
 	}))
-	view := app.View()
-	if !hasTruecolorForeground(view, 0, 255, 0) {
-		t.Fatalf("missing #00ff00: %q", view)
+	written := writtenTrueColor(t, app.View().Content)
+	if !hasTruecolorForeground(written, 0, 255, 0) {
+		t.Fatalf("missing #00ff00: %q", written)
 	}
-	if !hasTruecolorForeground(view, 0x0d, 0x47, 0xa1) {
-		t.Fatalf("missing #0D47A1: %q", view)
+	if !hasTruecolorForeground(written, 0x0d, 0x47, 0xa1) {
+		t.Fatalf("missing #0D47A1: %q", written)
 	}
 }
 
 func TestHexDownshiftsOnSixteenColor(t *testing.T) {
 	enableChroma(t)
-	lipgloss.SetColorProfile(termenv.ANSI)
-	t.Cleanup(func() { lipgloss.SetColorProfile(termenv.ANSI) })
 	app := weighedList(t, schemeCfg(map[string]string{"weight": "#00ff00"}))
-	view := app.View()
-	if hasTruecolorForeground(view, 0, 255, 0) {
-		t.Fatalf("16-color profile emitted 38;2: %q", view)
+	written := writtenANSI(t, app.View().Content)
+	if hasTruecolorForeground(written, 0, 255, 0) {
+		t.Fatalf("16-color profile emitted 38;2: %q", written)
 	}
-	if !hasIndexedForeground(view, 2) && !hasIndexedForeground(view, 10) {
-		t.Fatalf("#00ff00 did not downshift to green or bright-green: %q", view)
+	if !hasIndexedForeground(written, 2) && !hasIndexedForeground(written, 10) {
+		t.Fatalf("#00ff00 did not downshift to green or bright-green: %q", written)
 	}
 }
 
 func TestNamedAndHexMix(t *testing.T) {
 	enableChroma(t)
-	lipgloss.SetColorProfile(termenv.TrueColor)
-	t.Cleanup(func() { lipgloss.SetColorProfile(termenv.ANSI) })
 	app := weighedList(t, schemeCfg(map[string]string{
 		"weight": "blue",
 		"trend":  "#ff0000",
 	}))
-	view := app.View()
-	if !hasIndexedForeground(view, 4) {
-		t.Fatalf("named blue missing: %q", view)
+	written := writtenTrueColor(t, app.View().Content)
+	if !hasIndexedForeground(written, 4) {
+		t.Fatalf("named blue missing: %q", written)
 	}
-	if !hasTruecolorForeground(view, 255, 0, 0) {
-		t.Fatalf("hex red missing: %q", view)
+	if !hasTruecolorForeground(written, 255, 0, 0) {
+		t.Fatalf("hex red missing: %q", written)
 	}
 }

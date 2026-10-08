@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"go/parser"
+	"go/token"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -762,4 +766,169 @@ func TestChartPDFHomePrefixRelativeHomeFails(t *testing.T) {
 	wantNoStdoutPath(t, stdout)
 	assertNoFile(t, filepath.Join(cwd, chartPDFName))
 	assertNoFile(t, filepath.Join(cwd, "home", "charts", chartPDFName))
+}
+
+// TestModuleRequiresCharmV2 is S1. Docs name ntcharts in prose, so the
+// scan stays on go.mod plus Go files under cmd and internal. The module
+// root is this file's tree: other tests in this package change directory.
+func TestModuleRequiresCharmV2(t *testing.T) {
+	root := moduleRoot(t)
+	raw, err := os.ReadFile(filepath.Join(root, "go.mod"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(raw)
+	var problems []string
+	if got := goVersion(text); got != "1.27.0" {
+		problems = append(problems, fmt.Sprintf("go line = %q, want 1.27.0", got))
+	}
+	mods := requireModules(text)
+	for _, want := range []string{
+		"charm.land/bubbletea/v2",
+		"charm.land/lipgloss/v2",
+		"charm.land/bubbles/v2",
+	} {
+		if !moduleListed(mods, want) {
+			problems = append(problems, "require block missing "+want)
+		}
+	}
+	for _, mod := range mods {
+		switch mod {
+		case "github.com/charmbracelet/bubbletea",
+			"github.com/charmbracelet/lipgloss",
+			"github.com/charmbracelet/bubbles":
+			problems = append(problems, "require block still requires "+mod)
+		}
+		if strings.Contains(mod, "ntcharts") {
+			problems = append(problems, "require block names ntcharts module "+mod)
+		}
+	}
+	for _, imp := range goImports(t, root) {
+		for _, bad := range []string{
+			"github.com/charmbracelet/bubbletea",
+			"github.com/charmbracelet/lipgloss",
+			"github.com/charmbracelet/bubbles",
+		} {
+			if imp.path == bad || strings.HasPrefix(imp.path, bad+"/") {
+				problems = append(problems, imp.file+" imports "+imp.path)
+			}
+		}
+		if strings.Contains(imp.path, "ntcharts") {
+			problems = append(problems, imp.file+" imports ntcharts "+imp.path)
+		}
+	}
+	if len(problems) > 0 {
+		t.Fatalf("charm v2 module contract:\n%s", strings.Join(problems, "\n"))
+	}
+}
+
+func moduleRoot(t *testing.T) string {
+	t.Helper()
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("module root: caller failed")
+	}
+	dir := filepath.Dir(file)
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			t.Fatal("module root: go.mod not found")
+		}
+		dir = parent
+	}
+}
+
+func goVersion(goMod string) string {
+	for _, line := range strings.Split(goMod, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[0] == "go" {
+			return fields[1]
+		}
+	}
+	return ""
+}
+
+func requireModules(goMod string) []string {
+	var mods []string
+	inBlock := false
+	for _, line := range strings.Split(goMod, "\n") {
+		trim := strings.TrimSpace(line)
+		if trim == "" || strings.HasPrefix(trim, "//") {
+			continue
+		}
+		switch {
+		case trim == "require (":
+			inBlock = true
+		case inBlock && trim == ")":
+			inBlock = false
+		case inBlock:
+			mods = append(mods, strings.Fields(trim)[0])
+		case strings.HasPrefix(trim, "require "):
+			rest := strings.TrimSpace(strings.TrimPrefix(trim, "require"))
+			if rest != "" {
+				mods = append(mods, strings.Fields(rest)[0])
+			}
+		}
+	}
+	return mods
+}
+
+func moduleListed(mods []string, want string) bool {
+	for _, mod := range mods {
+		if mod == want {
+			return true
+		}
+	}
+	return false
+}
+
+type scannedImport struct {
+	file string
+	path string
+}
+
+func goImports(t *testing.T, root string) []scannedImport {
+	t.Helper()
+	var found []scannedImport
+	for _, dir := range []string{"cmd", "internal"} {
+		start := filepath.Join(root, dir)
+		err := filepath.WalkDir(start, func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.IsDir() {
+				if path != start && (d.Name() == "vendor" || d.Name() == "testdata") {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if !strings.HasSuffix(path, ".go") {
+				return nil
+			}
+			fset := token.NewFileSet()
+			file, err := parser.ParseFile(fset, path, nil, parser.ImportsOnly)
+			if err != nil {
+				return err
+			}
+			rel, err := filepath.Rel(root, path)
+			if err != nil {
+				return err
+			}
+			for _, imp := range file.Imports {
+				p, err := strconv.Unquote(imp.Path.Value)
+				if err != nil {
+					return err
+				}
+				found = append(found, scannedImport{file: rel, path: p})
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	return found
 }

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 	"github.com/jglueckstein/hdtools/internal/units"
 )
@@ -49,7 +49,7 @@ func (a *App) openLong() {
 	a.err = nil
 }
 
-func (a *App) updateLong(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (a *App) updateLong(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		a.screen = a.afterLong

@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 	"github.com/jglueckstein/hdtools/internal/units"
 )
@@ -43,12 +43,13 @@ func newForm(unit units.Unit) formModel {
 		ti := textinput.New()
 		ti.Placeholder = placeholders[i]
 		ti.Prompt = ""
-		ti.Width = 32
+		ti.SetWidth(32)
 		ti.CharLimit = 200
 		if i == 0 {
 			ti.CharLimit = 10
-			ti.Width = 12
+			ti.SetWidth(12)
 		}
+		quietInput(&ti)
 		inputs[i] = ti
 	}
 	f := formModel{inputs: inputs, unit: unit}
@@ -108,7 +109,7 @@ func inputIndex(focus int) int {
 }
 
 func (f *formModel) update(msg tea.Msg) tea.Cmd {
-	key, ok := msg.(tea.KeyMsg)
+	key, ok := msg.(tea.KeyPressMsg)
 	if ok {
 		switch key.String() {
 		case "tab", "down":
@@ -117,11 +118,12 @@ func (f *formModel) update(msg tea.Msg) tea.Cmd {
 		case "shift+tab", "up":
 			f.setFocus((f.focus - 1 + fieldCount) % fieldCount)
 			return nil
-		case " ":
-			if f.focus == fieldWorkout {
-				f.workout = !f.workout
-				return nil
-			}
+		}
+		// The space bar prints as "space". A text field still receives
+		// the key, so the field gains one space character.
+		if spaceBar(key) && f.focus == fieldWorkout {
+			f.workout = !f.workout
+			return nil
 		}
 	}
 	idx := inputIndex(f.focus)
