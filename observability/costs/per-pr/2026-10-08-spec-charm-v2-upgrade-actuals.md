@@ -2,12 +2,12 @@
 date: 2026-10-08
 branch: spec/charm-v2-upgrade
 issue: "#80"
-pr: null
+pr: "#81"
 task_summary: Upgrade the TUI to Charm v2 and leave every current screen behaving as it does today.
 progressed_slice: S1
 stages_run: [spec-writer, tdd-agent, implementer, code-reviewer, integration-agent]
 review_cycles: 1
-files_changed: 26
+files_changed: 28
 languages: [go, markdown]
 tokens_by_stage:
   - stage: spec-writer
