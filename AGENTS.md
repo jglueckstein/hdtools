@@ -29,6 +29,11 @@
 - `View()` emits chroma unless `NO_COLOR` is non-empty; the process does
   not consult the TTY. Tests that need color must `t.Setenv("NO_COLOR",
   "")`. Hex is `38;2;` on truecolor and downshifts on a 16-color profile.
+- Integration stays on the feature branch until squash-merge. The
+  default branch is `master`, not `main`, and CHANGELOG stays under
+  Unreleased. Commit the reflection on that feature branch before the
+  merge. The integration-agent file checks out `main` and writes a
+  dated changelog; that file loses to this note.
 - On Grok 1.0.46, `spawn_subagent` rejects
   `ai-literacy-superpowers:<name>` even when the error lists that
   string as available. Plugin files are `agents/<name>.agent.md`, and

@@ -64,6 +64,8 @@
 
 ### Changed
 
+- AGENTS.md records that integration stays on the feature branch,
+  targets master, and keeps this changelog under Unreleased. (#84)
 - TUI uses Charm v2 (Bubble Tea, Lip Gloss, and bubbles). Screens,
   charts, and the monthly PDF behave as before. (#81)
 - Monthly chart PDFs default to `$XDG_DATA_HOME/hdtools` (or
