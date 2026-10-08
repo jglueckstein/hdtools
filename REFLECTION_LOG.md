@@ -276,6 +276,7 @@
   a later harness sync.
 - **Signal**: workflow
 - **Constraint**: none
+- **Promoted**: 2026-10-08 → AGENTS.md GOTCHAS: "Integration stays on the feature branch until squash-merge."
 - **Session metadata**:
   - Duration: unknown
   - Model tiers used: unknown
