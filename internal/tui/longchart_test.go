@@ -382,7 +382,8 @@ func TestLongChartBucketOmitsWeightDot(t *testing.T) {
 	end := time.Date(ey, em, last, 0, 0, 0, 0, time.UTC)
 	span := sheetRange(app.logs, start, end)
 	cols := bucketSpan(span, defaultLongCols)
-	ymin, ymax, yok := longYRange(cols, app.cfg.DisplayUnit, false)
+	// The scale is the day's weights and trend. Buckets drop the weigh-in.
+	ymin, ymax, yok := longYRange(span, app.cfg.DisplayUnit, true)
 	if !yok || len(cols) != defaultLongCols {
 		t.Fatalf("bucket Y range ok %v cols %d", yok, len(cols))
 	}

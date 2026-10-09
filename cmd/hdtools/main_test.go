@@ -768,9 +768,10 @@ func TestChartPDFHomePrefixRelativeHomeFails(t *testing.T) {
 	assertNoFile(t, filepath.Join(cwd, "home", "charts", chartPDFName))
 }
 
-// TestModuleRequiresCharmV2 is S1. Docs name ntcharts in prose, so the
-// scan stays on go.mod plus Go files under cmd and internal. The module
-// root is this file's tree: other tests in this package change directory.
+// TestModuleRequiresCharmV2 is the library line for the monthly Online
+// chart. Docs name ntcharts in prose, so the scan stays on go.mod plus
+// Go files under cmd and internal. The module root is this file's tree:
+// other tests in this package change directory.
 func TestModuleRequiresCharmV2(t *testing.T) {
 	root := moduleRoot(t)
 	raw, err := os.ReadFile(filepath.Join(root, "go.mod"))
@@ -787,6 +788,7 @@ func TestModuleRequiresCharmV2(t *testing.T) {
 		"charm.land/bubbletea/v2",
 		"charm.land/lipgloss/v2",
 		"charm.land/bubbles/v2",
+		"github.com/NimbleMarkets/ntcharts/v2",
 	} {
 		if !moduleListed(mods, want) {
 			problems = append(problems, "require block missing "+want)
@@ -799,10 +801,14 @@ func TestModuleRequiresCharmV2(t *testing.T) {
 			"github.com/charmbracelet/bubbles":
 			problems = append(problems, "require block still requires "+mod)
 		}
-		if strings.Contains(mod, "ntcharts") {
+		if mod == "github.com/sajari/regression" || strings.HasPrefix(mod, "github.com/sajari/regression/") {
+			problems = append(problems, "require block requires "+mod)
+		}
+		if strings.Contains(mod, "ntcharts") && mod != "github.com/NimbleMarkets/ntcharts/v2" {
 			problems = append(problems, "require block names ntcharts module "+mod)
 		}
 	}
+	ntchartsImport := false
 	for _, imp := range goImports(t, root) {
 		for _, bad := range []string{
 			"github.com/charmbracelet/bubbletea",
@@ -813,13 +819,101 @@ func TestModuleRequiresCharmV2(t *testing.T) {
 				problems = append(problems, imp.file+" imports "+imp.path)
 			}
 		}
-		if strings.Contains(imp.path, "ntcharts") {
-			problems = append(problems, imp.file+" imports ntcharts "+imp.path)
+		if imp.path == "github.com/sajari/regression" || strings.HasPrefix(imp.path, "github.com/sajari/regression/") {
+			problems = append(problems, imp.file+" imports "+imp.path)
 		}
+		if strings.Contains(imp.path, "bubblezone") {
+			problems = append(problems, imp.file+" imports "+imp.path)
+		}
+		if strings.Contains(imp.path, "ntcharts") {
+			if imp.path == "github.com/NimbleMarkets/ntcharts/v2" || strings.HasPrefix(imp.path, "github.com/NimbleMarkets/ntcharts/v2/") {
+				ntchartsImport = true
+			} else {
+				problems = append(problems, imp.file+" imports ntcharts "+imp.path)
+			}
+		}
+	}
+	if !ntchartsImport {
+		problems = append(problems, "no import of github.com/NimbleMarkets/ntcharts/v2 under cmd/ or internal/")
 	}
 	if len(problems) > 0 {
 		t.Fatalf("charm v2 module contract:\n%s", strings.Join(problems, "\n"))
 	}
+}
+
+// TestProgramIsModelOnly reads main.go. The screen starts from the model
+// alone: an alternate screen or a mouse mode would add pointer behaviour
+// the monthly chart does not have.
+func TestProgramIsModelOnly(t *testing.T) {
+	root := moduleRoot(t)
+	raw, err := os.ReadFile(filepath.Join(root, "cmd", "hdtools", "main.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(raw)
+	if strings.Contains(text, "AltScreen") || strings.Contains(text, "MouseMode") {
+		t.Fatal("main.go mentions AltScreen or MouseMode")
+	}
+	args := programArgs(text)
+	if len(args) == 0 {
+		t.Fatal("main.go does not call tea.NewProgram")
+	}
+	for _, arg := range args {
+		if commaOutside(arg) {
+			t.Fatalf("tea.NewProgram(%s), want the model only", arg)
+		}
+	}
+}
+
+func programArgs(text string) []string {
+	var args []string
+	rest := text
+	const key = "tea.NewProgram("
+	for {
+		i := strings.Index(rest, key)
+		if i < 0 {
+			return args
+		}
+		arg, next, ok := programArgAt(rest[i+len(key):])
+		if !ok {
+			return args
+		}
+		args = append(args, arg)
+		rest = next
+	}
+}
+
+func programArgAt(rest string) (arg, next string, ok bool) {
+	depth := 1
+	for j, r := range rest {
+		switch r {
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 {
+				return rest[:j], rest[j+len(string(r)):], true
+			}
+		}
+	}
+	return "", "", false
+}
+
+func commaOutside(arg string) bool {
+	depth := 0
+	for _, r := range arg {
+		switch r {
+		case '(':
+			depth++
+		case ')':
+			depth--
+		case ',':
+			if depth == 0 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func moduleRoot(t *testing.T) string {

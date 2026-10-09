@@ -1,9 +1,9 @@
 # How to open the monthly chart
 
 The monthly chart plots that month's daily weights and trend, plus
-Monthly Loss and Daily Deficit. A month-year box sits above the plot
-(`June 1990`). Each daily mark is a float or sinker: a thin vertical
-stem joins it to the trend that day.
+Monthly Loss and Daily Deficit. A plain month-year heading sits above
+the plot (`June 1990`). Each weighed day is an open diamond. A green
+stem joins that diamond to the trend when they land on different rows.
 
 1.  From the daily list, select a day in the month you want and press
     `c`.
@@ -12,8 +12,10 @@ stem joins it to the trend that day.
 3.  Press `[` or `]` to change month. Esc returns to the screen you
     came from.
 
-The vertical scale is the plotted min and max plus 2 lb of margin
-(the same margin in kg and stone). The current month ends at today. A month with no weights and no
-carried trend shows as empty. The two numbers are the book's
-first-and-last trend identity (3500 kcal per pound); they are not
-medical advice.
+The vertical scale runs one step below the plotted minimum and one
+step above the plotted maximum. A step is 1 kg, 1 lb, or 1 lb shown
+as one decimal of stones. The scale does not add the 2 lb margin the
+long-term chart uses. The current month ends at today. A month with
+no weights and no carried trend shows as empty. The two numbers are
+the book's first-and-last trend identity (3500 kcal per pound); they
+are not medical advice.

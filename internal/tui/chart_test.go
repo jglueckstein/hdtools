@@ -103,27 +103,14 @@ func TestChartDailyMarksAndTrendPath(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
-	rows := mustPlot(t, app.View().Content)
-	var left, right bool
-	for _, row := range rows {
-		for _, c := range row {
-			if c.r == ' ' {
-				continue
-			}
-			if !isBraille(c.r) {
-				t.Fatalf("plot paints %q, want braille dots for the mark and the trend", string(c.r))
-			}
-			m := maskOf(c.r)
-			if m&sideBits(true) != 0 {
-				left = true
-			}
-			if m&sideBits(false) != 0 {
-				right = true
-			}
-		}
+	view := app.View().Content
+	assertNoFilledDiamond(t, view)
+	plot := mustOnlinePlot(t, view)
+	if len(plot.diamondCols()) < 2 {
+		t.Fatalf("diamonds = %d, want open diamonds on the weighed days, not braille dot columns", len(plot.diamondCols()))
 	}
-	if !left || !right {
-		t.Fatalf("mark and trend dots missing: left %v right %v", left, right)
+	if !plot.hasBraille() {
+		t.Fatal("missing braille trend")
 	}
 }
 
@@ -147,23 +134,12 @@ func TestChartOmitsDailyMarkOnBlankDay(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "c")
-	raw := app.View().Content
-	view := visible(raw)
-	if !strings.Contains(view, "1") || !strings.Contains(view, "30") {
-		t.Fatalf("axis labels missing: %q", view)
-	}
 	// Days 2 and 3 have no weigh-in. They keep day 1's trend and
-	// must not grow a mark or a stem.
-	rows := mustPlot(t, raw)
-	pad := yPad(units.Kilogram)
-	trendBin := wantBrailleBin(80, 79-pad, 80+pad, brailleN)
-	for _, day := range []int{1, 2} {
-		left, right := leftBins(rows, day), rightBins(rows, day)
-		if !sameSet(left, trendBin) || !sameSet(right, trendBin) {
-			t.Fatalf("blank day %d left %v right %v, want only carried trend bin %d; column %q",
-				day+1, left, right, trendBin, columnGlyphs(rows, day))
-		}
-	}
+	// must not grow a diamond or a stem.
+	plot := mustOnlinePlot(t, app.View().Content)
+	shares := bestDayShares(t, plot, 30, []int{0, 3})
+	assertBlankDay(t, plot, shares, 1)
+	assertBlankDay(t, plot, shares, 2)
 }
 
 func TestChartUsesWeightAndTrendColors(t *testing.T) {
@@ -177,19 +153,16 @@ func TestChartUsesWeightAndTrendColors(t *testing.T) {
 	if strings.Contains(visible(view), "daily log") {
 		t.Fatalf("chart missing: %q", view)
 	}
-	rows := mustPlot(t, view)
-	// Day 1 sits on the trend, so that cell has a mark and no stem.
-	// Stem chrome is green; magenta is the weight role.
-	_, _, shared := twoDaySeriesBins()
-	mark, _, ok := binRow(rows, 0, shared, true)
-	if !ok || !cellHasFG(mark, 5) || cellHasFG(mark, 2) {
-		t.Fatalf("coincident mark seq %q, want magenta weight", mark.seq)
-	}
-	if !sameSet(leftBins(rows, 0), shared) || !sameSet(rightBins(rows, 0), shared) {
-		t.Fatalf("day 1 left %v right %v, want bin %d and no stem", leftBins(rows, 0), rightBins(rows, 0), shared)
-	}
-	if !hasFGOnBraille(view, 3) {
-		t.Fatalf("missing yellow trend on a braille cell")
+	plot := mustOnlinePlot(t, writtenANSI(t, view))
+	shares := bestDayShares(t, plot, 30, []int{0, 1})
+	for _, s := range shares {
+		lo, hi := s.bounds(0)
+		assertDiamondFG(t, plot.cellsWhere(lo, hi, func(c cellStyle) bool { return c.r == openDiamond }), 5)
+		lo, hi = s.bounds(1)
+		// The stem is green. It must not take the diamond's cell.
+		assertDiamondFG(t, plot.cellsWhere(lo, hi, func(c cellStyle) bool { return c.r == openDiamond }), 5)
+		lo, hi = s.bounds(2)
+		assertCellsFG(t, plot.cellsWhere(lo, hi, func(c cellStyle) bool { return isBraille(c.r) }), 3, "blank-day trend")
 	}
 }
 
@@ -205,14 +178,9 @@ func TestChartNoColorKeepsTwoSeries(t *testing.T) {
 	if hasChromaticSGR(view) {
 		t.Fatalf("chromatic SGR under NO_COLOR: %q", view)
 	}
-	vis := visible(view)
-	if !strings.Contains(vis, "November 1990") {
-		t.Fatalf("title missing under NO_COLOR: %q", vis)
-	}
-	mark, trend, _ := twoDaySeriesBins()
-	rows := mustPlot(t, view)
-	if !hasLeftBin(rows, 1, mark) || !hasRightBin(rows, 1, trend) {
-		t.Fatalf("series missing under NO_COLOR: day 2 column %q", columnGlyphs(rows, 1))
+	plot := mustOnlinePlot(t, view)
+	if len(plot.diamondCols()) == 0 || !plot.hasBraille() {
+		t.Fatal("NO_COLOR dropped the diamond or the braille trend")
 	}
 }
 
@@ -227,6 +195,9 @@ func TestChartEmptyMonth(t *testing.T) {
 	}
 	if strings.Contains(view, "deficit") || strings.Contains(view, " cal") {
 		t.Fatalf("analysis shown on empty month: %q", app.View().Content)
+	}
+	if n := countOnlinePlotRows(app.View().Content); n != 0 {
+		t.Fatalf("empty month has %d plot rows, want no 62-column plot", n)
 	}
 }
 
@@ -253,6 +224,13 @@ func TestChartCarryOnlyIsNotEmpty(t *testing.T) {
 	}
 	if !strings.Contains(view, "November 1990") {
 		t.Fatalf("want November chart: %q", view)
+	}
+	plot := mustOnlinePlot(t, app.View().Content)
+	if !plot.hasBraille() {
+		t.Fatal("carry-only plot has no braille trend")
+	}
+	if len(plot.diamondCols()) != 0 {
+		t.Fatal("carry-only plot has a diamond")
 	}
 }
 
@@ -416,17 +394,14 @@ func TestChartFlatSeriesHasScale(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "c")
-	view := visible(app.View().Content)
-	if !strings.Contains(view, "November 1990") {
+	if !strings.Contains(visible(app.View().Content), "November 1990") {
 		t.Fatalf("chart missing: %q", app.View().Content)
 	}
-	lo, hi, ok := chartYBounds(view)
-	if !ok {
-		t.Fatalf("no Y scale: %q", view)
-	}
-	p := yPad(units.Kilogram)
-	if hi-lo < 2*p-0.15 || hi-lo > 2*p+0.15 {
-		t.Fatalf("Y span = %.2f, want ~%.2f (2P)", hi-lo, 2*p)
+	plot := assertTickLabels(t, app.View().Content, []string{"81", "80", "79"})
+	for _, lab := range plot.tickLabels {
+		if strings.Contains(lab, ".") {
+			t.Fatalf("tick %q, want 79, 80, 81 and not a ±2 lb span", lab)
+		}
 	}
 }
 
@@ -477,15 +452,9 @@ func TestChartYRangePounds(t *testing.T) {
 	app := New(store, "mem.db", cfg)
 	app.Update(app.load())
 	press(app, "c")
-	ymin, ymax, ok := chartYBounds(app.View().Content)
-	if !ok {
-		t.Fatalf("no Y scale: %q", app.View().Content)
-	}
-	if ymin < 167.9 || ymin > 168.2 || ymax < 176.8 || ymax > 177.2 {
-		t.Fatalf("monthly Y = [%.2f, %.2f], want [168, 177]", ymin, ymax)
-	}
+	assertTickLabels(t, app.View().Content, []string{"176", "175", "174", "173", "172", "171", "170", "169"})
 	press(app, "l")
-	ymin, ymax, ok = chartYBounds(app.View().Content)
+	ymin, ymax, ok := chartYBounds(app.View().Content)
 	if !ok {
 		t.Fatalf("long-term no Y scale: %q", app.View().Content)
 	}
@@ -502,16 +471,10 @@ func TestChartYRangeKilograms(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "c")
+	assertTickLabels(t, app.View().Content, []string{"82", "81", "80", "79"})
+	press(app, "l")
 	p := yPad(units.Kilogram)
 	ymin, ymax, ok := chartYBounds(app.View().Content)
-	if !ok {
-		t.Fatal("no Y scale")
-	}
-	if ymin < 80-p-0.05 || ymin > 80-p+0.05 || ymax < 81+p-0.05 || ymax > 81+p+0.05 {
-		t.Fatalf("monthly Y = [%.3f, %.3f], want [%.3f, %.3f]", ymin, ymax, 80-p, 81+p)
-	}
-	press(app, "l")
-	ymin, ymax, ok = chartYBounds(app.View().Content)
 	if !ok {
 		t.Fatal("long-term no Y scale")
 	}
@@ -538,13 +501,13 @@ func TestChartYRangeStone(t *testing.T) {
 	app := New(store, "mem.db", cfg)
 	app.Update(app.load())
 	press(app, "c")
-	p := yPad(units.Stone)
-	ymin, ymax, ok := chartYBounds(app.View().Content)
-	if !ok {
-		t.Fatal("no Y scale")
-	}
-	if ymin < 12-p-0.05 || ymin > 12-p+0.05 || ymax < 12.5+p-0.05 || ymax > 12.5+p+0.05 {
-		t.Fatalf("monthly Y = [%.3f, %.3f], want [%.3f, %.3f]", ymin, ymax, 12-p, 12.5+p)
+	plot := assertTickLabels(t, app.View().Content, []string{
+		"12.6", "12.5", "12.4", "12.4", "12.3", "12.2", "12.1", "12.1", "12.0", "11.9",
+	})
+	for _, lab := range plot.tickLabels {
+		if strings.Contains(lab, "st") || strings.Contains(lab, "lb") {
+			t.Fatalf("tick %q, want one decimal of stones and not a ±2 lb pad", lab)
+		}
 	}
 }
 
@@ -594,15 +557,9 @@ func TestChartTitleBoxColours(t *testing.T) {
 	app := twoDayApp(t, store)
 	press(app, "c")
 	view := app.View().Content
-	if chartTitleLine(view) == "" {
-		t.Fatalf("title missing: %q", view)
-	}
-	written := writtenANSI(t, view)
-	if !hasIndexedForeground(written, 3) {
-		t.Fatalf("missing yellow title foreground: %q", written)
-	}
-	if !hasSGRCode(written, 44) {
-		t.Fatalf("missing blue title background: %q", written)
+	raw := assertHeadingShape(t, view, "November 1990")
+	if !hasIndexedForeground(writtenANSI(t, raw), 6) {
+		t.Fatal("heading is not the default cyan title role")
 	}
 }
 
@@ -625,22 +582,9 @@ func TestChartStemJoinsMarkToTrend(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
-	view := app.View().Content
-	rows := mustPlot(t, view)
-	mark, trend, _ := twoDaySeriesBins()
-	lo, hi := mark, trend
-	if lo > hi {
-		lo, hi = hi, lo
-	}
-	var missing []int
-	for b := lo + 1; b < hi; b++ {
-		if !hasLeftBin(rows, 1, b) {
-			missing = append(missing, b)
-		}
-	}
-	if len(missing) > 0 {
-		t.Fatalf("day 2 missing stem bins %v between %d and %d; plotColumn %q", missing, lo, hi, plotColumn(view, 1))
-	}
+	plot := mustOnlinePlot(t, app.View().Content)
+	shares := bestDayShares(t, plot, 30, []int{0, 1})
+	assertStemBetween(t, plot, shares, 1)
 }
 
 func TestChartNoStemWhenMarkOnTrend(t *testing.T) {
@@ -657,12 +601,12 @@ func TestChartNoStemWhenMarkOnTrend(t *testing.T) {
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "c")
-	view := app.View().Content
-	rows := mustPlot(t, view)
-	left, right := leftBins(rows, 0), rightBins(rows, 0)
-	if len(left) != 1 || !sameSet(right, left...) {
-		t.Fatalf("coincident day left %v right %v, want one shared bin and no stem; plotColumn %q", left, right, plotColumn(view, 0))
+	plot := mustOnlinePlot(t, app.View().Content)
+	if len(plot.diamondCols()) == 0 {
+		t.Fatal("missing open diamond on the weighed day")
 	}
+	shares := bestDayShares(t, plot, 30, []int{0})
+	assertNoStem(t, plot, shares, 0)
 }
 
 func TestChartStemGreen(t *testing.T) {
@@ -670,23 +614,24 @@ func TestChartStemGreen(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "c")
-	view := app.View().Content
-	rows := mustPlot(t, view)
+	plot := mustOnlinePlot(t, writtenANSI(t, app.View().Content))
+	shares := bestDayShares(t, plot, 30, []int{0, 1})
 	found := false
-	for _, row := range rows {
-		for _, c := range row {
-			m := maskOf(c.r)
-			// A pure stem cell has left dots and no right dot.
-			if !isBraille(c.r) || m&sideBits(true) == 0 || m&sideBits(false) != 0 {
-				continue
+	for _, s := range shares {
+		lo, hi := s.bounds(1)
+		stems := plot.cellsWhere(lo, hi, func(c cellStyle) bool { return isStemRune(c.r) })
+		if len(stems) == 0 {
+			t.Fatal("day 2 has no stem rune")
+		}
+		for _, c := range stems {
+			if !cellHasFG(c, 2) {
+				t.Fatalf("stem seq %q, want green", c.seq)
 			}
-			if cellHasFG(c, 2) {
-				found = true
-			}
+			found = true
 		}
 	}
 	if !found {
-		t.Fatalf("no green stem braille cell without a mark dot; first glyph %q", string(firstPlotGlyph(rows)))
+		t.Fatal("no green stem rune")
 	}
 }
 
@@ -708,23 +653,12 @@ func TestChartDailyMarkWinsSharedCell(t *testing.T) {
 	if strings.Contains(visible(view), "daily log") {
 		t.Fatalf("chart missing: %q", view)
 	}
-	rows := mustPlot(t, view)
-	found := false
-	for _, row := range rows {
-		c := row[0]
-		m := maskOf(c.r)
-		if !isBraille(c.r) || m&sideBits(true) == 0 {
-			continue
-		}
-		found = true
-		// Default weight role is blue. The mark wins this shared dot.
-		if !cellHasFG(c, 4) {
-			t.Fatalf("shared dot cell seq %q, want weight color", c.seq)
-		}
+	plot := mustOnlinePlot(t, writtenANSI(t, view))
+	diamonds := plot.cellsWhere(0, onlinePlotCols, func(c cellStyle) bool { return c.r == openDiamond })
+	if len(diamonds) == 0 {
+		t.Fatal("missing open diamond on the weight")
 	}
-	if !found {
-		t.Fatalf("shared dot missing; day 1 column %q", columnGlyphs(rows, 0))
-	}
+	assertDiamondFG(t, diamonds, 4)
 }
 
 func TestChartPWritesPDF(t *testing.T) {
@@ -1176,28 +1110,15 @@ func dec151990() time.Time {
 
 func TestChartBrailleBothColumnsNovember(t *testing.T) {
 	app := openNovemberChart(t, dec151990(), kgOnDay{1, 80}, kgOnDay{30, 82})
-	rows := mustPlot(t, monthlyView(t, app))
-	if w := plotWidth(rows); w != 30 {
-		t.Fatalf("day columns = %d, want 30", w)
+	view := monthlyView(t, app)
+	plot := mustOnlinePlot(t, view)
+	assertNoFilledDiamond(t, view)
+	cols := plot.diamondCols()
+	if len(cols) != 2 {
+		t.Fatalf("diamonds = %d, want two open diamonds on the 62-column plot", len(cols))
 	}
-	for day := 0; day < 30; day++ {
-		both := false
-		for _, row := range rows {
-			r := row[day].r
-			if r == ' ' {
-				continue
-			}
-			if !isBraille(r) {
-				t.Fatalf("day %d paints %q, want one braille rune with a left and a right dot", day+1, string(r))
-			}
-			m := maskOf(r)
-			if m&sideBits(true) != 0 && m&sideBits(false) != 0 {
-				both = true
-			}
-		}
-		if !both {
-			t.Fatalf("day %d has no braille rune with both dot columns; column %q", day+1, columnGlyphs(rows, day))
-		}
+	if !plot.slotHasBraille(cols[0]+1, cols[1]) {
+		t.Fatal("no braille on the days between the diamonds")
 	}
 }
 
@@ -1205,83 +1126,48 @@ func TestChartBrailleCloseMarksBins(t *testing.T) {
 	app := openNovemberChart(t, dec151990(),
 		kgOnDay{1, 80}, kgOnDay{2, 80.55}, kgOnDay{3, 80.85}, kgOnDay{30, 82})
 	view := monthlyView(t, app)
-	ymin, ymax, ok := chartYBounds(view)
-	pad := yPad(units.Kilogram)
-	if !ok || ymin < 80-pad-0.06 || ymin > 80-pad+0.06 || ymax < 82+pad-0.06 || ymax > 82+pad+0.06 {
-		t.Fatalf("Y labels [%.2f, %.2f], want padded 80..82 kg", ymin, ymax)
-	}
-	rows := mustPlot(t, view)
-	if !hasLeftBin(rows, 1, 12) || !hasLeftBin(rows, 2, 14) || hasLeftBin(rows, 1, 14) {
-		t.Fatalf("day 2 left %v, day 3 left %v, want bins 12 and 14; day2 %q day3 %q",
-			leftBins(rows, 1), leftBins(rows, 2), columnGlyphs(rows, 1), columnGlyphs(rows, 2))
+	plot := assertTickLabels(t, view, []string{"83", "82", "81", "80", "79"})
+	if len(plot.diamondCols()) != 4 {
+		t.Fatalf("diamonds = %d, want one open diamond on each weighed day", len(plot.diamondCols()))
 	}
 }
 
 func TestChartBrailleStemIsGreen(t *testing.T) {
 	enableChroma(t)
 	app := openNovemberChart(t, dec151990(),
-		kgOnDay{1, 80}, kgOnDay{2, 80.55}, kgOnDay{3, 80.85}, kgOnDay{30, 82})
-	rows := mustPlot(t, monthlyView(t, app))
-	// Stems 9–11 share the trend's cell (bin 8). That rune is the
-	// stem, so it is green rather than the trend role.
-	stem, _, ok := binRow(rows, 1, 8, false)
-	if !ok || !cellHasFG(stem, 2) || cellHasFG(stem, 1) {
-		t.Fatalf("S2 day 2 stem cell seq %q, want stem green", stem.seq)
-	}
-	mark, _, ok := binRow(rows, 1, 12, true)
-	if !ok || !cellHasFG(mark, 4) {
-		t.Fatalf("S2 day 2 mark cell seq %q, want weight role", mark.seq)
-	}
-	for _, row := range rows {
-		c := row[10]
-		if !isBraille(c.r) || maskOf(c.r) == 0 {
-			continue
+		kgOnDay{1, 80}, kgOnDay{2, 100}, kgOnDay{30, 82})
+	plot := mustOnlinePlot(t, writtenANSI(t, monthlyView(t, app)))
+	shares := bestDayShares(t, plot, 30, []int{0, 1, 29})
+	for _, s := range shares {
+		lo, hi := s.bounds(1)
+		stems := plot.cellsWhere(lo, hi, func(c cellStyle) bool { return isStemRune(c.r) })
+		if len(stems) == 0 {
+			t.Fatal("day 2 has no stem rune")
 		}
-		if !cellHasFG(c, 1) {
-			t.Fatalf("carry day cell seq %q, want trend role", c.seq)
-		}
+		assertCellsFG(t, stems, 2, "stem")
 	}
 }
 
 func TestChartBrailleEightByFour(t *testing.T) {
 	app := openNovemberChart(t, dec151990(),
 		kgOnDay{1, 80}, kgOnDay{2, 80.55}, kgOnDay{3, 80.85}, kgOnDay{30, 82})
-	rows := mustPlot(t, monthlyView(t, app))
-	painted := 0
-	for _, row := range rows {
-		for _, c := range row {
-			if c.r == ' ' {
-				continue
-			}
-			painted++
-			if !isBraille(c.r) {
-				t.Fatalf("plot cell %q is not a braille rune with 4 vertical dots", string(c.r))
-			}
-		}
+	plot := mustOnlinePlot(t, monthlyView(t, app))
+	if len(plot.rows) != onlinePlotRows {
+		t.Fatalf("plot rows = %d, want %d, not an eight-by-four braille grid", len(plot.rows), onlinePlotRows)
 	}
-	if painted == 0 {
-		t.Fatal("plot has no braille cells for 8×4 bins")
+	if len(plot.diamondCols()) == 0 {
+		t.Fatal("plot has no open diamond; still an all-braille grid")
 	}
 }
 
 func TestChartBrailleStemInsideRow(t *testing.T) {
 	enableChroma(t)
 	app := openNovemberChart(t, dec151990(),
-		kgOnDay{1, 80}, kgOnDay{2, 80.50}, kgOnDay{30, 82})
-	rows := mustPlot(t, monthlyView(t, app))
-	if !sameSet(leftBins(rows, 1), 8, 9, 10, 11) || !sameSet(rightBins(rows, 1), 8) {
-		t.Fatalf("day 2 left %v right %v, want stem dots at 9 and 10 with mark 11 and trend 8 in one row; column %q",
-			leftBins(rows, 1), rightBins(rows, 1), columnGlyphs(rows, 1))
-	}
-	// Bins 8 through 11 share one rune. The stem wins that cell.
-	shared, _, ok := binRow(rows, 1, 11, true)
-	if !ok || !cellHasFG(shared, 2) || cellHasFG(shared, 4) {
-		t.Fatalf("S4 shared cell seq %q, want stem green", shared.seq)
-	}
-	if !sameSet(leftBins(rows, 0), 7) || !sameSet(rightBins(rows, 0), 7) {
-		t.Fatalf("day 1 left %v right %v, want bin 7 and no stem; column %q",
-			leftBins(rows, 0), rightBins(rows, 0), columnGlyphs(rows, 0))
-	}
+		kgOnDay{1, 80}, kgOnDay{2, 100}, kgOnDay{30, 82})
+	plot := mustOnlinePlot(t, monthlyView(t, app))
+	shares := bestDayShares(t, plot, 30, []int{0, 1, 29})
+	assertNoStem(t, plot, shares, 0)
+	assertStemBetween(t, plot, shares, 1)
 }
 
 func TestChartBrailleNoColorCarryIsBold(t *testing.T) {
@@ -1291,28 +1177,29 @@ func TestChartBrailleNoColorCarryIsBold(t *testing.T) {
 	if hasChromaticSGR(view) {
 		t.Fatalf("chromatic SGR under NO_COLOR: %q", view)
 	}
-	rows := mustPlot(t, view)
-	lit := func(day int) []cellStyle {
-		var out []cellStyle
-		for _, row := range rows {
-			c := row[day]
-			if isBraille(c.r) && maskOf(c.r) != 0 {
-				out = append(out, c)
+	plot := mustOnlinePlot(t, view)
+	shares := bestDayShares(t, plot, 30, []int{0})
+	for _, s := range shares {
+		lo, hi := s.bounds(0)
+		diamonds := plot.cellsWhere(lo, hi, func(c cellStyle) bool { return c.r == openDiamond })
+		if len(diamonds) == 0 {
+			t.Fatal("weigh-in is not an open diamond")
+		}
+		for _, c := range diamonds {
+			if c.bold || isBraille(c.r) {
+				t.Fatalf("diamond bold %v rune %q, want a non-bold open diamond", c.bold, string(c.r))
 			}
 		}
-		return out
-	}
-	weighIn, carry := lit(0), lit(1)
-	if len(weighIn) != 1 || len(carry) != 1 {
-		t.Fatalf("weigh-in cells %d, carry cells %d, want one each; columns %q %q",
-			len(weighIn), len(carry), columnGlyphs(rows, 0), columnGlyphs(rows, 1))
-	}
-	got, want := maskOf(weighIn[0].r), maskOf(carry[0].r)
-	if got != want || got&sideBits(true) == 0 || got&sideBits(false) == 0 {
-		t.Fatalf("masks weigh-in %#x carry %#x, want the same two-dot rune", got, want)
-	}
-	if weighIn[0].bold || !carry[0].bold {
-		t.Fatalf("bold weigh-in %v carry %v, want the carry day only", weighIn[0].bold, carry[0].bold)
+		bLo, bHi := s.bounds(1)
+		blank := plot.cellsWhere(bLo, bHi, func(c cellStyle) bool { return isBraille(c.r) })
+		if len(blank) == 0 {
+			t.Fatal("blank day has no braille trend")
+		}
+		for _, c := range blank {
+			if !c.bold {
+				t.Fatal("blank-day trend is not bold")
+			}
+		}
 	}
 }
 
@@ -1321,15 +1208,12 @@ func TestChartBrailleNoColorKeepsDots(t *testing.T) {
 	app := openNovemberChart(t, dec151990(),
 		kgOnDay{1, 80}, kgOnDay{2, 80.55}, kgOnDay{3, 80.85}, kgOnDay{30, 82})
 	view := monthlyView(t, app)
-	rows := mustPlot(t, view)
-	_, markRow, markOK := binRow(rows, 1, 12, true)
-	_, trendRow, trendOK := binRow(rows, 1, 8, false)
-	if !markOK || !trendOK || markRow == trendRow {
-		t.Fatalf("day 2 mark row %d ok %v, trend row %d ok %v, want different braille cells; column %q",
-			markRow, markOK, trendRow, trendOK, columnGlyphs(rows, 1))
-	}
 	if hasChromaticSGR(view) {
 		t.Fatalf("chromatic SGR under NO_COLOR: %q", view)
+	}
+	plot := mustOnlinePlot(t, view)
+	if len(plot.diamondCols()) == 0 || !plot.hasBraille() {
+		t.Fatal("NO_COLOR dropped the diamond or the braille trend")
 	}
 	if !strings.Contains(visible(view), "November 1990") {
 		t.Fatalf("title missing: %q", visible(view))

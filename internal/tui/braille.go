@@ -1,18 +1,17 @@
 package tui
 
-// Braille dots are the on-screen chart paint. A day or a bucket stays
-// one character column; the two dot columns are the two horizontal
-// positions, and four dots replace the old eight inclusive rows. Both
-// the monthly chart and the long-term chart call this file so the bin
-// rule cannot drift, and so neither of those files absorbs the grid.
+// Braille dots are the long-term chart's paint. A bucket stays one
+// character column; the two dot columns are the two horizontal
+// positions, and four dots replace eight inclusive rows. The monthly
+// chart does not call this grid. The bin rule stays here so the
+// long-term painter does not absorb it.
 //
 // Bin group 0 sits on the bottom row, toward Ymin, because weight
-// still has to increase upward. On the monthly chart a stem dot
-// wins the cell, even when a mark or a trend dot shares it. A cell
-// with no stem keeps the mark, then the trend. On the long-term
-// chart the trend wins, and that cell stays bold. Stems are monthly
-// only, and only in the mark's own column. This file does not
-// choose the Y pad, the span, the buckets, or the PDF.
+// still has to increase upward. On the long-term chart the trend
+// wins, and that cell stays bold. The monthly branch of the tone
+// rule remains so a stem, a mark, and a trend still have one order
+// if a caller passes monthly. This file does not choose the Y pad,
+// the span, the buckets, or the PDF.
 
 import "math"
 

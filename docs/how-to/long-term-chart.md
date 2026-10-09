@@ -17,7 +17,7 @@ The horizontal axis is labeled at month starts (`Sep 90`). If those
 labels would collide, they stack (`Sep` over `90`) or skip months.
 
 The vertical scale is the plotted min and max plus 2 lb of margin
-(the same margin in kg and stone), as on the monthly chart.
+(the same margin in kg and stone).
 
 Loss and Daily deficit use the same first-and-last trend identity as
 the monthly chart (3500 kcal per pound); they are not medical
