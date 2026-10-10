@@ -422,6 +422,70 @@ func assertBlankDay(t *testing.T, p onlinePlot, shares []dayShare, day int) {
 	}
 }
 
+// assertFullStemBar rejects the library half-tips. A stem that joins
+// the diamond to the trend is U+2502 on every cell of the segment.
+func assertFullStemBar(t *testing.T, p onlinePlot, shares []dayShare, day int) {
+	t.Helper()
+	for _, s := range shares {
+		lo, hi := s.bounds(day)
+		stems := p.cellsWhere(lo, hi, func(c cellStyle) bool { return isStemRune(c.r) })
+		if len(stems) == 0 {
+			t.Fatalf("day %d has no stem bar", day+1)
+		}
+		for _, c := range stems {
+			if c.r != '\u2502' {
+				t.Fatalf("day %d stem %q, want U+2502", day+1, string(c.r))
+			}
+		}
+	}
+}
+
+// assertStemReachesTrend requires that bar on the trend row in the
+// diamond's column. A one-row gap has no row between the two marks,
+// so the between-row check cannot see it.
+func assertStemReachesTrend(t *testing.T, p onlinePlot, shares []dayShare, day int) {
+	t.Helper()
+	for _, s := range shares {
+		lo, hi := s.bounds(day)
+		dRow, dCol := -1, -1
+		for r, row := range p.rows {
+			for c := lo; c < hi && c < len(row); c++ {
+				if row[c].r == openDiamond {
+					dRow, dCol = r, c
+				}
+			}
+		}
+		if dCol < 0 {
+			t.Fatalf("day %d has no diamond", day+1)
+		}
+		trendRow := -1
+		for r, row := range p.rows {
+			for c := lo; c < hi && c < len(row); c++ {
+				if c == dCol || !isBraille(row[c].r) {
+					continue
+				}
+				if trendRow >= 0 && trendRow != r {
+					t.Fatalf("day %d braille on rows %d and %d", day+1, trendRow, r)
+				}
+				trendRow = r
+			}
+		}
+		if trendRow < 0 {
+			t.Fatalf("day %d has no trend beside the diamond", day+1)
+		}
+		gap := dRow - trendRow
+		if gap < 0 {
+			gap = -gap
+		}
+		if gap != 1 {
+			t.Fatalf("day %d diamond row %d trend row %d, want adjacent rows", day+1, dRow, trendRow)
+		}
+		if got := p.rows[trendRow][dCol].r; got != '\u2502' {
+			t.Fatalf("day %d trend cell %q, want U+2502", day+1, string(got))
+		}
+	}
+}
+
 func assertStemBetween(t *testing.T, p onlinePlot, shares []dayShare, day int) {
 	t.Helper()
 	for _, s := range shares {
@@ -468,6 +532,15 @@ func assertNoFilledDiamond(t *testing.T, view string) {
 	if strings.ContainsRune(visible(view), filledDiamond) {
 		t.Fatal("view has a filled diamond")
 	}
+}
+
+// plotLabelCol is the plot column where text starts on the day-label
+// line. The five gutter columns are not plot columns.
+func plotLabelCol(line, text string) int {
+	if len(line) < onlineGutterCols {
+		return -1
+	}
+	return strings.Index(line[onlineGutterCols:], text)
 }
 
 func dayInts(line string) []int {
@@ -716,6 +789,7 @@ func TestOnlineStemFloatAndSinker(t *testing.T) {
 		shares := bestDayShares(t, plot, 30, []int{0, 1})
 		assertNoStem(t, plot, shares, 0)
 		assertStemBetween(t, plot, shares, 1)
+		assertFullStemBar(t, plot, shares, 1)
 		for _, s := range shares {
 			lo, hi := s.bounds(1)
 			assertDiamondFG(t, plot.cellsWhere(lo, hi, func(c cellStyle) bool { return c.r == openDiamond }), 4)
@@ -735,6 +809,7 @@ func TestOnlineStemFloatAndSinker(t *testing.T) {
 		plot := mustOnlinePlot(t, writtenANSI(t, view))
 		shares := bestDayShares(t, plot, 30, []int{0, 1})
 		assertStemBetween(t, plot, shares, 1)
+		assertFullStemBar(t, plot, shares, 1)
 		for _, s := range shares {
 			lo, hi := s.bounds(1)
 			assertDiamondFG(t, plot.cellsWhere(lo, hi, func(c cellStyle) bool { return c.r == openDiamond }), 4)
@@ -742,6 +817,17 @@ func TestOnlineStemFloatAndSinker(t *testing.T) {
 			assertCellsFG(t, stems, 2, "sinker stem")
 		}
 	})
+}
+
+func TestOnlineStemJoinsAdjacentRows(t *testing.T) {
+	// 80 then 80.1 kg. Day 2's trend stays 80.0. On the 79 to 81.1
+	// canvas those two values round to neighboring rows, so the stem
+	// has no row between the diamond and the trend.
+	_, plot := novemberPlot(t, dec151990(), config.Default(),
+		kgPoint(time.November, 1, 80), kgPoint(time.November, 2, 80.1))
+	shares := bestDayShares(t, plot, 30, []int{0, 1})
+	assertNoStem(t, plot, shares, 0)
+	assertStemReachesTrend(t, plot, shares, 1)
 }
 
 func TestOnlineWorkoutSameDiamond(t *testing.T) {
@@ -883,6 +969,27 @@ func TestOnlineAxisStone(t *testing.T) {
 	}
 }
 
+func TestOnlineStoneCanvasIsOnePoundPastData(t *testing.T) {
+	// 80 kg is about 176.37 lb, not a whole pound. The canvas is one
+	// pound past that value. Snapping onto the 176 and 177 ticks
+	// leaves less than a pound of room.
+	v, err := units.FromKG(80, units.Stone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lo, hi, ticks := stoneAxis(v, v)
+	minLb := v * lbPerStone
+	wantLo := (minLb - 1) / lbPerStone
+	wantHi := (minLb + 1) / lbPerStone
+	const eps = 1e-9
+	if lo < wantLo-eps || lo > wantLo+eps || hi < wantHi-eps || hi > wantHi+eps {
+		t.Fatalf("canvas [%v, %v], want one pound past the data [%v, %v]", lo, hi, wantLo, wantHi)
+	}
+	if len(ticks) != 2 || ticks[0].label != "12.6" || ticks[1].label != "12.6" {
+		t.Fatalf("ticks = %+v, want the pounds inside that scale, both labeled 12.6", ticks)
+	}
+}
+
 func TestOnlineCrowdedEndTicks(t *testing.T) {
 	view, _ := novemberPlot(t, dec151990(), config.Default(),
 		kgPoint(time.November, 1, 40), kgPoint(time.November, 30, 120))
@@ -938,6 +1045,12 @@ func TestOnlineCurrentMonthEndsToday(t *testing.T) {
 	if hasDay(days, 15) || hasDay(days, 30) {
 		t.Fatalf("day labels %v include a day that is not plotted", days)
 	}
+	// A 30-day month gives day 10 columns 18 through 21 at most.
+	// The two digits must sit in that share, not on the empty tail.
+	col := plotLabelCol(dayLabelLine(view), "10")
+	if col < 18 || col > 20 {
+		t.Fatalf("day 10 label column %d, want it under that day", col)
+	}
 	// Ten days of a 30-day month take at most 22 columns when both
 	// remainder columns fall on days 1 through 10.
 	if !plot.columnsBlank(22, onlinePlotCols) {
@@ -950,6 +1063,24 @@ func TestOnlineCurrentMonthEndsToday(t *testing.T) {
 	// 772 is 1.0 kg over 10 days. 257 would be that loss over 30 days.
 	if strings.Contains(cap, "257") {
 		t.Fatalf("caption %q used the 30-day deficit", cap)
+	}
+}
+
+func TestOnlineDayLabelsSkipUnplottedStart(t *testing.T) {
+	view, _ := novemberPlot(t, dec151990(), config.Default(),
+		kgPoint(time.November, 5, 80), kgPoint(time.November, 20, 82))
+	line := dayLabelLine(view)
+	days := dayInts(line)
+	if !hasDay(days, 5) || !hasDay(days, 30) {
+		t.Fatalf("day labels %v, want first plotted day 5 and last plotted day 30", days)
+	}
+	if hasDay(days, 1) {
+		t.Fatalf("day labels %v include unplotted day 1", days)
+	}
+	// Day 5 starts in columns 8 through 10. Column 0 is day 1.
+	col := plotLabelCol(line, "5")
+	if col < 8 || col > 10 {
+		t.Fatalf("day 5 label column %d, want it under that day", col)
 	}
 }
 

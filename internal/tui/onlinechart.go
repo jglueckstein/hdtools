@@ -92,7 +92,7 @@ func renderOnline(span chartspan.Span, year int, month time.Month, unit units.Un
 
 	var b strings.Builder
 	writeOnlineRows(&b, &m, placed)
-	b.WriteString(onlineDayLabels(span))
+	b.WriteString(onlineDayLabels(samples, share))
 	b.WriteByte('\n')
 	return b.String()
 }
@@ -159,13 +159,18 @@ func onlineAxis(min, max float64, unit units.Unit) (float64, float64, []onlineTi
 }
 
 func stoneAxis(min, max float64) (float64, float64, []onlineTick) {
-	low := int(math.Ceil(min*lbPerStone - 1 - onlineAxisEps))
-	high := int(math.Floor(max*lbPerStone + 1 + onlineAxisEps))
+	minLb := min * lbPerStone
+	maxLb := max * lbPerStone
+	// The canvas is one pound past the data even when that end is
+	// not a whole pound. Ticks are the whole pounds inside it.
+	// Using those ticks as the canvas would snap inward.
+	lo := (minLb - 1) / lbPerStone
+	hi := (maxLb + 1) / lbPerStone
+	low := int(math.Ceil(minLb - 1 - onlineAxisEps))
+	high := int(math.Floor(maxLb + 1 + onlineAxisEps))
 	if high < low {
 		high = low
 	}
-	lo := float64(low) / lbPerStone
-	hi := float64(high) / lbPerStone
 	ticks := make([]onlineTick, 0, high-low+1)
 	for lb := high; lb >= low; lb-- {
 		v := float64(lb) / lbPerStone
@@ -288,9 +293,12 @@ func lightTrend(grid *graph.BrailleGrid, col, row int) {
 }
 
 // paintStems draws the segment from that day's weight to that day's
-// trend. GetLinePoints plus DrawLinePoints is the library's line
-// between two points. A vertical helper would also paint past the
-// segment. The same row means no stem, including equal values.
+// trend. GetLinePoints stays inside the segment, where a vertical
+// helper would paint past it. The same row means no stem, including
+// equal values. The library's own line leaves a half-tip on each
+// end. That tip sits in the wrong half of the trend cell, and a
+// one-row gap has no middle bar once the diamond covers the weight
+// cell, so every cell of the segment is the full vertical.
 func paintStems(m *canvas.Model, samples []onlineSample, share monthShare, lo, hi float64) {
 	style := onlineStemStyle()
 	for _, s := range samples {
@@ -308,7 +316,9 @@ func paintStems(m *canvas.Model, samples []onlineSample, share monthShare, lo, h
 		}
 		from := canvas.Point{X: c0, Y: weightRow}
 		to := canvas.Point{X: c0, Y: trendRow}
-		graph.DrawLinePoints(m, graph.GetLinePoints(from, to), runes.ThinLineStyle, style)
+		for _, p := range graph.GetLinePoints(from, to) {
+			m.SetRuneWithStyle(p, runes.LineVertical, style)
+		}
 	}
 }
 
@@ -350,36 +360,42 @@ func writeOnlineRows(b *strings.Builder, m *canvas.Model, ticks map[int]string) 
 	}
 }
 
-// onlineDayLabels names the first and last plotted days. A day that
-// was not plotted, including the empty rest of the current month, is
-// not labeled. The line is not a plot row: its fifth cell is a space.
-func onlineDayLabels(span chartspan.Span) string {
-	n := len(span.Points)
-	if n == 0 {
+// onlineDayLabels names the first and last days that were drawn, in
+// that day's columns. Clip begins on day 1, so a series that starts
+// later must not label those blank days, and the empty tail of the
+// current month stays blank. The line is not a plot row: its fifth
+// cell is a space.
+func onlineDayLabels(samples []onlineSample, share monthShare) string {
+	first := -1
+	last := -1
+	for _, s := range samples {
+		if !s.hasWeight && !s.hasTrend {
+			continue
+		}
+		if first < 0 {
+			first = s.day
+		}
+		last = s.day
+	}
+	if first < 0 {
 		return ""
 	}
-	first := span.Points[0].Day.Day()
-	last := span.Points[n-1].Day.Day()
 	buf := make([]rune, monthCols)
 	for i := range buf {
 		buf[i] = ' '
 	}
-	put := func(col int, text string) {
+	put := func(day int) {
+		text := strconv.Itoa(day + 1)
+		col, _ := share.bounds(day)
 		for i, r := range text {
 			if col+i >= 0 && col+i < len(buf) {
 				buf[col+i] = r
 			}
 		}
 	}
-	firstText := strconv.Itoa(first)
-	put(0, firstText)
+	put(first)
 	if last != first {
-		lastText := strconv.Itoa(last)
-		start := monthCols - len(lastText)
-		if start < len(firstText) {
-			start = len(firstText)
-		}
-		put(start, lastText)
+		put(last)
 	}
 	return strings.Repeat(" ", monthGutter) + string(buf)
 }
