@@ -224,7 +224,7 @@ and Lip Gloss v2. That is not this slice.
 Change record (monthly Online chart):
 [docs/superpowers/specs/2026-10-08-monthly-online-chart.md](docs/superpowers/specs/2026-10-08-monthly-online-chart.md).
 This spec replaces the on-screen monthly Braille-cell picture
-with the Hacker's Diet Online picture. It is not shipped. The
+with the Hacker's Diet Online picture. It is shipped. The
 monthly screen drops the coloured title box and the shared ±2 lb
 margin. The long-term screen keeps both until
 [#78](https://github.com/jglueckstein/hdtools/issues/78).
