@@ -1,16 +1,14 @@
 package tui
 
-// The monthly chart is the book's signal/noise plot for one sitting:
-// a month-year title box, daily weight as marks, green stems from
-// each mark to the trend (floats and sinkers), the trend path, and
-// Monthly Loss and Daily Deficit from first and last trend of the
-// plotted span. Title-box and stem colours are Excel defaults, not
-// [colors] roles. The dots are Braille runes from braille.go; this
-// file still owns the title, the Y labels, and the loss line. Clip,
-// empty, Y pad, and analysis live in chartspan so the PDF cannot
-// drift. p writes that picture through chartpdf into the configured
-// PDF directory, not the process working directory. This file does
-// not import a PDF library.
+// The monthly chart screen is one sitting of the book: the keys, the
+// PDF write, the database line, and Monthly Loss / Daily Deficit.
+// The on-screen picture is the Online chart in onlinechart.go. The
+// yellow-on-blue title box stays in this file because the long-term
+// chart still uses it. Clip, empty, the ±2 lb pad, and the caption
+// live in chartspan so the PDF cannot drift. p writes that PDF
+// through chartpdf into the configured directory, not the process
+// working directory. This file does not import a PDF library and
+// does not paint the long-term chart.
 
 import (
 	"fmt"
@@ -131,22 +129,17 @@ func (a *App) chartView() string {
 	p := a.pal
 	unit := a.cfg.DisplayUnit
 	span := chartspan.Clip(a.logs, a.month.year, a.month.month, localToday())
-	last := len(span.Points)
-	plotWidth := 6 + last
-	if last <= 0 {
-		plotWidth = 6 + daysInMonth(a.month.year, a.month.month)
-	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s\n", monthYearBox(a.month.month, a.month.year, plotWidth))
+	fmt.Fprintf(&b, "%s\n", onlineHeading(a.month.month, a.month.year, p))
 	fmt.Fprintf(&b, "%s\n\n", p.muted.Render(fmt.Sprintf("db: %s   weight %s", a.dbPath, unit)))
 
-	if last <= 0 || span.Empty() {
+	if len(span.Points) == 0 || span.Empty() {
 		fmt.Fprintf(&b, "%s\n", p.muted.Render("(empty month)"))
 		b.WriteString(a.chartFooter())
 		return b.String()
 	}
 
-	b.WriteString(renderPlot(span, unit, p))
+	b.WriteString(renderOnline(span, a.month.year, a.month.month, unit, p))
 	if line, ok := span.Analysis(unit); ok {
 		fmt.Fprintf(&b, "\n%s\n", line)
 	}
@@ -174,57 +167,6 @@ func chartEmpty(span []sheetDay) bool {
 		}
 	}
 	return true
-}
-
-func renderPlot(span chartspan.Span, unit units.Unit, p palette) string {
-	n := len(span.Points)
-	ymin, ymax, ok := chartspan.YRange(span, unit)
-	if !ok {
-		return ""
-	}
-	grid := newBrailleGrid(n, true)
-	for i, d := range span.Points {
-		var wy, ty float64
-		hw, ht := false, false
-		if d.Weight != nil {
-			y, err := units.FromKG(*d.Weight, unit)
-			if err == nil {
-				wy, hw = y, true
-			}
-		}
-		if d.HasTrend {
-			y, err := units.FromKG(d.Trend, unit)
-			if err == nil {
-				ty, ht = y, true
-			}
-		}
-		grid.plotMonthly(i, wy, hw, ty, ht, ymin, ymax)
-	}
-
-	var b strings.Builder
-	for r := 0; r < plotRows; r++ {
-		frac := 0.0
-		if plotRows > 1 {
-			frac = float64(r) / float64(plotRows-1)
-		}
-		labelY := ymax - frac*(ymax-ymin)
-		fmt.Fprintf(&b, "%5.1f-", labelY)
-		for c := 0; c < n; c++ {
-			b.WriteString(grid.paint(r, c, p))
-		}
-		b.WriteByte('\n')
-	}
-	fmt.Fprintf(&b, "%s%d", strings.Repeat(" ", 6), 1)
-	if n > 1 {
-		last := fmt.Sprintf("%d", span.Points[n-1].Day.Day())
-		pad := n - 1 - len(last)
-		if pad < 1 {
-			pad = 1
-		}
-		fmt.Fprintf(&b, "%s%s", strings.Repeat(" ", pad), last)
-	}
-	b.WriteByte('\n')
-	return b.String()
 }
 
 func yPad(unit units.Unit) float64 {

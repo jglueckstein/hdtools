@@ -231,7 +231,10 @@ func longAnalysis(span []sheetDay, unit units.Unit) (string, bool) {
 
 func renderLongPlot(orig, span []sheetDay, unit units.Unit, p palette, daily bool) string {
 	n := len(span)
-	ymin, ymax, ok := longYRange(span, unit, daily)
+	// Scale the day's weights and trend, not the bucket. A bucket
+	// keeps only the trend, and the 170 lb to 175 lb series would
+	// otherwise lose the weigh-in and stop spanning 168 lb to 177 lb.
+	ymin, ymax, ok := longYRange(orig, unit, true)
 	if !ok {
 		return ""
 	}

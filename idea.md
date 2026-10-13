@@ -34,6 +34,9 @@ charts. ntcharts is the later work
 ([#77](https://github.com/jglueckstein/hdtools/issues/77),
 [#79](https://github.com/jglueckstein/hdtools/issues/79),
 [#78](https://github.com/jglueckstein/hdtools/issues/78)).
+The monthly Online picture is drafted, not shipped, in
+[docs/superpowers/specs/2026-10-08-monthly-online-chart.md](docs/superpowers/specs/2026-10-08-monthly-online-chart.md).
+The Charm v2 slice still keeps the Braille-cell charts.
 
 Color schemes should be user-configurable in the same config file as
 display units (`[colors]` table). The user names roles (`title`,
@@ -217,6 +220,17 @@ Change record (high-resolution on-screen charts):
 
 A later change moves charts onto ntcharts, after Bubble Tea v2
 and Lip Gloss v2. That is not this slice.
+
+Change record (monthly Online chart):
+[docs/superpowers/specs/2026-10-08-monthly-online-chart.md](docs/superpowers/specs/2026-10-08-monthly-online-chart.md).
+This spec replaces the on-screen monthly Braille-cell picture
+with the Hacker's Diet Online picture. It is shipped. The
+monthly screen drops the coloured title box and the shared ±2 lb
+margin. The long-term screen keeps both until
+[#78](https://github.com/jglueckstein/hdtools/issues/78).
+The PDF keeps the existing vector page, including its title box.
+Monthly Loss and Daily Deficit stay the pencil identity until
+[#79](https://github.com/jglueckstein/hdtools/issues/79).
 
 ## Meal Planning
 
