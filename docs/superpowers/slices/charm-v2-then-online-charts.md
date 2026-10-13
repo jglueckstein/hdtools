@@ -159,7 +159,7 @@ This record slices the Charm upgrade and the on-screen Hacker's Diet
 Online charts into four pieces. The look and the stack were settled in
 the grill. Each slice is one engagement: the upgrade, the monthly
 picture, the caption numbers, then the long-term picture. All four
-slices are accepted. S1 shipped as #81. S2 is #77.
+slices are accepted. S1 shipped as #81. S2 shipped as #85.
 S3 is #79, and S4 is #78.
 
 ## S1 — Upgrade Charm to v2 and leave every screen as it is — decision-boundary

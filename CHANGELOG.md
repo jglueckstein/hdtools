@@ -69,7 +69,7 @@
   stem, on a fixed 62-by-16 plot with a plain month-year heading.
   The PDF page is unchanged. A bucketed long-term chart still draws
   only the trend, and its scale includes each day's weigh-in, so
-  170 lb to 175 lb stays about 168 lb to 177 lb
+  170 lb to 175 lb stays about 168 lb to 177 lb (#85)
 - AGENTS.md records that integration stays on the feature branch,
   targets master, and keeps this changelog under Unreleased. (#84)
 - TUI uses Charm v2 (Bubble Tea, Lip Gloss, and bubbles). Screens,

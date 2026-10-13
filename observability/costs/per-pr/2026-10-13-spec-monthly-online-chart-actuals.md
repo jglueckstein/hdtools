@@ -2,7 +2,7 @@
 date: 2026-10-13
 branch: spec/monthly-online-chart
 issue: "#77"
-pr: null
+pr: "#85"
 task_summary: >
   Draw the monthly chart as the Hacker's Diet Online picture and
   leave the pencil caption, the PDF page, and the long-term drawing.
@@ -14,7 +14,7 @@ stages_run:
   - code-reviewer
   - integration-agent
 review_cycles: 2
-files_changed: 21
+files_changed: 23
 languages: [go, markdown]
 tokens_by_stage:
   - stage: spec-writer
