@@ -324,6 +324,7 @@
   cannot tell a decline from a first measurement.
 - **Signal**: workflow
 - **Constraint**: none
+- **Promoted**: 2026-10-14 → AGENTS.md GOTCHAS: "Every harness GC rule is auto-fix false, so findings become issues."
 - **Session metadata**:
   - Duration: unknown
   - Model tiers used: unknown

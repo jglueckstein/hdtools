@@ -64,6 +64,9 @@
 
 ### Changed
 
+- AGENTS.md records that every harness GC rule is auto-fix false,
+  so findings become issues. A same-package unused name is not
+  dead code until a module-wide search agrees. (#92)
 - On-screen monthly chart is the Hacker's Diet Online picture: a
   Braille trend, an open diamond on each weighed day, and a green
   stem, on a fixed 62-by-16 plot with a plain month-year heading.
