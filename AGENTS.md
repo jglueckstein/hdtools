@@ -34,6 +34,11 @@
   Unreleased. Commit the reflection on that feature branch before the
   merge. The integration-agent file checks out `main` and writes a
   dated changelog; that file loses to this note.
+- Every harness GC rule is auto-fix false, so findings become issues.
+  A same-package unused name is not dead code until a module-wide
+  search agrees. `plotMonthly` in `braille.go` is unreferenced on
+  purpose; the long-term chart still calls `newBrailleGrid` with
+  `monthly` false.
 - On Grok 1.0.46, `spawn_subagent` rejects
   `ai-literacy-superpowers:<name>` even when the error lists that
   string as available. Plugin files are `agents/<name>.agent.md`, and
