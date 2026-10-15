@@ -64,6 +64,7 @@
 
 ### Changed
 
+- The backlog record says the on-screen caption rate is shipped. (#95)
 - On-screen Monthly Loss and Daily Deficit use the last seven trend
   values for the current month and a straight-line fit for every
   other month and every long-term window. The printed loss is the
