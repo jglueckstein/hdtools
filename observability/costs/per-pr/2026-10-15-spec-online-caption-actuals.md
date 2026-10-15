@@ -2,7 +2,7 @@
 date: 2026-10-15
 branch: spec/online-caption
 issue: "#79"
-pr: null
+pr: "#93"
 task_summary: Rate on-screen Monthly Loss and Daily Deficit from the last seven trends or a straight-line fit.
 progressed_slice: S3
 stages_run: [spec-writer, tdd-agent, implementer, code-reviewer, integration-agent]

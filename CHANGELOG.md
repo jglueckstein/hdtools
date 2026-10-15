@@ -68,7 +68,7 @@
   values for the current month and a straight-line fit for every
   other month and every long-term window. The printed loss is the
   change over the days that entered the rate. The PDF keeps the
-  first-and-last identity.
+  first-and-last identity. (#93)
 - AGENTS.md records that every harness GC rule is auto-fix false,
   so findings become issues. A same-package unused name is not
   dead code until a module-wide search agrees. (#92)
