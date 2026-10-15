@@ -19,6 +19,9 @@ labels would collide, they stack (`Sep` over `90`) or skip months.
 The vertical scale is the plotted min and max plus 2 lb of margin
 (the same margin in kg and stone).
 
-Loss and Daily deficit use the same first-and-last trend identity as
-the monthly chart (3500 kcal per pound); they are not medical
-advice.
+Loss and Daily Deficit use a straight-line fit through the trend.
+The printed loss is the change along that line from the first trend
+day to the last. Days with no trend are not part of the change. The
+daily deficit is 3500 kcal per pound of the unrounded daily rate.
+This is not the monthly chart's last-seven rate, and it is not the
+PDF's first-and-last identity. These numbers are not medical advice.

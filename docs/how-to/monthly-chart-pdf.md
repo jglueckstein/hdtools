@@ -1,9 +1,10 @@
 # How to export a monthly chart PDF
 
 The monthly chart PDF is a vector page: title box, daily marks,
-stems, trend, Y margin, and the same Monthly Loss and Daily Deficit
-copy. It keeps that page when the on-screen chart changes. It is not
-a screenshot of the TUI.
+stems, trend, and Y margin. It keeps that page when the on-screen
+chart changes. It is not a screenshot of the TUI. Monthly Loss and
+Daily Deficit stay the book's first-and-last identity. The on-screen
+caption is a different rate.
 
 ## From the command line
 

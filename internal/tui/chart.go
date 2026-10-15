@@ -4,11 +4,14 @@ package tui
 // PDF write, the database line, and Monthly Loss / Daily Deficit.
 // The on-screen picture is the Online chart in onlinechart.go. The
 // yellow-on-blue title box stays in this file because the long-term
-// chart still uses it. Clip, empty, the ±2 lb pad, and the caption
-// live in chartspan so the PDF cannot drift. p writes that PDF
-// through chartpdf into the configured directory, not the process
-// working directory. This file does not import a PDF library and
-// does not paint the long-term chart.
+// chart still uses it. Clip, empty, and the ±2 lb pad live in
+// chartspan. The PDF caption stays on that package's pencil
+// identity. The on-screen caption does not: the current month uses
+// the last seven trends, and every other month uses the fit, both
+// from dailylog. p writes the PDF through chartpdf into the
+// configured directory, not the process working directory. This
+// file does not import a PDF library and does not paint the
+// long-term chart.
 
 import (
 	"fmt"
@@ -22,6 +25,7 @@ import (
 	"github.com/jglueckstein/hdtools/internal/chartpdf"
 	"github.com/jglueckstein/hdtools/internal/chartspan"
 	"github.com/jglueckstein/hdtools/internal/config"
+	"github.com/jglueckstein/hdtools/internal/dailylog"
 	"github.com/jglueckstein/hdtools/internal/units"
 )
 
@@ -140,11 +144,44 @@ func (a *App) chartView() string {
 	}
 
 	b.WriteString(renderOnline(span, a.month.year, a.month.month, unit, p))
-	if line, ok := span.Analysis(unit); ok {
+	if line, ok := monthCaption(a.logs, span, a.month.year, a.month.month, localToday(), unit); ok {
 		fmt.Fprintf(&b, "\n%s\n", line)
 	}
 	b.WriteString(a.chartFooter())
 	return b.String()
+}
+
+// monthCaption is the on-screen loss line. The month that contains
+// today reads the last seven trends, including carry from earlier
+// months, because the plotted span would otherwise drop that carry.
+// Any other month fits the trend days of the plotted span and does
+// not renumber a day the fit left out. The PDF does not call this.
+func monthCaption(logs []dailylog.DailyLog, span chartspan.Span, year int, month time.Month, today time.Time, unit units.Unit) (string, bool) {
+	var lossKG float64
+	var kcal int
+	var ok bool
+	ty, tm, _ := today.Date()
+	if year == ty && month == tm {
+		lossKG, kcal, ok = dailylog.WindowRate(dailylog.LastSeven(logs, today))
+	} else {
+		var x, y []float64
+		for i, p := range span.Points {
+			if !p.HasTrend {
+				continue
+			}
+			x = append(x, float64(i))
+			y = append(y, p.Trend)
+		}
+		lossKG, kcal, ok = dailylog.FitRate(x, y)
+	}
+	if !ok {
+		return "", false
+	}
+	loss, err := units.FromKG(lossKG, unit)
+	if err != nil {
+		return "", false
+	}
+	return fmt.Sprintf("Monthly loss: %.1f %s   Daily deficit: %d cal", loss, unit, kcal), true
 }
 
 func (a *App) chartFooter() string {

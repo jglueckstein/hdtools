@@ -232,6 +232,17 @@ The PDF keeps the existing vector page, including its title box.
 Monthly Loss and Daily Deficit stay the pencil identity until
 [#79](https://github.com/jglueckstein/hdtools/issues/79).
 
+Change record (Online caption):
+[docs/superpowers/specs/2026-10-14-online-caption.md](docs/superpowers/specs/2026-10-14-online-caption.md).
+This spec is drafted, not shipped. On-screen Monthly Loss and
+Daily Deficit become the Online rates
+([#79](https://github.com/jglueckstein/hdtools/issues/79)).
+The current month uses the last seven trend values. Every other
+on-screen chart uses a straight-line fit to the trend. The PDF
+keeps the pencil identity. The long-term plot stays the
+Braille-cell picture until
+[#78](https://github.com/jglueckstein/hdtools/issues/78).
+
 ## Meal Planning
 
 The tool should implement the meal planning system described
