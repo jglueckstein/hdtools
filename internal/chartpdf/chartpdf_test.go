@@ -222,6 +222,45 @@ func TestWritePDFCurrentMonthClipsAtToday(t *testing.T) {
 	}
 }
 
+func TestWritePDFOnlineFixturesStayPencil(t *testing.T) {
+	t.Parallel()
+	logs := kgLogs(t, 80, 70)
+	t.Run("finished", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join(t.TempDir(), "out.pdf")
+		opts := novemberPastOpts(t, logs)
+		opts.Today = time.Date(1990, 12, 15, 12, 0, 0, 0, time.UTC)
+		if err := Write(path, opts); err != nil {
+			t.Fatal(err)
+		}
+		text := pdfExtractedText(t, path)
+		want := "Monthly loss: 1.0 kg   Daily deficit: 257 cal"
+		if !strings.Contains(text, want) {
+			t.Fatalf("missing %q in %q", want, text)
+		}
+		if strings.Contains(text, "Daily deficit: 50 cal") {
+			t.Fatalf("PDF used the on-screen fit: %q", text)
+		}
+	})
+	t.Run("current", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join(t.TempDir(), "out.pdf")
+		opts := novemberPastOpts(t, logs)
+		opts.Today = time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC)
+		if err := Write(path, opts); err != nil {
+			t.Fatal(err)
+		}
+		text := pdfExtractedText(t, path)
+		want := "Monthly loss: 1.0 kg   Daily deficit: 772 cal"
+		if !strings.Contains(text, want) {
+			t.Fatalf("missing %q in %q", want, text)
+		}
+		if strings.Contains(text, "Daily deficit: 0 cal") {
+			t.Fatalf("PDF used the on-screen last seven: %q", text)
+		}
+	})
+}
+
 func TestWritePDFOmitsAnalysisWithoutEndpoints(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), "out.pdf")

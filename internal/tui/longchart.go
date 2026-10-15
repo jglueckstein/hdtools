@@ -4,7 +4,10 @@ package tui
 // semiannual, annual, or complete history, ending at the latest log.
 // Daily weight is a thin line only when one column per day fits;
 // otherwise the plot is trend-only. The columns are Braille runes
-// from braille.go. This file does not open SQLite or edit the log.
+// from braille.go. Loss and Daily Deficit are a straight-line fit
+// through the trend on the day span, before any bucketing, so a
+// bucket is not a regression sample. The fit itself lives in
+// dailylog. This file does not open SQLite or edit the log.
 
 import (
 	"fmt"
@@ -214,11 +217,20 @@ func (a *App) longView() string {
 	return b.String()
 }
 
+// longAnalysis fits the unbucketed day span. x is the index in that
+// slice, so a leading day with no trend keeps the later offsets and
+// is left out of the sample. A window that ends today still uses the
+// fit. The caption is omitted only when the fit itself has no rate.
 func longAnalysis(span []sheetDay, unit units.Unit) (string, bool) {
-	if len(span) == 0 || !span[0].HasTrend || !span[len(span)-1].HasTrend {
-		return "", false
+	var x, y []float64
+	for i, d := range span {
+		if !d.HasTrend {
+			continue
+		}
+		x = append(x, float64(i))
+		y = append(y, d.Trend)
 	}
-	lossKG, kcal, ok := dailylog.MonthlyBalance(span[0].Trend, span[len(span)-1].Trend, len(span))
+	lossKG, kcal, ok := dailylog.FitRate(x, y)
 	if !ok {
 		return "", false
 	}

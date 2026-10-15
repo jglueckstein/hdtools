@@ -16,6 +16,11 @@ The vertical scale runs one step below the plotted minimum and one
 step above the plotted maximum. A step is 1 kg, 1 lb, or 1 lb shown
 as one decimal of stones. The scale does not add the 2 lb margin the
 long-term chart uses. The current month ends at today. A month with
-no weights and no carried trend shows as empty. The two numbers are
-the book's first-and-last trend identity (3500 kcal per pound); they
-are not medical advice.
+no weights and no carried trend shows as empty. The current month
+uses the last seven trend values, carrying into the previous month
+when this month has fewer than seven. Every other month uses a
+straight-line fit to the trend. The printed loss is the change over
+the days that entered that rate. Days with no trend are not part of
+the change. The daily deficit is 3500 kcal per pound of the
+unrounded daily rate. The PDF is not that rate. These numbers are
+not medical advice.

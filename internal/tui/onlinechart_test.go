@@ -604,6 +604,13 @@ func captionLine(view string) string {
 	return ""
 }
 
+func assertCaption(t *testing.T, view, want string) {
+	t.Helper()
+	if got := strings.TrimSpace(captionLine(view)); got != want {
+		t.Fatalf("caption %q, want %q", got, want)
+	}
+}
+
 func headingRaw(view, label string) string {
 	for _, line := range strings.Split(view, "\n") {
 		vis := visible(line)
@@ -1056,14 +1063,7 @@ func TestOnlineCurrentMonthEndsToday(t *testing.T) {
 	if !plot.columnsBlank(22, onlinePlotCols) {
 		t.Fatal("plot columns 23 through 62 are not empty")
 	}
-	cap := captionLine(view)
-	if !strings.Contains(cap, "1.0 kg") || !strings.Contains(cap, "772") {
-		t.Fatalf("caption %q, want 1.0 kg and 772 calories", cap)
-	}
-	// 772 is 1.0 kg over 10 days. 257 would be that loss over 30 days.
-	if strings.Contains(cap, "257") {
-		t.Fatalf("caption %q used the 30-day deficit", cap)
-	}
+	assertCaption(t, view, "Monthly loss: 0.0 kg   Daily deficit: 0 cal")
 }
 
 func TestOnlineDayLabelsSkipUnplottedStart(t *testing.T) {
@@ -1321,25 +1321,19 @@ func TestOnlineHexDownshift(t *testing.T) {
 	}
 }
 
-func TestOnlinePencilLoss(t *testing.T) {
+func TestOnlineFixtureC(t *testing.T) {
 	points := []logPoint{kgPoint(time.November, 1, 80), kgPoint(time.November, 2, 70)}
 	t.Run("kilograms", func(t *testing.T) {
 		view, _ := novemberPlot(t, dec151990(), config.Default(), points...)
-		cap := captionLine(view)
-		if !strings.Contains(cap, "1.0 kg") || !strings.Contains(cap, "257") {
-			t.Fatalf("caption %q, want pencil 1.0 kg and 257 cal", cap)
-		}
+		assertCaption(t, view, "Monthly loss: 0.2 kg   Daily deficit: 50 cal")
 	})
 	t.Run("pounds", func(t *testing.T) {
 		cfg := config.Default()
 		cfg.DisplayUnit = units.Pound
 		view, _ := novemberPlot(t, dec151990(), cfg, points...)
-		cap := captionLine(view)
-		if !strings.Contains(cap, "2.2 lb") || !strings.Contains(cap, "257") {
-			t.Fatalf("caption %q, want pencil 2.2 lb and 257 cal", cap)
-		}
-		if strings.Contains(cap, " kg") {
-			t.Fatalf("caption still in kg: %q", cap)
+		assertCaption(t, view, "Monthly loss: 0.4 lb   Daily deficit: 50 cal")
+		if strings.Contains(captionLine(view), " kg") {
+			t.Fatalf("caption still in kg: %q", captionLine(view))
 		}
 	})
 }
@@ -1390,4 +1384,92 @@ func TestOnlineLongTermKeepsPad(t *testing.T) {
 			t.Fatal("long-term row uses the monthly 67-column gutter")
 		}
 	}
+}
+
+func TestOnlineFixtureA(t *testing.T) {
+	view, _ := novemberPlot(t, ymd(1990, time.November, 10), config.Default(),
+		kgPoint(time.November, 1, 80),
+		kgPoint(time.November, 2, 70))
+	assertCaption(t, view, "Monthly loss: 0.0 kg   Daily deficit: 0 cal")
+}
+
+func TestOnlineFixtureB(t *testing.T) {
+	points := []logPoint{
+		kgPoint(time.November, 8, 80),
+		kgPoint(time.November, 9, 70),
+	}
+	today := ymd(1990, time.November, 10)
+	t.Run("kilograms", func(t *testing.T) {
+		view, _ := novemberPlot(t, today, config.Default(), points...)
+		assertCaption(t, view, "Monthly loss: 1.0 kg   Daily deficit: 3858 cal")
+	})
+	t.Run("pounds", func(t *testing.T) {
+		cfg := config.Default()
+		cfg.DisplayUnit = units.Pound
+		view, _ := novemberPlot(t, today, cfg, points...)
+		assertCaption(t, view, "Monthly loss: 2.2 lb   Daily deficit: 3858 cal")
+		if strings.Contains(captionLine(view), " kg") {
+			t.Fatalf("caption still in kg: %q", captionLine(view))
+		}
+	})
+}
+
+func TestOnlineGainIsNegative(t *testing.T) {
+	view, _ := novemberPlot(t, ymd(1990, time.November, 10), config.Default(),
+		kgPoint(time.November, 8, 70),
+		kgPoint(time.November, 9, 80))
+	assertCaption(t, view, "Monthly loss: -1.0 kg   Daily deficit: -3858 cal")
+}
+
+func TestOnlineCarryFeedsRateOnly(t *testing.T) {
+	app := showOnline(t, ymd(1990, time.November, 4), config.Default(),
+		kgPoint(time.October, 30, 80),
+		kgPoint(time.October, 31, 70))
+	press(app, "]")
+	view := monthlyView(t, app)
+	plot := mustOnlinePlot(t, view)
+	if len(plot.diamondCols()) != 0 {
+		t.Fatal("November has a diamond")
+	}
+	assertCaption(t, view, "Monthly loss: 1.0 kg   Daily deficit: 1543 cal")
+}
+
+func TestOnlineFitWithoutFirstDay(t *testing.T) {
+	view, _ := novemberPlot(t, dec151990(), config.Default(),
+		kgPoint(time.November, 29, 80),
+		kgPoint(time.November, 30, 70))
+	assertCaption(t, view, "Monthly loss: 1.0 kg   Daily deficit: 7716 cal")
+}
+
+func TestOnlineCurrentMonthLateStart(t *testing.T) {
+	view, _ := novemberPlot(t, ymd(1990, time.November, 30), config.Default(),
+		kgPoint(time.November, 29, 80),
+		kgPoint(time.November, 30, 70))
+	assertCaption(t, view, "Monthly loss: 1.0 kg   Daily deficit: 7716 cal")
+}
+
+func TestOnlineOmitsShortSeries(t *testing.T) {
+	view, _ := novemberPlot(t, ymd(1990, time.November, 1), config.Default(),
+		kgPoint(time.November, 1, 80))
+	vis := visible(view)
+	if strings.Contains(vis, "Monthly loss:") || strings.Contains(vis, "Daily deficit:") {
+		t.Fatalf("caption on one trend value: %q", vis)
+	}
+}
+
+func TestOnlineUnroundedPounds(t *testing.T) {
+	points := []logPoint{
+		kgPoint(time.November, 1, 70),
+		kgPoint(time.November, 15, 60),
+	}
+	t.Run("kilograms", func(t *testing.T) {
+		view, _ := novemberPlot(t, dec151990(), config.Default(), points...)
+		assertCaption(t, view, "Monthly loss: 1.4 kg   Daily deficit: 385 cal")
+	})
+	t.Run("pounds", func(t *testing.T) {
+		cfg := config.Default()
+		cfg.DisplayUnit = units.Pound
+		view, _ := novemberPlot(t, dec151990(), cfg, points...)
+		assertCaption(t, view, "Monthly loss: 3.2 lb   Daily deficit: 385 cal")
+	})
 }

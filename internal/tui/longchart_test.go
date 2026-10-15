@@ -289,36 +289,68 @@ func TestLongChartKeysDoNotWrite(t *testing.T) {
 	}
 }
 
-func TestLongChartLossAndDeficit(t *testing.T) {
-	freezeToday(t, time.Date(1990, 11, 29, 12, 0, 0, 0, time.UTC))
+func quarterlyLossView(t *testing.T, today time.Time, cfg config.Config) string {
+	t.Helper()
+	freezeToday(t, today)
 	store := openStore(t)
-	w80, w70 := 80.0, 70.0
-	first, err := dailylog.New(time.Date(1990, 9, 1, 0, 0, 0, 0, time.UTC), &w80, 8, 0, false, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	last, err := dailylog.New(time.Date(1990, 11, 29, 0, 0, 0, 0, time.UTC), &w70, 8, 0, false, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := store.Upsert(context.Background(), first); err != nil {
-		t.Fatal(err)
-	}
-	if err := store.Upsert(context.Background(), last); err != nil {
-		t.Fatal(err)
-	}
+	upsertKG(t, store, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), 80)
+	upsertKG(t, store, time.Date(1990, 11, 2, 0, 0, 0, 0, time.UTC), 70)
+	app := New(store, "mem.db", cfg)
+	app.Update(app.load())
+	press(app, "l")
+	return quarterlyView(t, app)
+}
+
+func TestLongChartFitWhileOldPicture(t *testing.T) {
+	today := time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC)
+	t.Run("kilograms", func(t *testing.T) {
+		view := quarterlyLossView(t, today, config.Default())
+		vis := visible(view)
+		if !strings.Contains(vis, "Quarterly") || !strings.Contains(vis, "September 1990") || !strings.Contains(vis, "November 1990") {
+			t.Fatalf("heading: %q", vis)
+		}
+		if strings.Contains(vis, "Monthly loss:") {
+			t.Fatalf("says Monthly loss: %q", vis)
+		}
+		if strings.ContainsRune(vis, openDiamond) {
+			t.Fatal("long-term chart has an open diamond")
+		}
+		rows := mustPlot(t, view)
+		braille := false
+		for _, row := range rows {
+			for _, c := range row {
+				if isBraille(c.r) {
+					braille = true
+				}
+			}
+		}
+		if !braille {
+			t.Fatal("trend is not braille")
+		}
+		if !strings.Contains(vis, " 80.9-") || !strings.Contains(vis, " 69.1-") {
+			t.Fatalf("gutters: %q", vis)
+		}
+		assertCaption(t, view, "Loss: 0.5 kg   Daily deficit: 421 cal")
+	})
+	t.Run("pounds", func(t *testing.T) {
+		cfg := config.Default()
+		cfg.DisplayUnit = units.Pound
+		view := quarterlyLossView(t, today, cfg)
+		assertCaption(t, view, "Loss: 1.1 lb   Daily deficit: 421 cal")
+	})
+}
+
+func TestLongChartOmitsShortSeries(t *testing.T) {
+	freezeToday(t, time.Date(1990, 11, 1, 12, 0, 0, 0, time.UTC))
+	store := openStore(t)
+	upsertKG(t, store, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), 80)
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "l")
-	view := visible(app.View().Content)
-	if !strings.Contains(view, "Loss:") {
-		t.Fatalf("missing Loss: %q", view)
-	}
-	if !strings.Contains(view, "1.0 kg") {
-		t.Fatalf("want Loss 1.0 kg: %q", view)
-	}
-	if !strings.Contains(view, "86") {
-		t.Fatalf("want 86 cal: %q", view)
+	view := quarterlyView(t, app)
+	vis := visible(view)
+	if strings.Contains(vis, "Loss:") || strings.Contains(vis, "Daily deficit:") {
+		t.Fatalf("caption on one trend value: %q", vis)
 	}
 }
 
