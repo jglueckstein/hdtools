@@ -234,8 +234,8 @@ Monthly Loss and Daily Deficit stay the pencil identity until
 
 Change record (Online caption):
 [docs/superpowers/specs/2026-10-14-online-caption.md](docs/superpowers/specs/2026-10-14-online-caption.md).
-This spec is drafted, not shipped. On-screen Monthly Loss and
-Daily Deficit become the Online rates
+This spec is shipped. On-screen Monthly Loss and Daily Deficit
+are the Online rates
 ([#79](https://github.com/jglueckstein/hdtools/issues/79)).
 The current month uses the last seven trend values. Every other
 on-screen chart uses a straight-line fit to the trend. The PDF
