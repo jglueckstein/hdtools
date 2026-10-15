@@ -58,9 +58,14 @@
   store the display unit in each row (rejected — mixed series).
 - Decision: do not persist trend. Reason: a backdated weight edit would
   desync a stored moving average. `ApplyTrend` is the source of truth.
-- Decision: Monthly Loss is first minus last trend of the plotted
-  span; Daily Deficit is that loss in pounds × 3500 ÷ days in the
-  span. Reason: the book's pencil identity. Neither number is stored.
+- Decision: On-screen Monthly Loss for the current month is first
+  minus last of the last seven trend values. Every other month and
+  every long-term window uses a straight-line fit, and the printed
+  loss is the daily rate times the gap from the first trend day to
+  the last. Daily Deficit is that unrounded daily rate in pounds
+  times 3500. The PDF keeps the pencil identity: first minus last
+  trend of the plotted span, divided by the days in the span.
+  Neither number is stored.
 - Decision: config file under XDG, database under XDG data, not
   `~/.hdtools`. Reason: spec-compliant Unix paths; config is
   hand-editable and must not live in SQLite.

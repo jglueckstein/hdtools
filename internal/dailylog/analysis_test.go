@@ -2,6 +2,7 @@ package dailylog
 
 import (
 	"fmt"
+	"math"
 	"testing"
 	"time"
 )
@@ -175,6 +176,21 @@ func TestFitRateFixtureC(t *testing.T) {
 	wantRate(t, loss, kcal, ok, "0.2", 50)
 	if kcal == 257 {
 		t.Fatal("kcal used the pencil 257")
+	}
+}
+
+func TestFitRateFlatCarry(t *testing.T) {
+	t.Parallel()
+	x := make([]float64, 30)
+	y := make([]float64, 30)
+	for i := 0; i < 30; i++ {
+		x[i] = float64(i)
+		y[i] = 80
+	}
+	loss, kcal, ok := FitRate(x, y)
+	wantRate(t, loss, kcal, ok, "0.0", 0)
+	if math.Signbit(loss) {
+		t.Fatal("flat fit stored a negative zero")
 	}
 }
 

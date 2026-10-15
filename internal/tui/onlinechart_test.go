@@ -1164,6 +1164,7 @@ func TestOnlinePlotHeight(t *testing.T) {
 		if len(plot.diamondCols()) != 0 {
 			t.Fatal("carry-only plot has a diamond")
 		}
+		assertCaption(t, view, "Monthly loss: 0.0 kg   Daily deficit: 0 cal")
 	})
 	t.Run("empty", func(t *testing.T) {
 		app := loadOnline(t, dec151990(), config.Default())

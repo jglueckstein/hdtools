@@ -129,5 +129,11 @@ func FitRate(x, trendKG []float64) (lossKG float64, kcal int, ok bool) {
 		return 0, 0, false
 	}
 	daily := -(nf*sumXY - sumX*sumY) / den
-	return daily * gap, kcalFromDailyKG(daily), true
+	lossKG = daily * gap
+	// A flat series has an exact +0 numerator. Negating it stores a
+	// negative zero, and %.1f prints that as -0.0.
+	if lossKG == 0 {
+		lossKG = 0
+	}
+	return lossKG, kcalFromDailyKG(daily), true
 }
