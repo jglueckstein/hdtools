@@ -7,7 +7,7 @@
 - A reflection records how the long-term Online chart reuses the
   monthly canvas: a one-point line draws nothing, the weight stroke
   overwrites Braille on a shared cell, and `monthShares` drops days
-  past column 62.
+  past column 62. (#109)
 - Each `CONVENTIONS.md` section names the harness check that covers
   it, and a pull request fails when that binding is missing (#97)
 - Import direction and the 500-line file limit run on pull requests (#97)
