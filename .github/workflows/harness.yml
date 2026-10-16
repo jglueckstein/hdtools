@@ -64,6 +64,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: "Constraint: Import direction"
+        run: bash scripts/check-import-direction.sh
+
+      - name: "Constraint: File size"
+        run: |
+          test -z "$(find . -name '*.go' ! -name '*_test.go' ! -path './.git/*' -exec wc -l {} + | awk '$1 > 500 && $2 != "total"')"
+
+      - name: "Constraint: Conventions are bound"
+        run: bash scripts/check-conventions-bound.sh
+
       - name: Summary
         if: always()
         run: echo "Harness constraint check complete. See HARNESS.md for constraint details."
