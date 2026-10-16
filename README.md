@@ -4,7 +4,7 @@ A terminal UI for daily and monthly weight logs, inspired by
 [The Hacker's Diet](https://www.fourmilab.ch/hackdiet/e4/welcome.html).
 It is a tracking tool, not a diagnosis or treatment system.
 
-[![Harness](https://img.shields.io/badge/Harness-15%2F15_enforced-2E8B57?style=flat-square)](HARNESS.md)
+[![Harness](https://img.shields.io/badge/Harness-18%2F18_enforced%20%E2%9A%A0%20drift-2E8B57?style=flat-square)](HARNESS.md)
 [![Harness Health](https://img.shields.io/badge/Harness_Health-Healthy-2E8B57?style=flat-square)](observability/snapshots/2026-09-19-snapshot.md)
 [![Agent Harness Enabled](https://img.shields.io/badge/Agent_Harness-Enabled-000000?style=flat-square)](HARNESS.md)
 [![AI Literacy](https://img.shields.io/badge/AI_Literacy-Level_3-20B2AA?style=flat-square)](assessments/2026-09-08-assessment.md)

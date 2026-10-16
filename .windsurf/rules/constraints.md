@@ -27,7 +27,7 @@ directly — run `/convention-sync` to regenerate.
 
 ## Idiomatic Go naming
 
-- **Rule**: Exported identifiers are PascalCase; unexported identifiers are camelCase; initialisms are all-caps as words (`HTTPServer`, `userID`, `ServeHTTP`); packages are short lowercase with no underscores; files are a single lowercase word or `snake_case.go` for multi-word names
+- **Rule**: Exported identifiers are MixedCaps; unexported identifiers are mixedCaps; initialisms are all-caps as words (`HTTPServer`, `userID`, `ServeHTTP`); packages are short lowercase with no underscores; files are lowercase with no underscores except `_test.go`
 - **Enforcement**: agent
 - **Tool**: harness-enforcer
 - **Scope**: pr
@@ -111,4 +111,48 @@ directly — run `/convention-sync` to regenerate.
   AGENTS.md) and non-product comments are out of scope.
 - **Enforcement**: agent
 - **Tool**: harness-enforcer
+- **Scope**: pr
+- **Governance requirement**: The application must remain a tracking
+  and analysis tool rather than presenting itself as a medical
+  diagnosis or treatment system
+- **Operational meaning**: Those four surfaces must not claim
+  diagnosis, treatment, prescription, or medical advice. Feature
+  behaviour (trend, meal planning) and a visible disclaimer are out
+  of scope.
+- **Verification method**: harness-enforcer reviews the listed
+  surfaces on the PR, including paraphrase
+- **Evidence**: harness-enforcer PR output
+- **Failure action**: block merge
+- **Frame check**: divergence resolved: copy-only is an explicit
+  scope limit — this constraint does not ban clinical-adjacent
+  features or require a disclaimer. Engineering, compliance, and AI
+  frames agree on user-facing copy only. Block-merge is the declared
+  failure action; agent PR constraints are not dispatched in CI today
+  (`harness.yml` does not run harness-enforcer).
+
+## Import direction
+
+- **Rule**: `internal/dailylog` does not import `tui`, `config`, or
+  `units`. `internal/units` does not import `tui`, `dailylog`, or
+  `config`. `internal/config` does not import `tui` or `dailylog`.
+  `cmd/hdtools` and `internal/tui` import downward
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-import-direction.sh
+- **Scope**: pr
+
+## File size
+
+- **Rule**: Every non-test `.go` file is at most 500 lines
+- **Enforcement**: deterministic
+- **Tool**: test -z "$(find . -name '*.go' ! -name '*_test.go' ! -path './.git/*' -exec wc -l {} + | awk '$1 > 500 && $2 != "total"')"
+- **Scope**: pr
+
+## Conventions are bound
+
+- **Rule**: Every `##` section in `CONVENTIONS.md` has a `Checked by`
+  line. Each name is a `###` heading under Constraints in this file,
+  or the whole value is `not a merge gate`. A named constraint that
+  this file does not declare fails the check
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-conventions-bound.sh
 - **Scope**: pr
