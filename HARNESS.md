@@ -417,8 +417,8 @@ Run /reservoir for an on-demand read, or /reservoir tune to edit this block.
 
 <!-- Auto-updated by /harness-audit — do not edit manually -->
 
-Last audit: 2026-09-09
-Constraints enforced: 15/15
+Last audit: 2026-10-16
+Constraints enforced: 18/18
 Garbage collection active: 8/8
-Drift detected: no
-<!-- 15/15 counts declared enforcement (0 unverified). 6 agent PR constraints have no CI dispatch (harness.yml does not run harness-enforcer). -->
+Drift detected: yes
+<!-- 18/18 counts declared enforcement (0 unverified). 6 agent PR constraints have no CI dispatch (harness.yml does not run harness-enforcer). -->

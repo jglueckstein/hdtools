@@ -9,14 +9,17 @@ directly — run `/convention-sync` to regenerate.
 - **Build system**: Go modules (`go build ./...`)
 - **Test framework**: `go test`
 - **Container strategy**: none
-- **TUI**: Bubble Tea (`github.com/charmbracelet/bubbletea`) styled with lipgloss 16-color ANSI (`github.com/charmbracelet/lipgloss`); `cmd/hdtools` opens the store and runs `internal/tui`
+- **TUI**: Bubble Tea (`github.com/charmbracelet/bubbletea`) styled with lipgloss (`github.com/charmbracelet/lipgloss`); palette from config `[colors]` (16-color names or hex, downshift on 16-color terminals); `NO_COLOR` strips chroma; `cmd/hdtools` opens the store and runs `internal/tui`
 - **Persistence**: `database/sql` + `modernc.org/sqlite`. Default file is `$XDG_DATA_HOME/hdtools/hdtools.db` (typically `~/.local/share/hdtools/hdtools.db`; `-db` or `$HDTOOLS_DB` override). Remote database is not implemented. Weight is stored in kilograms.
-- **Config**: `$XDG_CONFIG_HOME/hdtools/config.toml` (typically `~/.config/hdtools/config.toml`; `-config` or `$HDTOOLS_CONFIG`). `display_unit` is `kg` (default), `lb`, or `st`.
+- **Config**: `$XDG_CONFIG_HOME/hdtools/config.toml` (typically `~/.config/hdtools/config.toml`; `-config` or `$HDTOOLS_CONFIG`). `display_unit` is `kg` (default), `lb`, or `st`. Optional `[colors]` table: 16-color names, `0`–`15`, or `#rrggbb` / `#rgb`. Invalid colors fall back; invalid `display_unit` fails the load.
 - **Product notes**: `idea.md` — Hacker's Diet TUI (daily/monthly weight logs, trend, meal planning, PDF charts)
 
 ## Conventions
 
-- **Naming**: Exported identifiers use PascalCase; unexported identifiers use camelCase. Initialisms stay all-caps as words: `HTTPServer`, `userID`, `ServeHTTP`. Packages are short, lowercase, and contain no underscores. Files use a single lowercase word (`trend.go`) or `snake_case.go` when the name is a phrase (`daily_log.go`).
+`CONVENTIONS.md` restates these conventions for agents. Each of
+its sections names the constraint below that checks it.
+
+- **Naming**: Follow the main points of [Google's Go Style Guide](https://google.github.io/styleguide/go/guide). Exported identifiers use MixedCaps; unexported identifiers use mixedCaps. Initialisms stay all-caps as words: `HTTPServer`, `userID`, `ServeHTTP`. Packages are short, lowercase, and contain no underscores. Files are lowercase with no underscores except `_test.go`. There is no fixed line length; `gofmt` is the format, and a long line is refactored rather than wrapped. New APIs avoid a `Get` prefix. `context.Context` is the first parameter when a function needs a context. Tests use package `testing` only (no assertion libraries).
 - **File structure**: One module at the repo root. The binary entry point is `cmd/hdtools/main.go` and stays a wiring layer. Application code lives under `internal/` and is not importable from outside the module. One package directory per concern (`internal/config`, `internal/dailylog`, `internal/tui`, `internal/units`, …). Weight trend belongs in `dailylog`, not a separate package. Tests sit next to the code as `<file>_test.go`. If a type is the package's main exported type, its file is named after that type.
 - **Error handling**: Every function that returns an `error` either handles it with a specific recovery action or wraps it with `%w` and a short context string before returning (`fmt.Errorf("load daily log: %w", err)`). Bare `return err` is not permitted. `panic` is only for truly unreachable programmer errors, never for I/O, parse, or database failures. Sentinel errors live in the package that defines them and are compared with `errors.Is` / `errors.As`.
 - **Documentation**:
@@ -24,6 +27,10 @@ directly — run `/convention-sync` to regenerate.
   - Function comments must explain the reasoning behind the approach, not restate the signature
   - Inline comments explain WHY, not WHAT — comments that restate the next line are prohibited
   - Every exported function, type, and const has a doc comment. The first sentence states what it does or returns, not how. Comments that only restate the signature (e.g. `// Weight returns the weight.`) count as missing. Unexported code gets a comment only when the reason is non-obvious (a constraint, a workaround, or a domain rule from The Hacker's Diet). Each package has a package comment (on one file in the package, or `doc.go`).
+  - User-facing docs follow [Diátaxis](https://diataxis.fr): tutorials, how-to guides, reference, and explanation stay in separate pages under `docs/`. The README is the map. Do not mix a lesson with a key table or a recipe with a design discussion. Habitat files (`HARNESS.md`, `ONBOARDING.md`, `AGENTS.md`, `docs/superpowers/`) are a different audience and stay outside that split.
+  - User-facing Markdown follows the main points of [Google's Markdown Style Guide](https://google.github.io/styleguide/docguide/style.html): 80-character wrap (except links, tables, headings, code blocks); ATX headings; one H1; fenced code with a language; 4-space nested list indent; no trailing whitespace; informative link titles; Markdown over HTML. GitHub exceptions: no `[TOC]` (Gitiles-only); `../` links are allowed (GitHub has no Gitiles repo-root paths).
+  - Shell scripts follow the main points of [Google's Shell Style Guide](https://google.github.io/styleguide/shellguide.html): `#!/bin/bash` and `set -euo pipefail`; 2-space indent, no tabs, 80-column wrap; `; then` / `; do` on the same line as `if`/`for`/`while`; quoted `"${var}"`; `$(...)` not backticks; `[[ ... ]]` not `[ ... ]`; errors on STDERR; file header comments; libraries under `scripts/lib/` are not executable. ShellCheck is recommended.
+  - Go source follows the main points of [Google's Go Style Guide](https://google.github.io/styleguide/go/guide): `gofmt`; MixedCaps; no fixed line length; package comments; `testing` only; `panic` is not for ordinary errors. The 80-column wrap used for Markdown and shell does not apply to `.go` files.
 
 ## Constraints
 
@@ -51,7 +58,7 @@ directly — run `/convention-sync` to regenerate.
 
 ### Idiomatic Go naming
 
-- **Rule**: Exported identifiers are PascalCase; unexported identifiers are camelCase; initialisms are all-caps as words (`HTTPServer`, `userID`, `ServeHTTP`); packages are short lowercase with no underscores; files are a single lowercase word or `snake_case.go` for multi-word names
+- **Rule**: Exported identifiers are MixedCaps; unexported identifiers are mixedCaps; initialisms are all-caps as words (`HTTPServer`, `userID`, `ServeHTTP`); packages are short lowercase with no underscores; files are lowercase with no underscores except `_test.go`
 - **Enforcement**: agent
 - **Tool**: harness-enforcer
 - **Scope**: pr
@@ -135,4 +142,48 @@ directly — run `/convention-sync` to regenerate.
   AGENTS.md) and non-product comments are out of scope.
 - **Enforcement**: agent
 - **Tool**: harness-enforcer
+- **Scope**: pr
+- **Governance requirement**: The application must remain a tracking
+  and analysis tool rather than presenting itself as a medical
+  diagnosis or treatment system
+- **Operational meaning**: Those four surfaces must not claim
+  diagnosis, treatment, prescription, or medical advice. Feature
+  behaviour (trend, meal planning) and a visible disclaimer are out
+  of scope.
+- **Verification method**: harness-enforcer reviews the listed
+  surfaces on the PR, including paraphrase
+- **Evidence**: harness-enforcer PR output
+- **Failure action**: block merge
+- **Frame check**: divergence resolved: copy-only is an explicit
+  scope limit — this constraint does not ban clinical-adjacent
+  features or require a disclaimer. Engineering, compliance, and AI
+  frames agree on user-facing copy only. Block-merge is the declared
+  failure action; agent PR constraints are not dispatched in CI today
+  (`harness.yml` does not run harness-enforcer).
+
+### Import direction
+
+- **Rule**: `internal/dailylog` does not import `tui`, `config`, or
+  `units`. `internal/units` does not import `tui`, `dailylog`, or
+  `config`. `internal/config` does not import `tui` or `dailylog`.
+  `cmd/hdtools` and `internal/tui` import downward
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-import-direction.sh
+- **Scope**: pr
+
+### File size
+
+- **Rule**: Every non-test `.go` file is at most 500 lines
+- **Enforcement**: deterministic
+- **Tool**: test -z "$(find . -name '*.go' ! -name '*_test.go' ! -path './.git/*' -exec wc -l {} + | awk '$1 > 500 && $2 != "total"')"
+- **Scope**: pr
+
+### Conventions are bound
+
+- **Rule**: Every `##` section in `CONVENTIONS.md` has a `Checked by`
+  line. Each name is a `###` heading under Constraints in this file,
+  or the whole value is `not a merge gate`. A named constraint that
+  this file does not declare fails the check
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-conventions-bound.sh
 - **Scope**: pr
