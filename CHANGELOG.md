@@ -69,7 +69,7 @@
 
 - Unused chart helpers are gone: `plotMonthly`, `monthYearBox`,
   `hasFGOnBraille`, and `plotColumn`. The long-term Braille grid
-  stays.
+  stays. (#105)
 - The harness stack line names Charm v2
   (`charm.land/bubbletea/v2`, `charm.land/lipgloss/v2`, and
   `charm.land/bubbles/v2`). (#104)
