@@ -37,8 +37,12 @@ Go is 1.27.0. Source follows the main points of
   a context.
 - Tests use package `testing` only. No assertion library.
 - `panic` is only for unreachable programmer errors, never for
-  I/O, parse, or database failures. That rule is also checked
-  under Errors.
+  I/O, parse, or database failures. That rule is written
+  guidance and is not a merge gate.
+
+MixedCaps, initialisms, a `Get` prefix, and `context` as the
+first parameter are written guidance and are not a merge gate.
+The pull-request check is file names and package names.
 
 Build and test:
 
@@ -59,8 +63,9 @@ resolution, paths, open the store, run the TUI. Application code
 lives under `internal/` and is not importable from outside the
 module. One package directory per concern (`config`, `dailylog`,
 `tui`, `units`, and the chart packages). Weight trend stays in
-`dailylog`. If a type is the package's main export, its file is
-named after that type.
+`dailylog`. `scripts/` may hold check tools. If a type is the
+package's main export, its file is named after that type. That
+file name is written guidance and is not a merge gate.
 
 Import direction, checked by `scripts/check-import-direction.sh`:
 
@@ -88,6 +93,10 @@ Handle the error, or wrap it with `%w` and a short context
 not permitted. Sentinel errors live in the package that defines
 them and are compared with `errors.Is` and `errors.As`.
 
+Whether a `panic` is unreachable, and whether `os.IsNotExist` is
+spelled `errors.Is`, are written guidance and are not a merge
+gate. The pull-request check is a returned identifier `err`.
+
 ## Comments
 
 Checked by: Literate preamble on new files; Exported API documentation
@@ -104,12 +113,19 @@ follow literate programming:
 5. Inline comments explain why, not what. A comment that restates
    the next line is prohibited.
 
+The pull-request check is that the file opens with a comment.
+Whether that comment answers why, the decisions, and what the
+file does not do is written guidance and is not a merge gate.
+
 Every exported function, type, and const has a doc comment. The
 first sentence says what it does or returns, not how. A comment
 that only restates the signature counts as missing. Unexported
 code is commented only when the reason is non-obvious: a
 constraint, a workaround, or a domain rule. Each package has a
-package comment, on one file or in `doc.go`.
+package comment, on one file or in `doc.go`. The pull-request
+check is that the exported comment exists. Whether its first
+sentence says what rather than how is written guidance and is
+not a merge gate.
 
 When reviewing or refactoring, apply CUPID: Composable, Unix
 philosophy, Predictable, Idiomatic, Domain-based. CUPID is
@@ -218,7 +234,8 @@ User-facing copy in TUI chrome and help, `README.md`,
 `ONBOARDING.md`, and `idea.md` product claims does not present
 the program as diagnosing, treating, prescribing, or giving
 medical advice. Paraphrase counts. Trend and meal planning are
-product features.
+product features. The pull-request build does not fail when
+that copy is wrong. Review still applies the rule.
 
 ## Shell
 

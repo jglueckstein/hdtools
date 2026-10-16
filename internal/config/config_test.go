@@ -398,6 +398,20 @@ func TestEnsureOmitsPDFDir(t *testing.T) {
 	}
 }
 
+func TestResolvePDFDirWrapsChosenError(t *testing.T) {
+	t.Parallel()
+	_, err := ResolvePDFDir(Config{pdfDirBad: true})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "choose pdf dir") {
+		t.Fatalf("error %q is not wrapped with choose pdf dir", err)
+	}
+	if !strings.Contains(err.Error(), "pdf_dir must be a string") {
+		t.Fatalf("error %q dropped the chosen directory error", err)
+	}
+}
+
 func TestPDFDirNonStringStillLoads(t *testing.T) {
 	t.Parallel()
 	path := writeTOML(t, "display_unit = \"kg\"\npdf_dir = 3\n")

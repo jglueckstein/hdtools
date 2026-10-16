@@ -74,6 +74,21 @@ jobs:
       - name: "Constraint: Conventions are bound"
         run: bash scripts/check-conventions-bound.sh
 
+      - name: "Constraint: Idiomatic Go naming"
+        run: bash scripts/check-go-naming.sh
+
+      - name: "Constraint: Standard Go layout"
+        run: bash scripts/check-go-layout.sh
+
+      - name: "Constraint: Errors wrapped with context"
+        run: bash scripts/check-wrapped-errors.sh
+
+      - name: "Constraint: Exported API documentation"
+        run: bash scripts/check-exported-docs.sh
+
+      - name: "Constraint: Literate preamble on new files"
+        run: bash scripts/check-preamble.sh
+
       - name: Summary
         if: always()
         run: echo "Harness constraint check complete. See HARNESS.md for constraint details."

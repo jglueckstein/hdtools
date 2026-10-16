@@ -67,6 +67,9 @@
 
 ### Changed
 
+- Pull requests check Go file names, layout, bare error returns,
+  exported doc comments, and file preambles. `month_save.go` is
+  `monthsave.go`, and `ResolvePDFDir` wraps its error. (#103)
 - The onboarding guide matches the current harness: MixedCaps,
   Charm v2 imports, and the pull-request checks for import
   direction, file size, and the conventions binding. (#101)

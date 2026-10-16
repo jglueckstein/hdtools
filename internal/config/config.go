@@ -106,7 +106,7 @@ func DefaultDBPath() (string, error) {
 func ResolvePDFDir(cfg Config) (string, error) {
 	dir, err := chosenPDFDir(cfg)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("choose pdf dir: %w", err)
 	}
 	if !filepath.IsAbs(dir) {
 		return "", fmt.Errorf("pdf directory %q is not absolute", dir)

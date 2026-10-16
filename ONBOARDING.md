@@ -134,17 +134,30 @@ green. A red check blocks the merge.
 - **File size.** No non-test `.go` file is over 500 lines.
 - **Conventions stay bound.** Every section of `CONVENTIONS.md`
   names a real harness check, or says it is not a merge gate.
+- **Go names.** Non-test `.go` files and package names are
+  lowercase with no underscores. An external test package may
+  be the directory name plus `_test`.
+- **Go layout.** `cmd/hdtools/main.go` exists. Production Go
+  lives under `cmd/hdtools` or `internal/`. `scripts/` may hold
+  check tools. A test is `*_test.go` in those trees.
+- **Wrapped errors.** Non-test Go under `cmd/` and `internal/`
+  does not return the identifier `err` unwrapped.
+- **Exported docs.** Every exported function, type, and const
+  has a doc comment.
+- **File preamble.** Every non-test `.go` file opens with a
+  comment, before `package` or between `package` and the
+  imports.
 
 **Reviewed by an agent, not by a CI job today:**
 
-Naming, layout, wrapped errors, exported docs, literate
-preambles, and medical copy are declared pull-request
-constraints. `harness.yml` does not run harness-enforcer, so a
-green build does not prove them. Still follow them. User-facing
-copy in the TUI, the README, this file, and `idea.md` must not
-present hdtools as diagnosing, treating, prescribing, or giving
-medical advice. Paraphrase counts. Trend and meal planning are
-product behaviour, not a violation.
+Medical copy is the remaining agent pull-request constraint.
+`harness.yml` does not run harness-enforcer, so a green build
+does not prove it. Still follow it. User-facing copy in the
+TUI, the README, this file, and `idea.md` must not present
+hdtools as diagnosing, treating, prescribing, or giving medical
+advice. Paraphrase counts. Trend and meal planning are product
+behaviour, not a violation. The build does not fail on this
+constraint.
 
 ### On schedule
 
@@ -246,9 +259,10 @@ with messages. Alignment tests strip ANSI and compare where the
 header and value columns end (`internal/tui/layout_test.go`).
 
 The pull-request scripts under `scripts/` are safe to run
-locally: import direction, file size, skip-to-green, live logs,
-TUI SQL imports, preferences out of SQLite, and the conventions
-binding.
+locally: Go names, layout, wrapped errors, exported docs, file
+preambles, import direction, file size, skip-to-green, live
+logs, TUI SQL imports, preferences out of SQLite, and the
+conventions binding.
 
 ---
 
@@ -259,7 +273,8 @@ binding.
 - **Strict loop.** A pull request runs
   `.github/workflows/harness.yml` and `ai-literacy.yml`. A red
   check blocks the merge. That is the test, `gofmt`, gitleaks,
-  and script set above. It is not the six agent constraints.
+  and script set above. Medical copy is still an agent review.
+  The build does not fail on it.
 - **Investigative loop.** Weekly GC looks for slow drift. It
   does not rewrite the code. A finding becomes an issue.
 
