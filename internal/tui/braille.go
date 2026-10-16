@@ -50,33 +50,6 @@ func newBrailleGrid(cols int, monthly bool) *brailleGrid {
 	return &brailleGrid{cells: cells, cols: cols, monthly: monthly}
 }
 
-// plotMonthly lights one day. The mark is the left dot. The trend
-// takes both dots so a carry-forward day still has two columns. The
-// stem is the left dots strictly between those bins; the same bin
-// means the mark is already on the trend and a stem would be a smear.
-func (g *brailleGrid) plotMonthly(col int, weightY float64, hasWeight bool, trendY float64, hasTrend bool, ymin, ymax float64) {
-	var markBin, trendBin int
-	if hasWeight {
-		markBin = brailleBin(weightY, ymin, ymax, brailleBins)
-		g.light(col, markBin, 0, dotMark)
-	}
-	if hasTrend {
-		trendBin = brailleBin(trendY, ymin, ymax, brailleBins)
-		g.light(col, trendBin, 0, dotTrend)
-		g.light(col, trendBin, 1, dotTrend)
-	}
-	if !hasWeight || !hasTrend || markBin == trendBin {
-		return
-	}
-	lo, hi := markBin, trendBin
-	if lo > hi {
-		lo, hi = hi, lo
-	}
-	for b := lo + 1; b < hi; b++ {
-		g.light(col, b, 0, dotStem)
-	}
-}
-
 // plotLong lights a long-term column. The weight path is the left dot
 // only, the thin line, and only when the span is still one day per
 // column. The trend uses both dots and outranks the weight path when

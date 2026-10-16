@@ -520,23 +520,6 @@ func chartTitleLine(view string) string {
 	return ""
 }
 
-func plotColumn(view string, dayIndex int) string {
-	var b strings.Builder
-	for _, line := range strings.Split(visible(view), "\n") {
-		// Day columns start after the "%5.1f-" gutter. A Braille line
-		// has no o-/\|, so the gutter is what marks the plot.
-		vis := []rune(line)
-		if !isPlotGutter(vis) {
-			continue
-		}
-		col := 6 + dayIndex
-		if col >= 0 && col < len(vis) {
-			b.WriteRune(vis[col])
-		}
-	}
-	return b.String()
-}
-
 func TestChartTitleIsMonthYear(t *testing.T) {
 	t.Parallel()
 	store := openStore(t)

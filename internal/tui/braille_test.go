@@ -407,14 +407,3 @@ func sameSet(got []int, want ...int) bool {
 	}
 	return true
 }
-
-func hasFGOnBraille(view string, n int) bool {
-	for _, row := range plotCells(view) {
-		for _, c := range row {
-			if isBraille(c.r) && maskOf(c.r) != 0 && cellHasFG(c, n) {
-				return true
-			}
-		}
-	}
-	return false
-}
