@@ -7,10 +7,8 @@ package tui
 // 1 is the first column after the gutter.
 //
 // The spec does not say which days of a 28- or 30-day month receive a
-// remainder column, so the share search accepts every even split. It
-// does not treat the long-term chart as 62 or 67 columns, and it does
-// not widen isPlotGutter. mustPlot, isPlotGutter, and chartYBounds stay
-// on the long-term %5.1f- grid.
+// remainder column, so the share search accepts every even split.
+// The long-term chart uses this same frame.
 
 import (
 	"context"
@@ -1339,7 +1337,7 @@ func TestOnlineFixtureC(t *testing.T) {
 	})
 }
 
-func TestOnlineLongTermKeepsPad(t *testing.T) {
+func TestOnlineLongTermUsesMonthlyScale(t *testing.T) {
 	lo, err := units.ToKG(170, units.Pound)
 	if err != nil {
 		t.Fatal(err)
@@ -1350,41 +1348,16 @@ func TestOnlineLongTermKeepsPad(t *testing.T) {
 	}
 	cfg := config.Default()
 	cfg.DisplayUnit = units.Pound
+	ticks := []string{"176", "175", "174", "173", "172", "171", "170", "169"}
 	app := showOnline(t, dec151990(), cfg,
 		logPoint{day: ymd(1990, time.November, 1), kg: lo},
 		logPoint{day: ymd(1990, time.November, 2), kg: hi})
-	monthly := monthlyView(t, app)
-	assertTickLabels(t, monthly, []string{"176", "175", "174", "173", "172", "171", "170", "169"})
+	assertTickLabels(t, monthlyView(t, app), ticks)
 	press(app, "l")
 	view := app.View().Content
-	vis := visible(view)
-	if strings.ContainsRune(vis, openDiamond) || strings.ContainsRune(vis, filledDiamond) {
-		t.Fatal("long-term chart has a diamond")
-	}
-	rows := mustPlot(t, view)
-	for _, row := range rows {
-		for _, c := range row {
-			if c.r == ' ' || c.r == 0 {
-				continue
-			}
-			if !isBraille(c.r) {
-				t.Fatalf("long-term rune %q, want braille and no stem", string(c.r))
-			}
-		}
-	}
-	ymin, ymax, ok := chartYBounds(view)
-	if !ok || ymin < 167.9 || ymin > 168.2 || ymax < 176.8 || ymax > 177.2 {
-		t.Fatalf("long-term Y = [%.2f, %.2f], want about [168, 177]", ymin, ymax)
-	}
-	// Headless tests leave the long-term width at its 72-column default.
-	if w := plotWidth(rows); w == onlinePlotCols || w == onlineLineCols || w != 72 {
-		t.Fatalf("long-term width = %d, want the current 72 columns, not 62 or 67", w)
-	}
-	for _, line := range strings.Split(view, "\n") {
-		if _, ok := onlineScaleLine(line); ok {
-			t.Fatal("long-term row uses the monthly 67-column gutter")
-		}
-	}
+	assertHeadingShape(t, view, "Quarterly")
+	assertTickLabels(t, view, ticks)
+	assertLongPicture(t, view)
 }
 
 func TestOnlineFixtureA(t *testing.T) {

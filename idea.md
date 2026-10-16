@@ -186,10 +186,10 @@ Change record (title box and stems):
 
 Long-term charts follow the book's WEIGHT menu: four views
 (quarterly, semiannual, annual, complete history), always ending at
-the latest data, with daily weight as a thin line and trend as a
-thick line — not the monthly floats-and-sinkers form. `l` opens that
-screen; `[` / `]` cycle the four kinds. Loss and Daily Deficit use
-the same first-and-last trend identity over the window's day count.
+the latest data. The on-screen picture is a thin weight line and a
+Braille trend, with no diamonds and no stems. `l` opens that
+screen; `[` / `]` cycle the four kinds. Loss and Daily Deficit on
+that screen are the straight-line fit to the trend.
 
 Change record (long-term, on screen):
 [docs/superpowers/specs/2026-09-12-long-term-charts.md](docs/superpowers/specs/2026-09-12-long-term-charts.md).
@@ -198,9 +198,9 @@ PDF is not in that slice.
 Change record (Y range, every on-screen chart):
 [docs/superpowers/specs/2026-09-12-chart-y-range.md](docs/superpowers/specs/2026-09-12-chart-y-range.md).
 
-Long-term X labels sit at month starts as `Aug 26` (month + two-digit
-year). If that will not fit, use two lines (`Aug` over `26`); if that
-will not fit, skip months.
+Long-term month labels sit under the plot as `Sep 90`. The first
+and last months are labeled when the last one fits. A label that
+would overlap is skipped. There is no second label line.
 
 Change record (long-term X labels):
 [docs/superpowers/specs/2026-09-12-long-term-x-labels.md](docs/superpowers/specs/2026-09-12-long-term-x-labels.md).
@@ -226,7 +226,7 @@ Change record (monthly Online chart):
 This spec replaces the on-screen monthly Braille-cell picture
 with the Hacker's Diet Online picture. It is shipped. The
 monthly screen drops the coloured title box and the shared ±2 lb
-margin. The long-term screen keeps both until
+margin. The long-term screen kept both until
 [#78](https://github.com/jglueckstein/hdtools/issues/78).
 The PDF keeps the existing vector page, including its title box.
 Monthly Loss and Daily Deficit stay the pencil identity until
@@ -239,9 +239,16 @@ are the Online rates
 ([#79](https://github.com/jglueckstein/hdtools/issues/79)).
 The current month uses the last seven trend values. Every other
 on-screen chart uses a straight-line fit to the trend. The PDF
-keeps the pencil identity. The long-term plot stays the
+keeps the pencil identity. The long-term plot was the
 Braille-cell picture until
 [#78](https://github.com/jglueckstein/hdtools/issues/78).
+
+Change record (long-term Online chart):
+[docs/superpowers/specs/2026-10-16-long-term-online-chart.md](docs/superpowers/specs/2026-10-16-long-term-online-chart.md).
+The on-screen long-term chart is the Online picture: a thin
+weight line, a Braille trend, a plain window name, the monthly
+one-step scale, and one-line month labels. The monthly chart and
+the PDF stay as they are.
 
 ## Meal Planning
 

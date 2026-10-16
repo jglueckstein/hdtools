@@ -2,7 +2,6 @@ package tui
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -405,24 +404,6 @@ func TestChartFlatSeriesHasScale(t *testing.T) {
 	}
 }
 
-func chartYBounds(view string) (ymin, ymax float64, ok bool) {
-	var ys []float64
-	for _, line := range strings.Split(visible(view), "\n") {
-		if len(line) < 6 || line[5] != '-' {
-			continue
-		}
-		var v float64
-		if _, err := fmt.Sscanf(strings.TrimSpace(line[:5]), "%f", &v); err != nil {
-			continue
-		}
-		ys = append(ys, v)
-	}
-	if len(ys) < 2 {
-		return 0, 0, false
-	}
-	return ys[len(ys)-1], ys[0], true
-}
-
 func upsertKG(t *testing.T, store *dailylog.Store, day time.Time, kg float64) {
 	t.Helper()
 	log, err := dailylog.New(day, &kg, 8, 0, false, "")
@@ -454,13 +435,8 @@ func TestChartYRangePounds(t *testing.T) {
 	press(app, "c")
 	assertTickLabels(t, app.View().Content, []string{"176", "175", "174", "173", "172", "171", "170", "169"})
 	press(app, "l")
-	ymin, ymax, ok := chartYBounds(app.View().Content)
-	if !ok {
-		t.Fatalf("long-term no Y scale: %q", app.View().Content)
-	}
-	if ymin < 167.9 || ymin > 168.2 || ymax < 176.8 || ymax > 177.2 {
-		t.Fatalf("long-term Y = [%.2f, %.2f], want [168, 177]", ymin, ymax)
-	}
+	assertTickLabels(t, app.View().Content, []string{"176", "175", "174", "173", "172", "171", "170", "169"})
+	assertLongPicture(t, app.View().Content)
 }
 
 func TestChartYRangeKilograms(t *testing.T) {
@@ -473,14 +449,7 @@ func TestChartYRangeKilograms(t *testing.T) {
 	press(app, "c")
 	assertTickLabels(t, app.View().Content, []string{"82", "81", "80", "79"})
 	press(app, "l")
-	p := yPad(units.Kilogram)
-	ymin, ymax, ok := chartYBounds(app.View().Content)
-	if !ok {
-		t.Fatal("long-term no Y scale")
-	}
-	if ymin < 80-p-0.05 || ymin > 80-p+0.05 || ymax < 81+p-0.05 || ymax > 81+p+0.05 {
-		t.Fatalf("long-term Y = [%.3f, %.3f], want [%.3f, %.3f]", ymin, ymax, 80-p, 81+p)
-	}
+	assertTickLabels(t, app.View().Content, []string{"82", "81", "80", "79"})
 }
 
 func TestChartYRangeStone(t *testing.T) {
@@ -501,14 +470,18 @@ func TestChartYRangeStone(t *testing.T) {
 	app := New(store, "mem.db", cfg)
 	app.Update(app.load())
 	press(app, "c")
-	plot := assertTickLabels(t, app.View().Content, []string{
+	ticks := []string{
 		"12.6", "12.5", "12.4", "12.4", "12.3", "12.2", "12.1", "12.1", "12.0", "11.9",
-	})
+	}
+	plot := assertTickLabels(t, app.View().Content, ticks)
 	for _, lab := range plot.tickLabels {
 		if strings.Contains(lab, "st") || strings.Contains(lab, "lb") {
 			t.Fatalf("tick %q, want one decimal of stones and not a ±2 lb pad", lab)
 		}
 	}
+	press(app, "l")
+	assertTickLabels(t, app.View().Content, ticks)
+	assertLongPicture(t, app.View().Content)
 }
 
 func chartTitleLine(view string) string {

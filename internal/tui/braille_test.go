@@ -1,20 +1,15 @@
 package tui
 
-// Braille chart tests pin the dot geometry from the high-resolution
-// chart spec: which bin a weight lands in, the eight Unicode masks,
-// and the dots read back from a chart view. The reader is an oracle
-// for those views. It does not paint, and it does not choose the
-// monthly span, the long-term buckets, or the Y pad.
+// These helpers read styled runes back out of a chart view. The
+// Online pictures use them. The old eight-row bin oracle left with
+// the Braille-cell grid. This file does not paint.
 
 import (
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 	"testing"
 	"unicode/utf8"
-
-	"github.com/jglueckstein/hdtools/internal/units"
 )
 
 const (
@@ -28,94 +23,6 @@ var (
 	brailleLeftFromTop  = []int{0x01, 0x02, 0x04, 0x40}
 	brailleRightFromTop = []int{0x08, 0x10, 0x20, 0x80}
 )
-
-func TestBrailleBinS2Marks(t *testing.T) {
-	t.Parallel()
-	pad := yPad(units.Kilogram)
-	ymin, ymax := 80-pad, 82+pad
-	if got := brailleBin(80.55, ymin, ymax, brailleN); got != 12 {
-		t.Fatalf("bin(80.55 kg) = %d, want 12 on padded 80..82 kg", got)
-	}
-	if got := brailleBin(80.85, ymin, ymax, brailleN); got != 14 {
-		t.Fatalf("bin(80.85 kg) = %d, want 14 on padded 80..82 kg", got)
-	}
-}
-
-func TestBrailleBinS4Stem(t *testing.T) {
-	t.Parallel()
-	pad := yPad(units.Kilogram)
-	ymin, ymax := 80-pad, 82+pad
-	for _, spec := range []struct {
-		v   float64
-		bin int
-	}{{80.00, 7}, {80.10, 8}, {80.50, 11}} {
-		if got := brailleBin(spec.v, ymin, ymax, brailleN); got != spec.bin {
-			t.Fatalf("bin(%g kg) = %d, want %d", spec.v, got, spec.bin)
-		}
-	}
-	for _, v := range []float64{80.10, 80.50} {
-		if got := brailleBin(v, ymin, ymax, brailleRows); got != 2 {
-			t.Fatalf("8-bin index of %g kg = %d, want 2", v, got)
-		}
-	}
-}
-
-func TestBrailleBinLastIsYMax(t *testing.T) {
-	t.Parallel()
-	ymin, ymax := 10.0, 20.0
-	if got := brailleBin(ymax, ymin, ymax, brailleN); got != 31 {
-		t.Fatalf("bin(Ymax) = %d, want 31", got)
-	}
-	if got := brailleBin(ymin, ymin, ymax, brailleN); got != 0 {
-		t.Fatalf("bin(Ymin) = %d, want 0", got)
-	}
-}
-
-func TestBrailleBits(t *testing.T) {
-	t.Parallel()
-	for row, want := range brailleLeftFromTop {
-		if got := brailleBit(0, row); got != want {
-			t.Fatalf("left dot row %d = %#x, want %#x", row, got, want)
-		}
-	}
-	for row, want := range brailleRightFromTop {
-		if got := brailleBit(1, row); got != want {
-			t.Fatalf("right dot row %d = %#x, want %#x", row, got, want)
-		}
-	}
-}
-
-// wantBrailleBin is the Decision 3 oracle for dots read from a view.
-// It is not the painter; chart tests compare the view to it.
-func wantBrailleBin(v, ymin, ymax float64, n int) int {
-	if n <= 0 {
-		return 0
-	}
-	if ymin == ymax {
-		return n / 2
-	}
-	if v >= ymax {
-		return n - 1
-	}
-	bin := int(math.Floor((v - ymin) / (ymax - ymin) * float64(n)))
-	if bin < 0 {
-		return 0
-	}
-	if bin > n-1 {
-		return n - 1
-	}
-	return bin
-}
-
-// twoDaySeriesBins is twoDayApp's November series in display kg:
-// day 1 is 172.5 (trend 172.5), day 2 is 171.5 (pencil trend 172.4).
-func twoDaySeriesBins() (day2Mark, day2Trend, day1Shared int) {
-	pad := yPad(units.Kilogram)
-	ymin, ymax := 171.5-pad, 172.5+pad
-	return wantBrailleBin(171.5, ymin, ymax, brailleN),
-		wantBrailleBin(172.4, ymin, ymax, brailleN),
-		wantBrailleBin(172.5, ymin, ymax, brailleN)
-}
 
 type cellStyle struct {
 	r    rune

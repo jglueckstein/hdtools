@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unicode"
 
 	"github.com/jglueckstein/hdtools/internal/config"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
@@ -14,34 +13,6 @@ import (
 
 func nov1990() time.Time {
 	return time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC)
-}
-
-func plotHas(view string, ch rune) bool {
-	for _, line := range strings.Split(visible(view), "\n") {
-		rs := []rune(line)
-		if len(rs) > 6 && unicode.IsDigit(rs[4]) {
-			for _, r := range rs[6:] {
-				if r == ch {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
-func longPlotCols(view string) int {
-	for _, line := range strings.Split(visible(view), "\n") {
-		if !strings.ContainsAny(line, `/\`) && !strings.Contains(line, "-") {
-			continue
-		}
-		// Gutter is "%5.1f-" (6 runes).
-		rs := []rune(line)
-		if len(rs) > 6 && unicode.IsDigit(rs[4]) {
-			return len(rs) - 6
-		}
-	}
-	return 0
 }
 
 func TestLongChartOpensFromListAndEscapes(t *testing.T) {
@@ -128,25 +99,7 @@ func TestLongChartTwoLinesNoMarksOrStems(t *testing.T) {
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "l")
-	view := app.View().Content
-	if plotHas(view, 'o') {
-		t.Fatalf("daily mark on long chart: %q", view)
-	}
-	if plotHas(view, '|') {
-		t.Fatalf("stem on long chart: %q", view)
-	}
-	rows := mustPlot(t, view)
-	mark, trend, shared := twoDaySeriesBins()
-	start := time.Date(1990, 9, 1, 0, 0, 0, 0, time.UTC)
-	nov1 := spanIndex(start, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC))
-	nov2 := spanIndex(start, time.Date(1990, 11, 2, 0, 0, 0, 0, time.UTC))
-	cell, _, ok := binRow(rows, nov1, shared, true)
-	sharedGood := ok && maskOf(cell.r)&sideBits(false) != 0 && cellHasFG(cell, 1)
-	pathsGood := hasBin(rows, nov2, mark) && hasLeftBin(rows, nov2, trend) && hasRightBin(rows, nov2, trend)
-	if !sharedGood || !pathsGood {
-		t.Fatalf("columns %q and %q, want braille dots for both paths and trend color on the shared cell",
-			columnGlyphs(rows, nov1), columnGlyphs(rows, nov2))
-	}
+	assertLongPicture(t, app.View().Content)
 }
 
 func TestLongChartWeightAndTrendColors(t *testing.T) {
@@ -194,16 +147,10 @@ func TestLongChartNoColorKeepsTwoLines(t *testing.T) {
 	app := twoDayApp(t, store)
 	press(app, "l")
 	view := app.View().Content
-	vis := visible(view)
-	if !strings.ContainsAny(vis, `/\-`) {
-		t.Fatalf("missing path: %q", view)
-	}
 	if hasChromaticSGR(view) {
 		t.Fatalf("chroma under NO_COLOR: %q", view)
 	}
-	if !hasSGRCode(view, 1) {
-		t.Fatalf("trend not bold: %q", view)
-	}
+	assertLongPicture(t, view)
 }
 
 func TestLongChartEmpty(t *testing.T) {
@@ -301,35 +248,22 @@ func quarterlyLossView(t *testing.T, today time.Time, cfg config.Config) string 
 	return quarterlyView(t, app)
 }
 
-func TestLongChartFitWhileOldPicture(t *testing.T) {
+func TestLongChartFitOnOnlinePicture(t *testing.T) {
 	today := time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC)
 	t.Run("kilograms", func(t *testing.T) {
 		view := quarterlyLossView(t, today, config.Default())
 		vis := visible(view)
-		if !strings.Contains(vis, "Quarterly") || !strings.Contains(vis, "September 1990") || !strings.Contains(vis, "November 1990") {
-			t.Fatalf("heading: %q", vis)
+		assertHeadingShape(t, view, "Quarterly")
+		if strings.Contains(vis, "September 1990") || strings.Contains(vis, "November 1990") {
+			t.Fatalf("heading still names the span: %q", vis)
 		}
 		if strings.Contains(vis, "Monthly loss:") {
 			t.Fatalf("says Monthly loss: %q", vis)
 		}
-		if strings.ContainsRune(vis, openDiamond) {
-			t.Fatal("long-term chart has an open diamond")
-		}
-		rows := mustPlot(t, view)
-		braille := false
-		for _, row := range rows {
-			for _, c := range row {
-				if isBraille(c.r) {
-					braille = true
-				}
-			}
-		}
-		if !braille {
-			t.Fatal("trend is not braille")
-		}
-		if !strings.Contains(vis, " 80.9-") || !strings.Contains(vis, " 69.1-") {
-			t.Fatalf("gutters: %q", vis)
-		}
+		assertLongPicture(t, view)
+		assertTickLabels(t, view, []string{
+			"81", "80", "79", "78", "77", "76", "75", "74", "73", "72", "71", "70", "69",
+		})
 		assertCaption(t, view, "Loss: 0.5 kg   Daily deficit: 421 cal")
 	})
 	t.Run("pounds", func(t *testing.T) {
@@ -360,11 +294,12 @@ func TestLongChartTitleKindAndSpan(t *testing.T) {
 	app := twoDayApp(t, store)
 	press(app, "l", "]", "]")
 	view := visible(app.View().Content)
-	if !strings.Contains(view, "Annual") {
-		t.Fatalf("want Annual: %q", view)
+	assertHeadingShape(t, app.View().Content, "Annual")
+	if !strings.Contains(view, "Dec 89") || !strings.Contains(view, "Nov 90") {
+		t.Fatalf("want end months: %q", view)
 	}
-	if !strings.Contains(view, "December 1989") || !strings.Contains(view, "November 1990") {
-		t.Fatalf("want span months: %q", view)
+	if strings.Contains(view, "December 1989") || strings.Contains(view, "November 1990") {
+		t.Fatalf("heading still names the span: %q", view)
 	}
 	if strings.Contains(view, "hdtools") {
 		t.Fatalf("hdtools in long chart: %q", view)
@@ -385,15 +320,16 @@ func TestLongChartCompleteStartsAtFirstLog(t *testing.T) {
 	app := twoDayApp(t, store)
 	press(app, "l", "]", "]", "]")
 	view := visible(app.View().Content)
-	if !strings.Contains(view, "Complete") {
-		t.Fatalf("want Complete: %q", view)
+	assertHeadingShape(t, app.View().Content, "Complete")
+	if !strings.Contains(view, "Apr 89") {
+		t.Fatalf("want Apr 89: %q", view)
 	}
-	if !strings.Contains(view, "April 1989") {
-		t.Fatalf("want April 1989: %q", view)
+	if strings.Contains(view, "April 1989") {
+		t.Fatalf("heading still names the span: %q", view)
 	}
 }
 
-func TestLongChartBucketOmitsWeightDot(t *testing.T) {
+func TestLongChartAnnualKeepsWeightLine(t *testing.T) {
 	freezeToday(t, time.Date(1990, 12, 15, 12, 0, 0, 0, time.UTC))
 	store := openStore(t)
 	upsertKG(t, store, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), 80)
@@ -402,76 +338,22 @@ func TestLongChartBucketOmitsWeightDot(t *testing.T) {
 	app.Update(app.load())
 	press(app, "l", "]", "]")
 	view := app.View().Content
-	rows := mustPlot(t, view)
-	if w := plotWidth(rows); w != defaultLongCols {
-		t.Fatalf("annual columns = %d, want %d buckets", w, defaultLongCols)
-	}
-	ey, em, last, ok := app.longEnd()
-	if !ok {
-		t.Fatal("no long-term end")
-	}
-	start := longStart(longAnnual, ey, em, app.logs)
-	end := time.Date(ey, em, last, 0, 0, 0, 0, time.UTC)
-	span := sheetRange(app.logs, start, end)
-	cols := bucketSpan(span, defaultLongCols)
-	// The scale is the day's weights and trend. Buckets drop the weigh-in.
-	ymin, ymax, yok := longYRange(span, app.cfg.DisplayUnit, true)
-	if !yok || len(cols) != defaultLongCols {
-		t.Fatalf("bucket Y range ok %v cols %d", yok, len(cols))
-	}
-	separated := false
-	for i, col := range cols {
-		if !col.HasTrend {
-			continue
-		}
-		ty, err := units.FromKG(col.Trend, app.cfg.DisplayUnit)
-		if err != nil {
-			t.Fatal(err)
-		}
-		tb := brailleBin(ty, ymin, ymax, brailleN)
-		left, right := leftBins(rows, i), rightBins(rows, i)
-		if !sameSet(left, tb) || !sameSet(right, tb) {
-			t.Fatalf("bucket %d left %v right %v, want only trend bin %d", i, left, right, tb)
-		}
-		d := len(span)
-		lo := i * d / defaultLongCols
-		hi := (i + 1) * d / defaultLongCols
-		if hi <= lo {
-			hi = lo + 1
-		}
-		if hi > d {
-			hi = d
-		}
-		for _, s := range span[lo:hi] {
-			if s.Log.Weight == nil {
-				continue
-			}
-			wy, err := units.FromKG(*s.Log.Weight, app.cfg.DisplayUnit)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if brailleBin(wy, ymin, ymax, brailleN) != tb {
-				separated = true
-			}
-		}
-	}
-	if !separated {
-		t.Fatal("fixture weight bins all match their bucket trend bins")
-	}
+	assertHeadingShape(t, view, "Annual")
+	assertLongPicture(t, view)
+	assertTickLabels(t, view, []string{
+		"91", "90", "89", "88", "87", "86", "85", "84", "83", "82", "81", "80", "79",
+	})
 }
 
-func TestLongChartAnnualIsBucketed(t *testing.T) {
+func TestLongChartAnnualHeadingIsTheWindow(t *testing.T) {
 	freezeToday(t, nov1990())
 	store := openStore(t)
 	app := twoDayApp(t, store)
 	press(app, "l", "]", "]")
 	view := app.View().Content
-	n := longPlotCols(view)
-	if n != 72 {
-		t.Fatalf("plot cols = %d, want 72\n%s", n, visible(view))
-	}
-	if plotHas(view, 'o') {
-		t.Fatalf("daily mark: %q", view)
+	assertLongPicture(t, view)
+	if strings.Contains(visible(view), "December 1989") {
+		t.Fatalf("heading still names the span: %q", visible(view))
 	}
 }
 
@@ -481,8 +363,11 @@ func TestLongChartQuarterlyClipsAtToday(t *testing.T) {
 	app := twoDayApp(t, store)
 	press(app, "l")
 	view := visible(app.View().Content)
-	if !strings.Contains(view, "September 1990") || !strings.Contains(view, "November 1990") {
+	if !strings.Contains(view, "Sep 90") || !strings.Contains(view, "Nov 90") {
 		t.Fatalf("quarterly span: %q", view)
+	}
+	if strings.Contains(view, "September 1990") || strings.Contains(view, "November 1990") {
+		t.Fatalf("heading still names the span: %q", view)
 	}
 }
 
@@ -495,8 +380,11 @@ func TestLongChartPastDatabaseUsesLatestLog(t *testing.T) {
 	if strings.Contains(view, "empty") {
 		t.Fatalf("empty in 2026: %q", view)
 	}
-	if !strings.Contains(view, "September 1990") || !strings.Contains(view, "November 1990") {
+	if !strings.Contains(view, "Sep 90") || !strings.Contains(view, "Nov 90") {
 		t.Fatalf("want 1990 quarter: %q", view)
+	}
+	if strings.Contains(view, "September 2026") || strings.Contains(view, "2026") {
+		t.Fatalf("followed the clock instead of the log: %q", view)
 	}
 }
 
@@ -523,7 +411,7 @@ func TestLongChartXLabelsQuarterlyOneLine(t *testing.T) {
 	}
 }
 
-func TestLongChartXLabelsCompleteTwoLine(t *testing.T) {
+func TestLongChartXLabelsCompleteOneLine(t *testing.T) {
 	freezeToday(t, nov1990())
 	store := openStore(t)
 	w := 80.0
@@ -537,11 +425,8 @@ func TestLongChartXLabelsCompleteTwoLine(t *testing.T) {
 	app := twoDayApp(t, store)
 	press(app, "l", "]", "]", "]")
 	view := visible(app.View().Content)
-	if strings.Contains(view, "Apr 89") {
-		t.Fatalf("one-line label on dense complete: %q", view)
-	}
-	if !strings.Contains(view, "Apr") || !strings.Contains(view, "89") {
-		t.Fatalf("want two-line Apr/89: %q", view)
+	if !strings.Contains(view, "Apr 89") || !strings.Contains(view, "Nov 90") {
+		t.Fatalf("want one-line Apr 89 and Nov 90: %q", view)
 	}
 }
 
@@ -558,24 +443,12 @@ func TestLongChartXLabelsSkipMonths(t *testing.T) {
 	}
 	app := twoDayApp(t, store)
 	press(app, "l", "]", "]", "]")
-	ticks := placeLongXLabels(monthTicks(sheetRange(app.logs, time.Date(1988, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC)), 72), 72)
-	if len(ticks) == 0 {
-		t.Fatal("no X labels")
+	view := visible(app.View().Content)
+	if !strings.Contains(view, "Jan 88") || !strings.Contains(view, "Nov 90") {
+		t.Fatalf("want the end months: %q", view)
 	}
-	months := 0
-	for d := time.Date(1988, 1, 1, 0, 0, 0, 0, time.UTC); !d.After(time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC)); d = d.AddDate(0, 1, 0) {
-		months++
-	}
-	if len(ticks) >= months {
-		t.Fatalf("placed %d labels for %d months, want skips", len(ticks), months)
-	}
-	for i := 1; i < len(ticks); i++ {
-		if ticks[i].col < ticks[i-1].col+3 {
-			t.Fatalf("overlap %v then %v", ticks[i-1], ticks[i])
-		}
-		if !ticks[i].two {
-			t.Fatalf("expected two-line at col %d", ticks[i].col)
-		}
+	if strings.Contains(view, "Feb 88") {
+		t.Fatalf("February overlaps January: %q", view)
 	}
 }
 
@@ -593,7 +466,7 @@ func TestLongChartXLabelsMidMonthStart(t *testing.T) {
 	app := twoDayApp(t, store)
 	press(app, "l", "]", "]", "]")
 	view := visible(app.View().Content)
-	if !strings.Contains(view, "Apr") || !strings.Contains(view, "89") {
+	if !strings.Contains(view, "Apr 89") {
 		t.Fatalf("want Apr 89 at start: %q", view)
 	}
 }
@@ -611,42 +484,6 @@ func TestLongChartEmptyHasNoMonthXLabels(t *testing.T) {
 	}
 }
 
-func TestPlaceLongXLabelsModes(t *testing.T) {
-	t.Parallel()
-	one := placeLongXLabels([]monthTick{
-		{col: 0, mon: "Sep", yy: "90"},
-		{col: 30, mon: "Oct", yy: "90"},
-		{col: 61, mon: "Nov", yy: "90"},
-	}, 71)
-	if len(one) != 3 || one[0].two || one[1].two {
-		t.Fatalf("one-line: %#v", one)
-	}
-	two := placeLongXLabels([]monthTick{
-		{col: 0, mon: "Apr", yy: "89"},
-		{col: 4, mon: "May", yy: "89"},
-		{col: 8, mon: "Jun", yy: "89"},
-	}, 72)
-	if len(two) < 2 || !two[0].two || !two[1].two {
-		t.Fatalf("two-line: %#v", two)
-	}
-	skip := placeLongXLabels([]monthTick{
-		{col: 0, mon: "Jan", yy: "88"},
-		{col: 2, mon: "Feb", yy: "88"},
-		{col: 4, mon: "Mar", yy: "88"},
-		{col: 6, mon: "Apr", yy: "88"},
-	}, 72)
-	if len(skip) >= 4 {
-		t.Fatalf("want skips: %#v", skip)
-	}
-	if skip[0].col != 0 || !skip[0].two {
-		t.Fatalf("first %#v", skip[0])
-	}
-}
-
-func spanIndex(start, day time.Time) int {
-	return int(day.Sub(start).Hours() / 24)
-}
-
 func quarterlyView(t *testing.T, app *App) string {
 	t.Helper()
 	view := app.View().Content
@@ -661,7 +498,7 @@ func s6Quarterly(t *testing.T) *App {
 	t.Helper()
 	freezeToday(t, time.Date(1990, 11, 10, 12, 0, 0, 0, time.UTC))
 	store := openStore(t)
-	// 80 then 90 keeps the daily dot and the trend dot in different rows.
+	// 80 then 90 keeps the weight line and the trend on different rows.
 	upsertKG(t, store, time.Date(1990, 11, 1, 0, 0, 0, 0, time.UTC), 80)
 	upsertKG(t, store, time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC), 90)
 	app := New(store, "mem.db", config.Default())
@@ -670,57 +507,31 @@ func s6Quarterly(t *testing.T) *App {
 	return app
 }
 
-func TestLongChartBrailleKeepsDayColumns(t *testing.T) {
+func TestLongChartWideQuarterlyStays62(t *testing.T) {
 	app := s6Quarterly(t)
-	rows := mustPlot(t, quarterlyView(t, app))
-	if w := plotWidth(rows); w != 71 {
-		t.Fatalf("quarterly columns = %d, want 71 day columns", w)
-	}
-	nov10 := spanIndex(time.Date(1990, 9, 1, 0, 0, 0, 0, time.UTC), time.Date(1990, 11, 10, 0, 0, 0, 0, time.UTC))
-	if !columnHasBothSides(rows, nov10) {
-		t.Fatalf("10 November column %q, want a left and a right trend dot", columnGlyphs(rows, nov10))
+	plot := assertLongPicture(t, quarterlyView(t, app))
+	if len(plot.rows) != onlinePlotRows || len(plot.rows[0]) != onlinePlotCols {
+		t.Fatalf("canvas = %d x %d, want %d x %d", len(plot.rows[0]), len(plot.rows), onlinePlotCols, onlinePlotRows)
 	}
 }
 
-func TestLongChartBrailleStaysBucketed(t *testing.T) {
+func TestLongChartFittedQuarterlyStays62(t *testing.T) {
 	freezeToday(t, time.Date(1990, 12, 15, 12, 0, 0, 0, time.UTC))
 	store := openStore(t)
-	upsertKG(t, store, time.Date(1990, 11, 30, 0, 0, 0, 0, time.UTC), 80)
+	upsertKG(t, store, time.Date(1990, 10, 1, 0, 0, 0, 0, time.UTC), 80)
+	upsertKG(t, store, time.Date(1990, 11, 30, 0, 0, 0, 0, time.UTC), 90)
 	app := New(store, "mem.db", config.Default())
 	app.Update(app.load())
 	press(app, "l")
-	rows := mustPlot(t, quarterlyView(t, app))
-	w := plotWidth(rows)
-	if w != 72 {
-		t.Fatalf("quarterly columns = %d, want 72 buckets", w)
-	}
-	if !columnHasBothSides(rows, w-1) {
-		t.Fatalf("30 November bucket %q, want a left and a right trend dot", columnGlyphs(rows, w-1))
-	}
+	assertLongPicture(t, quarterlyView(t, app))
 }
 
-func TestLongChartBrailleNoColorBoldTrend(t *testing.T) {
+func TestLongChartNoColorOnSeparatedSeries(t *testing.T) {
 	t.Setenv("NO_COLOR", "1")
 	app := s6Quarterly(t)
 	view := quarterlyView(t, app)
 	if hasChromaticSGR(view) {
 		t.Fatalf("chromatic SGR under NO_COLOR: %q", view)
 	}
-	rows := mustPlot(t, view)
-	boldDot, plainDot := false, false
-	for _, row := range rows {
-		for _, c := range row {
-			if !isBraille(c.r) || maskOf(c.r) == 0 {
-				continue
-			}
-			if c.bold {
-				boldDot = true
-			} else {
-				plainDot = true
-			}
-		}
-	}
-	if !boldDot || !plainDot {
-		t.Fatalf("bold trend dots %v, daily-only dots %v; first glyph %q", boldDot, plainDot, string(firstPlotGlyph(rows)))
-	}
+	assertLongPicture(t, view)
 }
