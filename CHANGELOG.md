@@ -67,6 +67,9 @@
 
 ### Changed
 
+- The harness stack line names Charm v2
+  (`charm.land/bubbletea/v2`, `charm.land/lipgloss/v2`, and
+  `charm.land/bubbles/v2`).
 - Pull requests check Go file names, layout, bare error returns,
   exported doc comments, and file preambles. `month_save.go` is
   `monthsave.go`, and `ResolvePDFDir` wraps its error. (#103)

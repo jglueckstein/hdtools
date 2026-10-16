@@ -203,9 +203,6 @@ request, so the weekly pass is a second look, not the only one.
   looks unused inside one file may have a caller in another
   package. Search the module before deleting it. `plotMonthly`
   in `braille.go` is unreferenced on purpose.
-- **`HARNESS.md` still names Charm v1 modules.** `go.mod` is
-  Charm v2. That stale line is issue #86. Do not change imports
-  to match the harness stack line.
 
 ---
 
