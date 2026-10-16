@@ -201,8 +201,7 @@ request, so the weekly pass is a second look, not the only one.
   both required jobs on the current head commit.
 - **Garbage collection does not edit the tree.** A name that
   looks unused inside one file may have a caller in another
-  package. Search the module before deleting it. `plotMonthly`
-  in `braille.go` is unreferenced on purpose.
+  package. Search the module before deleting it.
 
 ---
 

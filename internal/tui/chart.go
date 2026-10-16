@@ -118,10 +118,6 @@ func titleBox(text string, plotWidth int) string {
 	return lipgloss.PlaceHorizontal(plotWidth, lipgloss.Center, box)
 }
 
-func monthYearBox(month time.Month, year int, plotWidth int) string {
-	return titleBox(monthYearLabel(month, year), plotWidth)
-}
-
 func stemCell(ch string) string {
 	if os.Getenv("NO_COLOR") != "" {
 		return ch
