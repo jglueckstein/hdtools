@@ -69,7 +69,7 @@
 
 - The harness status records 18/18 declared constraints and that
   drift was found. Cursor, Copilot, and Windsurf copies match
-  `HARNESS.md`.
+  `HARNESS.md`. (#99)
 - The backlog record says the on-screen caption rate is shipped. (#95)
 - On-screen Monthly Loss and Daily Deficit use the last seven trend
   values for the current month and a straight-line fit for every
