@@ -6,3 +6,4 @@
 - **Improvement**: Colour and selection contracts need a test per role and per surface (list reverse vs month role colour), not only `delta-pos`.
 - **Signal**: workflow
 - **Constraint**: none
+- **Promoted**: 2026-10-16 → AGENTS.md GOTCHAS: "hides `ApplyTrend` rounding. At 176.5 lb that day is `-0.1`."
