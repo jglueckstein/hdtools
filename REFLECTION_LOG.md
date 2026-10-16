@@ -95,6 +95,7 @@
 - **Improvement**: Keep spec/plan on the feature branch before switching away. Dispatch diaboli as `general-purpose` with the skill when the plugin-prefixed type is unknown.
 - **Signal**: workflow
 - **Constraint**: none
+- **Promoted**: 2026-10-16 → AGENTS.md GOTCHAS: "Write a temp in the same directory and `Rename` it into place."
 
 ---
 
@@ -128,6 +129,7 @@
 - **Improvement**: Colour and selection contracts need a test per role and per surface (list reverse vs month role colour), not only `delta-pos`.
 - **Signal**: workflow
 - **Constraint**: none
+- **Promoted**: 2026-10-16 → AGENTS.md GOTCHAS: "hides `ApplyTrend` rounding. At 176.5 lb that day is `-0.1`."
 
 ---
 
@@ -254,6 +256,7 @@
   runs for that SHA instead of the first check command that returns.
 - **Signal**: workflow
 - **Constraint**: none
+- **Promoted**: 2026-10-16 → AGENTS.md GOTCHAS: "Wait for both required jobs on the current head commit."
 
 ---
 
@@ -374,6 +377,7 @@
   share a sign for zero.
 - **Signal**: failure
 - **Constraint**: A zero on-screen loss prints 0.0, never -0.0.
+- **Promoted**: 2026-10-16 → AGENTS.md GOTCHAS: "A zero on-screen loss prints `0.0`."
 - **Session metadata**:
   - Duration: unknown
   - Model tiers used: unknown

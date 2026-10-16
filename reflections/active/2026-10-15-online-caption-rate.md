@@ -11,6 +11,7 @@
   share a sign for zero.
 - **Signal**: failure
 - **Constraint**: A zero on-screen loss prints 0.0, never -0.0.
+- **Promoted**: 2026-10-16 → AGENTS.md GOTCHAS: "A zero on-screen loss prints `0.0`."
 - **Session metadata**:
   - Duration: unknown
   - Model tiers used: unknown

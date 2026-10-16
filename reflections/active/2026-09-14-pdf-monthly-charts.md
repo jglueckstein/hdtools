@@ -6,3 +6,4 @@
 - **Improvement**: Keep spec/plan on the feature branch before switching away. Dispatch diaboli as `general-purpose` with the skill when the plugin-prefixed type is unknown.
 - **Signal**: workflow
 - **Constraint**: none
+- **Promoted**: 2026-10-16 → AGENTS.md GOTCHAS: "Write a temp in the same directory and `Rename` it into place."

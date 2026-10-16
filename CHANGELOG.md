@@ -67,6 +67,8 @@
 
 ### Changed
 
+- AGENTS.md records empty `gh pr checks` output, 0600 writes,
+  display-column rounding, and a zero loss printing `0.0`.
 - Unused chart helpers are gone: `plotMonthly`, `monthYearBox`,
   `hasFGOnBraille`, and `plotColumn`. The long-term Braille grid
   stays. (#105)

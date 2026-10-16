@@ -43,6 +43,25 @@ before writing or reviewing code. Do not add style rules here.
   rejected, the host mapping has changed; use the id the error
   accepts. Do not edit the installed plugin copy; a plugin update
   overwrites it.
+- `gh pr checks` can exit at once with "no checks reported" while
+  the runs are still queued.
+  Wait for both required jobs on the current head commit.
+  A commit pushed while that run is in progress is not the commit
+  the job checked out.
+- A file that must be mode 0600 is not written with `os.Create`
+  or `fpdf.OutputFileAndClose` on the destination. Those truncate
+  the file and start from 0666.
+  Write a temp in the same directory and `Rename` it into place.
+  The PDF path is `installOwnerOnly`.
+  The harness rule names only the database and `config.toml`.
+- A derived display column subtracts the `%.1f` strings the
+  adjacent cells already paint. Converting a kilogram difference
+  disagrees with those cells: 80.0 kg and 79.9 kg show as `+0.3`
+  pounds. A test that the first day is `0.0` only in kilograms
+  hides `ApplyTrend` rounding. At 176.5 lb that day is `-0.1`.
+- A zero on-screen loss prints `0.0`. `FitRate`'s unary minus
+  turns an exact zero slope into a negative zero, and `%.1f`
+  prints `-0.0`.
 
 ## ARCH_DECISIONS
 

@@ -14,3 +14,4 @@
   runs for that SHA instead of the first check command that returns.
 - **Signal**: workflow
 - **Constraint**: none
+- **Promoted**: 2026-10-16 → AGENTS.md GOTCHAS: "Wait for both required jobs on the current head commit."
