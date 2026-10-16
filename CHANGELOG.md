@@ -4,6 +4,9 @@
 
 ### Added
 
+- Each `CONVENTIONS.md` section names the harness check that covers
+  it, and a pull request fails when that binding is missing
+- Import direction and the 500-line file limit run on pull requests
 - On-screen monthly and long-term charts paint with Braille dots
   inside each existing day or bucket column, so a mark, a stem, and
   the trend can share a column (#71)

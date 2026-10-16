@@ -2,19 +2,14 @@
 
 <!-- This file is the project's persistent memory across AI sessions.
      Review new entries with the same scepticism you would apply to any
-     generated content. Entries should reflect observed reality. -->
+     generated content. Entries should reflect observed reality.
+     Coding and style rules live in CONVENTIONS.md. Read that file
+     before writing or reviewing code. -->
 
 ## STYLE
 
-- Go follows Google's Go Style Guide: `gofmt`, MixedCaps, no fixed
-  line length, package `testing` only. The 80-column wrap for Markdown
-  and shell does not apply to `.go` files.
-- Co-located `*_test.go` next to the code they cover — that is how
-  `internal/dailylog` and `internal/tui` are already laid out.
-- Table-driven tests for validation and conversion matrices (`units`,
-  `dailylog` constructors).
-- Pad TUI columns with `lipgloss.Width` (`visPad`), never byte length,
-  once ANSI color is in the string.
+Coding and style rules live in `CONVENTIONS.md`. Read that file
+before writing or reviewing code. Do not add style rules here.
 
 ## GOTCHAS
 
@@ -76,12 +71,7 @@
 
 ## TEST_STRATEGY
 
-- Unit tests live beside source as `_test.go`.
-- Use `t.TempDir()` for SQLite; `:memory:` races under `t.Parallel`.
-- Alignment tests strip ANSI and compare header/value column ends
-  (`internal/tui/layout_test.go`).
-- Do not require a real terminal for TUI tests: drive `App.Update` /
-  `View` with messages.
+Test layout, fixtures, and TUI test rules live in `CONVENTIONS.md`.
 
 ## DESIGN_DECISIONS
 
@@ -92,13 +82,3 @@
 - `[colors]` is a sparse overlay of named 16-color or hex values.
   16-color is the floor and downshift target. `NO_COLOR` strips
   chromatic color only; bold, reverse, and `>` remain.
-- User-facing docs follow Diátaxis under `docs/` (tutorials, how-to,
-  reference, explanation). README is the map. Habitat files are not
-  that split.
-- User-facing Markdown follows Google's Markdown Style Guide: 80-col
-  wrap (except links, tables, headings, code); ATX headings; one H1;
-  fenced code with a language; 4-space nested lists; no trailing
-  whitespace. No Gitiles `[TOC]`; `../` links are allowed on GitHub.
-- Shell scripts follow Google's Shell Style Guide: `#!/bin/bash`,
-  `set -euo pipefail`, 2-space indent, `"${var}"`, `[[ ... ]]`,
-  errors on STDERR. `scripts/lib/*.sh` are not executable.

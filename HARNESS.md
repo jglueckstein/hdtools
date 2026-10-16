@@ -34,6 +34,9 @@
      concrete enough that a reviewer could objectively say whether code
      follows it or not. -->
 
+`CONVENTIONS.md` restates these conventions for agents. Each of
+its sections names the constraint below that checks it.
+
 - **Naming**: Follow the main points of [Google's Go Style Guide](https://google.github.io/styleguide/go/guide). Exported identifiers use MixedCaps; unexported identifiers use mixedCaps. Initialisms stay all-caps as words: `HTTPServer`, `userID`, `ServeHTTP`. Packages are short, lowercase, and contain no underscores. Files are lowercase with no underscores except `_test.go`. There is no fixed line length; `gofmt` is the format, and a long line is refactored rather than wrapped. New APIs avoid a `Get` prefix. `context.Context` is the first parameter when a function needs a context. Tests use package `testing` only (no assertion libraries).
 - **File structure**: One module at the repo root. The binary entry point is `cmd/hdtools/main.go` and stays a wiring layer. Application code lives under `internal/` and is not importable from outside the module. One package directory per concern (`internal/config`, `internal/dailylog`, `internal/tui`, `internal/units`, …). Weight trend belongs in `dailylog`, not a separate package. Tests sit next to the code as `<file>_test.go`. If a type is the package's main exported type, its file is named after that type.
 - **Error handling**: Every function that returns an `error` either handles it with a specific recovery action or wraps it with `%w` and a short context string before returning (`fmt.Errorf("load daily log: %w", err)`). Bare `return err` is not permitted. `panic` is only for truly unreachable programmer errors, never for I/O, parse, or database failures. Sentinel errors live in the package that defines them and are compared with `errors.Is` / `errors.As`.
@@ -182,6 +185,33 @@
   failure action; agent PR constraints are not dispatched in CI today
   (`harness.yml` does not run harness-enforcer).
 
+### Import direction
+
+- **Rule**: `internal/dailylog` does not import `tui`, `config`, or
+  `units`. `internal/units` does not import `tui`, `dailylog`, or
+  `config`. `internal/config` does not import `tui` or `dailylog`.
+  `cmd/hdtools` and `internal/tui` import downward
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-import-direction.sh
+- **Scope**: pr
+
+### File size
+
+- **Rule**: Every non-test `.go` file is at most 500 lines
+- **Enforcement**: deterministic
+- **Tool**: test -z "$(find . -name '*.go' ! -name '*_test.go' ! -path './.git/*' -exec wc -l {} + | awk '$1 > 500 && $2 != "total"')"
+- **Scope**: pr
+
+### Conventions are bound
+
+- **Rule**: Every `##` section in `CONVENTIONS.md` has a `Checked by`
+  line. Each name is a `###` heading under Constraints in this file,
+  or the whole value is `not a merge gate`. A named constraint that
+  this file does not declare fails the check
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-conventions-bound.sh
+- **Scope**: pr
+
 ---
 
 ## Garbage Collection
@@ -221,7 +251,12 @@
 
 - **What it checks**: Whether source layout, naming, error handling, and
   documentation in the tree still match the Context conventions in
-  HARNESS.md
+  HARNESS.md. Each bold Context convention (Naming, File structure,
+  Error handling, Documentation) must be mentioned in
+  `CONVENTIONS.md`. A Context convention added here that
+  `CONVENTIONS.md` does not mention is a failure.
+  `scripts/check-conventions-bound.sh` checks the other direction
+  on each pull request
 - **Frequency**: weekly
 - **Enforcement**: agent
 - **Tool**: harness-gc agent
@@ -252,6 +287,7 @@
   layers: `internal/dailylog` and `internal/units` stay TUI-free and do
   not import `config`; `internal/config` may import `units` but not
   `tui` or `dailylog`. `cmd/hdtools` and `internal/tui` import downward.
+  The pull-request constraint Import direction runs this same script.
 - **Frequency**: weekly
 - **Enforcement**: deterministic
 - **Tool**: scripts/check-import-direction.sh
@@ -261,6 +297,7 @@
 
 - **What it checks**: Whether any non-test `.go` file has grown past 500
   lines (split candidate). Current peak is `internal/tui/app.go`.
+  The pull-request constraint File size runs this same command.
 - **Frequency**: weekly
 - **Enforcement**: deterministic
 - **Tool**: test -z "$(find . -name '*.go' ! -name '*_test.go' ! -path './.git/*' -exec wc -l {} + | awk '$1 > 500 && $2 != "total"')"
