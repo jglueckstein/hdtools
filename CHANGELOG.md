@@ -67,6 +67,9 @@
 
 ### Changed
 
+- The onboarding guide matches the current harness: MixedCaps,
+  Charm v2 imports, and the pull-request checks for import
+  direction, file size, and the conventions binding.
 - The harness status records 18/18 declared constraints and that
   drift was found. Cursor, Copilot, and Windsurf copies match
   `HARNESS.md`. (#99)
