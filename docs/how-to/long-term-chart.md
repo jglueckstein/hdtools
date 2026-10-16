@@ -2,9 +2,9 @@
 
 The long-term chart is the book's WEIGHT menu: quarterly, semiannual,
 annual, or complete history. It always ends at your latest log (a
-1990 log opened in 2026 still plots 1990). Daily weight is a thin
-line when the span fits one column per day; longer spans show trend
-only.
+1990 log opened in 2026 still plots 1990). The picture is a thin
+weight line and a Braille trend. There are no diamonds and no stems.
+The heading is the window name.
 
 1.  From the daily list, press `l`.
 2.  Or open the month sheet with `m` (not while editing a cell) and
@@ -13,11 +13,13 @@ only.
 4.  Press `[` or `]` to cycle the four kinds. Esc returns to the
     screen you came from.
 
-The horizontal axis is labeled at month starts (`Sep 90`). If those
-labels would collide, they stack (`Sep` over `90`) or skip months.
+The plot is 62 columns and 16 rows, the same frame as the monthly
+chart. It does not follow the terminal. Month labels sit under the
+plot (`Sep 90`). The first and last months are shown when they fit.
+A label that would overlap is skipped.
 
-The vertical scale is the plotted min and max plus 2 lb of margin
-(the same margin in kg and stone).
+The vertical scale is the monthly rule: one step past the plotted
+weights and trend, in the display unit. It is not a 2 lb margin.
 
 Loss and Daily Deficit use a straight-line fit through the trend.
 The printed loss is the change along that line from the first trend

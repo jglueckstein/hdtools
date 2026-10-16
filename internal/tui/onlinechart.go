@@ -2,8 +2,8 @@ package tui
 
 // The monthly Online picture is one calendar month of The Hacker's Diet
 // website chart. It lives in this file so chart.go can keep the keys,
-// the PDF, and the caption, and so the long-term Braille painter stays
-// in longchart.go. app.go is already at the file-size line.
+// the PDF, and the caption. The long-term screen reuses this canvas
+// from longonline.go. app.go is already at the file-size line.
 //
 // The plot is 62 columns by 16 rows, plus a five-column gutter, and it
 // does not follow the terminal. Y is the display unit. The scale runs
@@ -69,7 +69,8 @@ func (s monthShare) bounds(day int) (int, int) {
 
 // onlineHeading is the month and year in the existing title role.
 // The words are centered on the 67-column plot line. There is no box
-// and no filled background; the long-term chart still owns that box.
+// and no filled background. The long-term window name uses the same
+// line, from longonline.go.
 func onlineHeading(month time.Month, year int, p palette) string {
 	label := p.title.Render(monthYearLabel(month, year))
 	return lipgloss.PlaceHorizontal(monthLine, lipgloss.Center, label)
@@ -322,8 +323,8 @@ func paintStems(m *canvas.Model, samples []onlineSample, share monthShare, lo, h
 	}
 }
 
-// onlineStemStyle is chrome green, the same green as stemCell, and
-// not a [colors] role. NO_COLOR drops the foreground and keeps the rune.
+// onlineStemStyle is chrome green, the monthly stem, and not a
+// [colors] role. NO_COLOR drops the foreground and keeps the rune.
 func onlineStemStyle() lipgloss.Style {
 	if os.Getenv("NO_COLOR") != "" {
 		return lipgloss.NewStyle()

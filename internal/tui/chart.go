@@ -2,26 +2,22 @@ package tui
 
 // The monthly chart screen is one sitting of the book: the keys, the
 // PDF write, the database line, and Monthly Loss / Daily Deficit.
-// The on-screen picture is the Online chart in onlinechart.go. The
-// yellow-on-blue title box stays in this file because the long-term
-// chart still uses it. Clip, empty, and the ±2 lb pad live in
-// chartspan. The PDF caption stays on that package's pencil
-// identity. The on-screen caption does not: the current month uses
-// the last seven trends, and every other month uses the fit, both
-// from dailylog. p writes the PDF through chartpdf into the
-// configured directory, not the process working directory. This
-// file does not import a PDF library and does not paint the
-// long-term chart.
+// The on-screen picture is the Online chart in onlinechart.go. Clip
+// and empty live in chartspan. The PDF caption stays on that
+// package's pencil identity. The on-screen caption does not: the
+// current month uses the last seven trends, and every other month
+// uses the fit, both from dailylog. p writes the PDF through
+// chartpdf into the configured directory, not the process working
+// directory. This file does not import a PDF library and does not
+// paint the long-term chart.
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/jglueckstein/hdtools/internal/chartpdf"
 	"github.com/jglueckstein/hdtools/internal/chartspan"
 	"github.com/jglueckstein/hdtools/internal/config"
@@ -29,10 +25,7 @@ import (
 	"github.com/jglueckstein/hdtools/internal/units"
 )
 
-const (
-	plotRows  = 8
-	chartHelp = "esc back   [ ] month   l long   p pdf   q quit"
-)
+const chartHelp = "esc back   [ ] month   l long   p pdf   q quit"
 
 func (a *App) openChart() {
 	if a.screen == screenList {
@@ -100,29 +93,6 @@ func (a *App) writeChartPDF() {
 
 func monthYearLabel(month time.Month, year int) string {
 	return fmt.Sprintf("%s %d", month.String(), year)
-}
-
-func titleBox(text string, plotWidth int) string {
-	s := lipgloss.NewStyle().Padding(0, 1)
-	if os.Getenv("NO_COLOR") == "" {
-		s = s.
-			Foreground(lipgloss.Color("3")).
-			Background(lipgloss.Color("4")).
-			Border(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("1"))
-	}
-	box := s.Render(text)
-	if plotWidth < 1 {
-		return box
-	}
-	return lipgloss.PlaceHorizontal(plotWidth, lipgloss.Center, box)
-}
-
-func stemCell(ch string) string {
-	if os.Getenv("NO_COLOR") != "" {
-		return ch
-	}
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Render(ch)
 }
 
 func (a *App) chartView() string {
@@ -200,13 +170,4 @@ func chartEmpty(span []sheetDay) bool {
 		}
 	}
 	return true
-}
-
-func yPad(unit units.Unit) float64 {
-	return chartspan.YPad(unit)
-}
-
-func applyYPad(ymin, ymax float64, unit units.Unit) (float64, float64) {
-	p := yPad(unit)
-	return ymin - p, ymax + p
 }

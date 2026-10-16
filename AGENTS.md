@@ -31,8 +31,7 @@ before writing or reviewing code. Do not add style rules here.
   dated changelog; that file loses to this note.
 - Every harness GC rule is auto-fix false, so findings become issues.
   A same-package unused name is not dead code until a module-wide
-  search agrees. The long-term chart calls `newBrailleGrid` with
-  `monthly` false.
+  search agrees.
 - On Grok 1.0.46, `spawn_subagent` rejects
   `ai-literacy-superpowers:<name>` even when the error lists that
   string as available. Plugin files are `agents/<name>.agent.md`, and

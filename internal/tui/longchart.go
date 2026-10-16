@@ -1,13 +1,12 @@
 package tui
 
-// The long-term chart is the book's WEIGHT-menu picture: quarterly,
+// The long-term chart is the book's WEIGHT menu: quarterly,
 // semiannual, annual, or complete history, ending at the latest log.
-// Daily weight is a thin line only when one column per day fits;
-// otherwise the plot is trend-only. The columns are Braille runes
-// from braille.go. Loss and Daily Deficit are a straight-line fit
-// through the trend on the day span, before any bucketing, so a
-// bucket is not a regression sample. The fit itself lives in
-// dailylog. This file does not open SQLite or edit the log.
+// The picture is the Online canvas in longonline.go. This file keeps
+// the keys, the four windows, and the straight-line fit. The fit
+// reads the day span, so a shared column is not a regression sample.
+// The fit itself lives in dailylog. This file does not open SQLite,
+// does not edit the log, and does not follow the terminal width.
 
 import (
 	"fmt"
@@ -18,8 +17,6 @@ import (
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 	"github.com/jglueckstein/hdtools/internal/units"
 )
-
-const defaultLongCols = 72
 
 type longKind int
 
@@ -65,17 +62,6 @@ func (a *App) updateLong(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		a.longKind = (a.longKind + 1) % longKindCount
 	}
 	return a, nil
-}
-
-func (a *App) longPlotWidth() int {
-	if a.termCols > 6 {
-		w := a.termCols - 6
-		if w < 8 {
-			return 8
-		}
-		return w
-	}
-	return defaultLongCols
 }
 
 func (a *App) longEnd() (year int, month time.Month, lastDay int, ok bool) {
@@ -144,72 +130,26 @@ func sheetRange(logs []dailylog.DailyLog, start, end time.Time) []sheetDay {
 	return out
 }
 
-func bucketSpan(span []sheetDay, w int) []sheetDay {
-	d := len(span)
-	if d <= w {
-		return span
-	}
-	out := make([]sheetDay, w)
-	for i := 0; i < w; i++ {
-		lo := i * d / w
-		hi := (i + 1) * d / w
-		if hi <= lo {
-			hi = lo + 1
-		}
-		if hi > d {
-			hi = d
-		}
-		row := sheetDay{Day: span[lo].Day}
-		for _, s := range span[lo:hi] {
-			if s.HasTrend {
-				row.Trend = s.Trend
-				row.HasTrend = true
-				row.Day = s.Day
-			}
-		}
-		out[i] = row
-	}
-	return out
-}
-
 func (a *App) longView() string {
 	p := a.pal
 	unit := a.cfg.DisplayUnit
 	help := p.help.Render("esc back   [ ] kind   q quit")
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s\n", longHeading(a.longKind.name(), p))
+	fmt.Fprintf(&b, "%s\n\n", p.muted.Render(fmt.Sprintf("db: %s   weight %s", a.dbPath, unit)))
 	ey, em, lastDay, ok := a.longEnd()
 	if !ok {
-		var b strings.Builder
-		fmt.Fprintf(&b, "%s\n", titleBox(a.longKind.name(), 40))
-		fmt.Fprintf(&b, "%s\n\n", p.muted.Render(fmt.Sprintf("db: %s   weight %s", a.dbPath, unit)))
 		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(empty span)"), help)
 		return b.String()
 	}
 	start := longStart(a.longKind, ey, em, a.logs)
 	end := time.Date(ey, em, lastDay, 0, 0, 0, 0, time.UTC)
-	if end.Before(start) {
-		var b strings.Builder
-		fmt.Fprintf(&b, "%s\n", titleBox(a.longKind.name(), 40))
-		fmt.Fprintf(&b, "%s\n\n", p.muted.Render(fmt.Sprintf("db: %s   weight %s", a.dbPath, unit)))
-		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(empty span)"), help)
-		return b.String()
-	}
 	span := sheetRange(a.logs, start, end)
-	title := fmt.Sprintf("%s  %s–%s", a.longKind.name(), monthYearLabel(start.Month(), start.Year()), monthYearLabel(em, ey))
-	w := a.longPlotWidth()
-	plotWidth := 6 + w
-	if len(span) <= w {
-		plotWidth = 6 + len(span)
-	}
-	var b strings.Builder
-	fmt.Fprintf(&b, "%s\n", titleBox(title, plotWidth))
-	fmt.Fprintf(&b, "%s\n\n", p.muted.Render(fmt.Sprintf("db: %s   weight %s", a.dbPath, unit)))
-	if chartEmpty(span) {
+	if end.Before(start) || chartEmpty(span) {
 		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(empty span)"), help)
 		return b.String()
 	}
-	daily := len(span) <= w
-	cols := bucketSpan(span, w)
-	b.WriteString(renderLongPlot(span, cols, unit, p, daily))
+	b.WriteString(renderLongOnline(span, unit, p))
 	if line, ok := longAnalysis(span, unit); ok {
 		fmt.Fprintf(&b, "\n%s\n", line)
 	}
@@ -217,10 +157,10 @@ func (a *App) longView() string {
 	return b.String()
 }
 
-// longAnalysis fits the unbucketed day span. x is the index in that
-// slice, so a leading day with no trend keeps the later offsets and
-// is left out of the sample. A window that ends today still uses the
-// fit. The caption is omitted only when the fit itself has no rate.
+// longAnalysis fits the day span. x is the index in that slice, so a
+// leading day with no trend keeps the later offsets and is left out
+// of the sample. A window that ends today still uses the fit. The
+// caption is omitted only when the fit itself has no rate.
 func longAnalysis(span []sheetDay, unit units.Unit) (string, bool) {
 	var x, y []float64
 	for i, d := range span {
@@ -239,192 +179,4 @@ func longAnalysis(span []sheetDay, unit units.Unit) (string, bool) {
 		return "", false
 	}
 	return fmt.Sprintf("Loss: %.1f %s   Daily deficit: %d cal", loss, unit, kcal), true
-}
-
-func renderLongPlot(orig, span []sheetDay, unit units.Unit, p palette, daily bool) string {
-	n := len(span)
-	// Scale the day's weights and trend, not the bucket. A bucket
-	// keeps only the trend, and the 170 lb to 175 lb series would
-	// otherwise lose the weigh-in and stop spanning 168 lb to 177 lb.
-	ymin, ymax, ok := longYRange(orig, unit, true)
-	if !ok {
-		return ""
-	}
-	grid := newBrailleGrid(n, false)
-	for i, d := range span {
-		var wy, ty float64
-		hw, ht := false, false
-		if daily && d.Log.Weight != nil {
-			y, err := units.FromKG(*d.Log.Weight, unit)
-			if err == nil {
-				wy, hw = y, true
-			}
-		}
-		if d.HasTrend {
-			y, err := units.FromKG(d.Trend, unit)
-			if err == nil {
-				ty, ht = y, true
-			}
-		}
-		grid.plotLong(i, wy, hw, ty, ht, ymin, ymax)
-	}
-	var b strings.Builder
-	for r := 0; r < plotRows; r++ {
-		frac := 0.0
-		if plotRows > 1 {
-			frac = float64(r) / float64(plotRows-1)
-		}
-		labelY := ymax - frac*(ymax-ymin)
-		fmt.Fprintf(&b, "%5.1f-", labelY)
-		for c := 0; c < n; c++ {
-			b.WriteString(grid.paint(r, c, p))
-		}
-		b.WriteByte('\n')
-	}
-	b.WriteString(formatLongXAxis(n, placeLongXLabels(monthTicks(orig, n), n)))
-	return b.String()
-}
-
-type monthTick struct {
-	col     int
-	mon, yy string
-}
-
-type xPlaced struct {
-	col     int
-	two     bool
-	mon, yy string
-}
-
-func dayCol(d, w, idx int) int {
-	if d <= w {
-		return idx
-	}
-	for i := 0; i < w; i++ {
-		if idx < (i+1)*d/w {
-			return i
-		}
-	}
-	return w - 1
-}
-
-func monthTicks(orig []sheetDay, nCols int) []monthTick {
-	d := len(orig)
-	if d == 0 || nCols < 1 {
-		return nil
-	}
-	seen := make(map[int]bool)
-	var ticks []monthTick
-	for i, row := range orig {
-		if i > 0 && row.Day.Day() != 1 {
-			continue
-		}
-		c := dayCol(d, nCols, i)
-		if seen[c] {
-			continue
-		}
-		seen[c] = true
-		ticks = append(ticks, monthTick{
-			col: c,
-			mon: row.Day.Format("Jan"),
-			yy:  row.Day.Format("06"),
-		})
-	}
-	return ticks
-}
-
-func placeLongXLabels(ticks []monthTick, nCols int) []xPlaced {
-	var out []xPlaced
-	prevEnd := 0
-	for i, t := range ticks {
-		if t.col < prevEnd {
-			continue
-		}
-		next := nCols
-		if i+1 < len(ticks) {
-			next = ticks[i+1].col
-		}
-		gap := next - t.col
-		if gap >= 6 {
-			out = append(out, xPlaced{col: t.col, two: false, mon: t.mon, yy: t.yy})
-			prevEnd = t.col + 6
-			continue
-		}
-		if i == 0 || gap >= 3 {
-			out = append(out, xPlaced{col: t.col, two: true, mon: t.mon, yy: t.yy})
-			prevEnd = t.col + 3
-		}
-	}
-	return out
-}
-
-func formatLongXAxis(n int, labels []xPlaced) string {
-	if n < 1 {
-		return ""
-	}
-	line1 := make([]rune, n)
-	line2 := make([]rune, n)
-	for i := range line1 {
-		line1[i] = ' '
-		line2[i] = ' '
-	}
-	two := false
-	write := func(dst []rune, at int, s string) {
-		for i, r := range s {
-			if at+i >= len(dst) {
-				break
-			}
-			if at+i >= 0 {
-				dst[at+i] = r
-			}
-		}
-	}
-	for _, L := range labels {
-		if L.two {
-			two = true
-			write(line1, L.col, L.mon)
-			write(line2, L.col, L.yy)
-			continue
-		}
-		write(line1, L.col, L.mon+" "+L.yy)
-	}
-	gutter := strings.Repeat(" ", 6)
-	out := gutter + string(line1) + "\n"
-	if two {
-		out += gutter + string(line2) + "\n"
-	}
-	return out
-}
-
-func longYRange(span []sheetDay, unit units.Unit, daily bool) (ymin, ymax float64, ok bool) {
-	first := true
-	add := func(kg float64) {
-		v, err := units.FromKG(kg, unit)
-		if err != nil {
-			return
-		}
-		if first {
-			ymin, ymax, first, ok = v, v, false, true
-			return
-		}
-		if v < ymin {
-			ymin = v
-		}
-		if v > ymax {
-			ymax = v
-		}
-	}
-	for _, d := range span {
-		if daily && d.Log.Weight != nil {
-			add(*d.Log.Weight)
-		}
-		if d.HasTrend {
-			add(d.Trend)
-		}
-	}
-	if !ok {
-		return 0, 0, false
-	}
-	ymin, ymax = applyYPad(ymin, ymax, unit)
-	return ymin, ymax, true
 }
