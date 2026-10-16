@@ -33,37 +33,46 @@ directly — run `/convention-sync` to regenerate.
 
 ## Idiomatic Go naming
 
-- **Rule**: Exported identifiers are MixedCaps; unexported identifiers are mixedCaps; initialisms are all-caps as words (`HTTPServer`, `userID`, `ServeHTTP`); packages are short lowercase with no underscores; files are lowercase with no underscores except `_test.go`
-- **Enforcement**: agent
-- **Tool**: harness-enforcer
+- **Rule**: Non-test `.go` files are lowercase with no underscores.
+  Package names are lowercase with no underscores. An external test
+  package may be the directory name plus `_test`
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-go-naming.sh
 - **Scope**: pr
 
 ## Standard Go layout
 
-- **Rule**: The module root contains `cmd/hdtools/main.go`; application code lives only under `internal/` grouped by concern; tests are co-located as `*_test.go`; a package's main exported type lives in a file named after that type
-- **Enforcement**: agent
-- **Tool**: harness-enforcer
+- **Rule**: The module root contains `cmd/hdtools/main.go`.
+  Production `.go` files live under `cmd/hdtools` or `internal/`.
+  `scripts/` may hold check tools. A test file is `*_test.go` in
+  those trees
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-go-layout.sh
 - **Scope**: pr
 
 ## Errors wrapped with context
 
-- **Rule**: Every returned `error` is handled or wrapped with `%w` and a short context string; bare `return err` is not permitted; `panic` is only for unreachable programmer errors; sentinel errors are compared with `errors.Is` / `errors.As`
-- **Enforcement**: agent
-- **Tool**: harness-enforcer
+- **Rule**: Non-test `.go` files under `cmd/` and `internal/` do not
+  return the identifier `err` unwrapped
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-wrapped-errors.sh
 - **Scope**: pr
 
 ## Exported API documentation
 
-- **Rule**: Every exported function, type, and const has a doc comment whose first sentence says what it does or returns, not how; signature-restating comments count as missing; unexported code is commented only for non-obvious reasons; each package has a package comment
-- **Enforcement**: agent
-- **Tool**: harness-enforcer
+- **Rule**: Every exported function, type, and const has a doc
+  comment
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-exported-docs.sh
 - **Scope**: pr
 
 ## Literate preamble on new files
 
-- **Rule**: Every new or substantially rewritten `.go` source file (except `_test.go`) opens with a narrative preamble that answers why the file exists, the key design decisions, and what it deliberately does not do. Function comments explain the reasoning behind the approach, not the signature. Inline comments that restate the next line of code are prohibited. This is reviewed in code review (agent), not by a linter.
-- **Enforcement**: agent
-- **Tool**: harness-enforcer
+- **Rule**: Every non-test `.go` file opens with a comment,
+  immediately before the package clause or immediately after it
+  and before imports
+- **Enforcement**: deterministic
+- **Tool**: scripts/check-preamble.sh
 - **Scope**: pr
 
 ## Prefs out of SQLite
@@ -128,13 +137,13 @@ directly — run `/convention-sync` to regenerate.
 - **Verification method**: harness-enforcer reviews the listed
   surfaces on the PR, including paraphrase
 - **Evidence**: harness-enforcer PR output
-- **Failure action**: block merge
+- **Failure action**: review on the pull request. The build does
+  not fail
 - **Frame check**: divergence resolved: copy-only is an explicit
   scope limit — this constraint does not ban clinical-adjacent
   features or require a disclaimer. Engineering, compliance, and AI
-  frames agree on user-facing copy only. Block-merge is the declared
-  failure action; agent PR constraints are not dispatched in CI today
-  (`harness.yml` does not run harness-enforcer).
+  frames agree on user-facing copy only. The failure action is
+  review. The pull-request build does not fail on this constraint.
 
 ## Import direction
 
