@@ -70,7 +70,7 @@
 - The on-screen long-term chart is the Online picture: a thin weight
   line, a Braille trend, a plain window name, the monthly one-step
   scale, and one-line month labels. The monthly chart and the PDF
-  are unchanged.
+  are unchanged. (#108)
 - AGENTS.md records empty `gh pr checks` output, 0600 writes,
   display-column rounding, and a zero loss printing `0.0`. (#107)
 - Unused chart helpers are gone: `plotMonthly`, `monthYearBox`,
