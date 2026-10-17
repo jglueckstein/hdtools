@@ -6,7 +6,7 @@
 
 - `scripts/usagecapture` records one branch's grok usage turns into
   a per-PR actuals file. A missing span or token count prints
-  instructions and writes no figures.
+  instructions and writes no figures. (#112)
 - A reflection records how the long-term Online chart reuses the
   monthly canvas: a one-point line draws nothing, the weight stroke
   overwrites Braille on a shared cell, and `monthShares` drops days
