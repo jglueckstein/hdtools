@@ -1,0 +1,17 @@
+#!/bin/bash
+# Run usagecapture and keep its exit status.
+#
+# go run folds every non-zero status into 1. This wrapper builds
+# the command and runs it, so exit 2 still means a person has to
+# choose a number and exit 1 still means the tool failed.
+
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+bin="$(mktemp)"
+trap 'rm -f "${bin}"' EXIT
+(
+  cd "${root}"
+  go build -o "${bin}" ./scripts/usagecapture
+)
+"${bin}" "$@"
