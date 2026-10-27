@@ -128,7 +128,7 @@ slices:
       make one review accept the table and the typing change
       together. This slice waits until S1 has landed.
     file_as_issue: true
-    issue_url: null
+    issue_url: https://github.com/jglueckstein/hdtools/issues/113
     merged_into: null
 ---
 
