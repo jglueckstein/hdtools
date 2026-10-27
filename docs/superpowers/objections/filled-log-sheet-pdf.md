@@ -9,36 +9,36 @@ objections:
     severity: high
     claim: "A 31-day month can pass every acceptance scenario while day 31 sits outside the 612 by 792 page, because the oracle checks page count and extracted text on February and November only."
     evidence: "Decision 1 requires one portrait page, box 612 by 792 points. Decision 3 and FR3 require one one-line row per calendar day. S4 checks November (30) and February (28 and 29) only. The acceptance preamble checks page count, the page box, and cell text read back from the PDF, not that a row's baseline lies inside the box."
-    disposition: pending
-    disposition_rationale: null
+    disposition: accepted
+    disposition_rationale: "November and February cannot catch a layout that fits 30 rows and drops day 31. The page count stays one, and day 31 has to be visible on it."
   - id: O2
     category: implementation
     severity: high
     claim: "A series of notes and sleep with no weigh-in fails the export, while a database with no rows prints a full sheet, so the filled log is the one that produces no paper."
     evidence: "Decision 5: an empty log skips ApplyTrend and is still a sheet of blank days, but if ApplyTrend rejects the series the export writes no file. S7 exits 0 for no rows. S33 exits non-zero when the only row has no weigh-in. ApplyTrend returns ErrNoTrendStart when the first row has a nil weight (internal/dailylog/trend.go). Upsert stores that row (internal/dailylog/store.go); weight is optional (internal/dailylog/dailylog.go)."
-    disposition: pending
-    disposition_rationale: null
+    disposition: accepted
+    disposition_rationale: "The month sheet can save a day with no weigh-in, and that log is a filled sheet. Refusing it while an empty database prints is the wrong cliff. The export does not copy the screen's load error onto paper."
   - id: O3
     category: specification quality
     severity: medium
     claim: "Decision 8 both drops characters Helvetica cannot draw and cuts on drawn width, but never says which happens first, so one note can keep or lose an ellipsis."
     evidence: "Decision 8: a note that fits the column is not cut; a longer note ends with `...`; a character the font cannot draw is left out and the rest stays in order. S16 requires `say (hi)` with no added `...`. S17 requires a snowman to be omitted. No scenario combines a fitting note with an undrawable character."
-    disposition: pending
-    disposition_rationale: null
+    disposition: accepted
+    disposition_rationale: "The two steps in Decision 8 can be applied in either order and still pass S16 and S17. The drawable text is what the column measures."
   - id: O4
     category: specification quality
     severity: medium
     claim: "A bad month must not create config or a database, but both export flags set are not held to that rule, so a rejected command can still create the weight log."
     evidence: "Decision 10 and S28: a bad YYYY-MM is non-zero, no TUI, no PDF, and no config or database created. The both-flags sentence in Decision 10, FR17, and S29 say the process writes nothing and does not start the TUI, and they never repeat the config or database clause. In cmd/hdtools/main.go the chart path calls config.Ensure and Open after the month check, which is the shape a late both-flags check would copy."
-    disposition: pending
-    disposition_rationale: null
+    disposition: accepted
+    disposition_rationale: "A rejected export must not leave config.toml or hdtools.db behind. S29 has to say that, or a late check still passes."
   - id: O5
     category: implementation
     severity: medium
     claim: "A note that draws nothing is specified to look the same as an empty stored note, and the export still exits 0, so a note outside Helvetica disappears with no mark."
     evidence: "S16: an empty stored note is empty, not `-`. S17: a note that is only a snowman is empty, not `-`, and the export writes the page. Decision 8 forbids replacing the missing character with `.` or `?`, and says that if nothing drawable remains the note cell is empty, not `-`."
-    disposition: pending
-    disposition_rationale: null
+    disposition: rejected
+    disposition_rationale: "Nothing drawable is an empty cell. The slice already chose that over a replacement glyph or a new font file. The exit status stays 0 because the page was written."
 ---
 
 ## O1 — specification quality — high
