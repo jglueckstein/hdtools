@@ -77,6 +77,9 @@
 
 ### Changed
 
+- AGENTS.md records how to re-apply the Stop-hook JSON patch after
+  a plugin update: `printf '%s'` instead of `echo -e`, and `date -d`
+  before macOS `date -j`.
 - The on-screen long-term chart is the Online picture: a thin weight
   line, a Braille trend, a plain window name, the monthly one-step
   scale, and one-line month labels. The monthly chart and the PDF

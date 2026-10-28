@@ -44,8 +44,31 @@ before writing or reviewing code. Do not add style rules here.
   `integration-agent`, `orchestrator`, `spec-writer`, `tdd-agent`)
   spawn under those short names. If the `.agent` id is itself
   rejected, the host mapping has changed; use the id the error
-  accepts. Do not edit the installed plugin copy; a plugin update
-  overwrites it.
+  accepts. Do not edit the installed plugin copy except to re-apply
+  the Stop-hook patch below; a plugin update overwrites it.
+- A plugin update restores Stop hooks that Grok rejects. The message
+  is `hook reply is not valid JSON: control character (\u0000-\u001F)
+  found while parsing a string at line 2 column 0`. Grok parses a
+  reply that starts with `{` as JSON. Re-apply the patch to both
+  trees after every update:
+  `~/.grok/installed-plugins/ai-literacy-superpowers-*/hooks/scripts/`
+  and the same files under
+  `~/.grok/marketplace-cache/*/ai-literacy-superpowers/hooks/scripts/`.
+  In `governance-drift-check.sh`, `drift-check.sh`, and
+  `framework-change-prompt.sh`, replace the `echo -e` command
+  substitution with `printf '%s' "$message" | sed 's/"/\\"/g'`, so
+  the line is `printf '{"systemMessage": "%s"}' "$(printf '%s' "$message" | sed 's/"/\\"/g')"`.
+  The scripts store breaks as the two characters `\n`. `echo -e`
+  turns those into a raw newline inside the JSON string. On Linux,
+  `governance-drift-check.sh` must set
+  `audit_epoch=$(date -d "$audit_date" "+%s" 2>/dev/null || date -j -f "%Y-%m-%d" "$audit_date" "+%s" 2>/dev/null || true)`
+  and compute the age only when that value is non-empty. Do not
+  substitute epoch 0: that reported
+  `observability/governance/audit-2026-09-09.md` as about 20754
+  days old. The audit is under the 90-day threshold, so the hook
+  should print nothing and exit 0. Leave `markdownlint-check.sh`
+  alone: it runs `echo -e` and then `tr '\n' ' '` before printing.
+  Do not edit any other plugin file.
 - `gh pr checks` can exit at once with "no checks reported" while
   the runs are still queued.
   Wait for both required jobs on the current head commit.
