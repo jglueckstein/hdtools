@@ -131,6 +131,9 @@ The tool should be able to generate pdf of the monthly log sheets
 (filled in, not the blank sheets mentioned above), and pdfs of the
 monthly charts.
 
+Change record (filled log-sheet PDF):
+[docs/superpowers/specs/2026-10-17-filled-log-sheet-pdf.md](docs/superpowers/specs/2026-10-17-filled-log-sheet-pdf.md).
+
 PDF monthly charts are the on-screen monthly chart on paper. CLI
 `-chart-pdf YYYY-MM` and TUI `p` write that picture. Filled log-sheet
 PDFs and long-term PDFs are not in this slice.

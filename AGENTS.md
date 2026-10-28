@@ -19,6 +19,10 @@ before writing or reviewing code. Do not add style rules here.
   current month drops carry-forward from the previous month.
 - A chart of the current calendar month ends at today. Do not plot
   carried trend into the future.
+- The filled log-sheet PDF lists every calendar day of the named
+  month, including days after today. A later day with no weigh-in
+  still shows the carried trend. Do not apply the chart clip to
+  that page.
 - Display-unit conversion (`units.FromKG`) is for the TUI only. Saving
   must go through `units.ToKG` so SQLite always stores kilograms.
 - `View()` emits chroma unless `NO_COLOR` is non-empty; the process does
