@@ -42,7 +42,7 @@ slices:
       TUI already shows. Kilograms stay in the database. A day with a
       row prints sleep to one decimal, steps as an integer, and
       workout as yes or no, including zeros. A day with no row leaves
-      those cells blank. Blank cells use a dash the font can draw.
+      those cells blank. A blank cell has no mark.
       The note is the stored note, cut with an ellipsis when it does
       not fit the line. A note that fits is not cut. The page count
       stays one. The font is the chart's core Helvetica. A character
@@ -65,8 +65,9 @@ slices:
       a key in this slice and does not import a PDF library. The CLI
       reference, the -o line, and a one-line clause on pdf_dir
       describe the new file. A how-to at
-      docs/how-to/monthly-log-pdf.md says how to run the command.
-      The chart how-to stays the chart page.
+      docs/how-to/monthly-log-pdf.md says how to run the command,
+      and docs/how-to/README.md lists that page. The chart how-to
+      stays the chart page.
     decision_focus: >
       Does -log-pdf YYYY-MM write one portrait US Letter page of
       every calendar day in that month — the month sheet's columns,

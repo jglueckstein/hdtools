@@ -30,6 +30,8 @@ resolution fails the export and writes nothing. `$` is not expanded.
 A value that is not a string does not fail the load; an export that
 would use it fails and names `pdf_dir`. `-o` is a file path and
 ignores this key. The first-run file does not contain `pdf_dir`.
+The filled log sheet uses this same directory and the same `-o`
+rule.
 
 ## `[colors]`
 

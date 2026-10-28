@@ -1,7 +1,7 @@
 # PDF of one filled monthly log sheet
 
 **Date**: 2026-10-17
-**Status**: draft
+**Status**: approved
 **Issue**: [#110](https://github.com/jglueckstein/hdtools/issues/110)
 **Backlog**: [`idea.md`](../../../idea.md) (Monthly Log)
 **Slice**: S1 of
@@ -59,7 +59,11 @@ one whole file, so that I do not learn a second place to look.
     the cells, black ink. It is not a screenshot of the terminal
     and not the chart. There is no embedded image and no embedded
     font program. `[colors]` and `NO_COLOR` do not change the
-    page. The chart's coloured title box is not on it.
+    page. The chart's coloured title box is not on it. Every day
+    row's baseline, including day 31 of a 31-day month, lies
+    inside that page box. The page count stays one. A content
+    stream that draws past the media box fails even when the
+    extracted text contains `31`.
 2.  **Heading.** The heading is the English month name, the year,
     and the display unit in parentheses, for example
     `November 1990 (lb)`. The unit token is `kg`, `lb`, or `st`.
@@ -75,19 +79,30 @@ one whole file, so that I do not learn a second place to look.
     name (`Th` for Thursday). November 1, 1990 is `Th`. Days with
     no database row are still rows. A 28-day February has no 29th
     row. A 29-day February has a 29th row. November 1990 has days
-    1 through 30 and no day 31.
+    1 through 30 and no day 31. January 1991 has days 1 through
+    31. Day 31's baseline lies inside the page box. The month
+    stays on one page.
 4.  **Do not clip at today.** Days after today are rows when the
     named month is the current one. A weigh-in on a later day in
     that month is on the page. This slice does not use the chart
     clip. Carried trend still shows on a day after today.
-5.  **Trend.** The command loads the full series. When the series
-    is not empty it runs `ApplyTrend` before the month is built.
-    An empty log skips `ApplyTrend` and is still a sheet of blank
-    days. A day with no weigh-in shows the trend carried from the
-    last earlier day that has a weigh-in or a computed trend, the
-    same carry the month sheet shows. A day before the first
-    weigh-in has no trend. If `ApplyTrend` rejects the series, the
-    export fails, prints no path, and writes no file.
+5.  **Trend.** The command loads the full series. Days must be
+    strictly chronological, one row per day. A duplicate day or a
+    day out of order fails the export, prints no path, and writes
+    no file, whether or not any row has a weigh-in. An empty log
+    skips `ApplyTrend` and is still a sheet of blank days. A
+    series that has rows and no weigh-in also skips `ApplyTrend`
+    and still writes the page: sleep, steps, workout, and note
+    print, and weight, trend, and delta have no mark.
+    `ApplyTrend`
+    runs on the suffix that starts at the first weigh-in. It does
+    not see the leading days that have no weigh-in.
+    `ErrNoTrendStart` is not an export failure, and this command
+    does not copy the TUI's load error onto the page. Do not
+    change `ApplyTrend`. A day before that first weigh-in has no
+    trend. A later day with no weigh-in shows the trend carried
+    from the last earlier day that has a weigh-in or a computed
+    trend, the same carry the month sheet shows.
 6.  **Weight, trend, and delta.** Those three cells are the
     display unit, to one decimal, using the same one-decimal text
     the month sheet paints. Delta is that weight text minus that
@@ -102,25 +117,26 @@ one whole file, so that I do not learn a second place to look.
     sleep to one decimal, steps as an integer, and workout as
     `yes` or `no`, including zeros (`0.0`, `0`, and `no`). A row
     with no weigh-in still prints those three, and its weight cell
-    is blank. A day with no row leaves sleep, steps, workout, and
-    note blank. A blank cell is one hyphen-minus (`-`), a dash
-    the font draws as that character. It is not an empty gap, not
-    the word blank, and not the screen's em dash. The page is not
-    a screenshot. An empty stored note is empty, not `-`, because
-    the note is the stored text and an empty note fits.
+    has no mark. A day with no row leaves sleep, steps, workout,
+    and note with no mark. A blank cell is empty. It is not a
+    hyphen, not the screen's em dash, and not the word blank. The
+    page is not a screenshot. An empty stored note is that same
+    empty cell. A logged zero is still `0.0`, `0`, or `no`.
 8.  **Notes and the font.** The note is the stored note, not
-    trimmed. A note whose drawn width fits the note column is not
-    cut and gains no ellipsis. A longer note is shortened on that
-    same line and ends with three periods (`...`). The dropped
-    tail is not elsewhere on the page. The note does not wrap,
-    and the page count stays one. Numeric cells are not cut.
-    The font is the chart's built-in Helvetica. There is no new
-    font file. A character that font cannot draw is left out of
-    the cell, not replaced with `.` or `?`. The rest of the note
-    stays, in order. A newline is one of those skipped
-    characters, not a second line. `é` is kept. A snowman is not.
-    If nothing drawable remains, the note cell is empty, not
-    `-`, and the export still writes the page.
+    trimmed. Characters the built-in font cannot draw are dropped
+    first, including a newline. The column then measures what
+    remains. A remaining note that fits the note column is not
+    cut and gains no ellipsis. A remaining note that does not fit
+    is shortened on that same line and ends with three periods
+    (`...`). The dropped tail is not elsewhere on the page. The
+    note does not wrap, and the page count stays one. Numeric
+    cells are not cut. The font is the chart's built-in
+    Helvetica. There is no new font file. A skipped character is
+    not replaced with `.` or `?`. The rest of the note stays, in
+    order. `é` is kept. A snowman is not. `say (hi)` followed by
+    a snowman, once the snowman is gone and the rest fits, is
+    `say (hi)` with no ellipsis. If nothing drawable remains, the
+    note cell has no mark, and the export still writes the page.
 9.  **Filename and directory.** The file name is
     `YYYY-MM-log.pdf`. The directory is the chart rule in the
     PDF-destination spec: `ResolvePDFDir`, `pdf_dir`, and `-o` as
@@ -138,13 +154,14 @@ one whole file, so that I do not learn a second place to look.
 10. **Other flags.** A bad `YYYY-MM` fails the same way
     `-chart-pdf` does: non-zero, no TUI, no PDF, and no config or
     database created for that invocation. If `-log-pdf` and
-    `-chart-pdf` are both set, the process exits non-zero, writes
-    nothing, and does not start the TUI, including when `-o` is
-    set and including when a month string is invalid. `-o` alone,
-    with neither export flag, still only starts the TUI and
-    writes no PDF. Absent `-log-pdf`, `-chart-pdf` is unchanged:
-    it still writes the chart page as `YYYY-MM-chart.pdf` and
-    does not write `YYYY-MM-log.pdf`.
+    `-chart-pdf` are both set, the process exits non-zero before
+    reading config, creating a config file, or opening a
+    database. It writes no PDF, does not create `-o`, and does
+    not start the TUI. A month string of `banana` does not change
+    that. `-o` alone, with neither export flag, still only starts
+    the TUI and writes no PDF. Absent `-log-pdf`, `-chart-pdf`
+    is unchanged: it still writes the chart page as
+    `YYYY-MM-chart.pdf` and does not write `YYYY-MM-log.pdf`.
 11. **Where the code lives.** The writer is a new package under
     `internal/`. `cmd/hdtools` only wires the flag. This slice
     does not edit the chart painter. The TUI gains no key and
@@ -166,10 +183,12 @@ says the file belongs in the working directory. Tests set
 They must not use the developer's real home.
 
 A successful file starts with `%PDF`, is mode `0600`, has one
-page, and has a page box of 612 by 792 points. Cell text is read
-back from the PDF. Each cell is its own text, so the day number
-`1` is not confused with a weight, and a blank cell is the text
-`-`.
+page, and has a page box of 612 by 792 points. On a 31-day month
+the last row's baseline lies inside that box. A content stream
+that draws past the media box fails even when the extracted text
+contains `31`. Cell text is read back from the PDF. Each cell is
+its own text, so the day number `1` is not confused with a
+weight. A blank cell has no text of its own.
 
 `Today`, when a scenario sets it, is 10 November 1990. The sheet
 still lists the whole month.
@@ -230,6 +249,14 @@ sleep, steps, workout, note, in that order
 **When** the sheet is written
 **Then** day 29 is a row
 
+**Given** January 1991
+**When** the sheet is written
+**Then** there is a row for each day from 1 through 31
+**And** the page count is one
+**And** day 31's baseline lies inside the 612 by 792 page box
+**And** finding the text `31` in the content stream is not enough
+to pass
+
 ### S5 — Days after today stay on the sheet
 
 **Given** today is 10 November 1990
@@ -246,7 +273,7 @@ days are logged
 **And** `display_unit` is `kg`
 **When** `-log-pdf 1990-11` runs
 **Then** November 1's trend cell is `80.0`
-**And** November 1's weight cell and delta cell are `-`
+**And** November 1's weight cell and delta cell have no mark
 **And** the series used for that trend is the full log, not
 November alone
 
@@ -254,7 +281,7 @@ November alone
 **And** the only November weigh-in is 80 kg on November 10
 **When** the November sheet is written
 **Then** November 15's trend cell is that carried trend
-**And** November 15's weight cell is `-`
+**And** November 15's weight cell has no mark
 
 ### S7 — An empty log is still a sheet of days
 
@@ -263,7 +290,7 @@ November alone
 **Then** the process exits 0
 **And** the page has a row for each day from 1 through 30
 **And** weight, trend, delta, sleep, steps, workout, and note on
-those rows are `-`
+those rows have no mark
 **And** the page does not contain `(empty month)`
 
 ### S8 — Kilogram delta matches the painted cells
@@ -309,12 +336,12 @@ are the same one-decimal text
 
 **Given** a day with no weigh-in and a carried trend
 **When** the sheet is written
-**Then** the delta cell is `-`
+**Then** the delta cell has no mark
 **And** the trend cell still shows the carry
 
 **Given** a day before the first weigh-in
 **When** the sheet is written
-**Then** the trend cell and the delta cell are `-`
+**Then** the trend cell and the delta cell have no mark
 
 ### S13 — Stone is one decimal
 
@@ -340,15 +367,15 @@ are the same one-decimal text
 **Given** a row with no weigh-in, sleep 8, steps 100, and
 workout false
 **When** the sheet is written
-**Then** the weight cell is `-`
+**Then** the weight cell has no mark
 **And** sleep is `8.0`, steps is `100`, and workout is `no`
 
 ### S15 — A day with no row leaves those cells blank
 
 **Given** a calendar day with no database row
 **When** the sheet is written
-**Then** sleep, steps, workout, and note are each `-`
-**And** they are not `0.0`, `0`, `no`, or empty
+**Then** sleep, steps, workout, and note each have no mark
+**And** they are not `0.0`, `0`, `no`, `-`, or an em dash
 
 ### S16 — A long note is cut, and a note that fits is not
 
@@ -370,7 +397,21 @@ workout false
 
 **Given** a stored note that is empty
 **When** the sheet is written
-**Then** the note cell is empty, not `-`
+**Then** the note cell has no mark
+
+**Given** a note `say (hi)` followed by a snowman (U+2603)
+**And** the text that remains after the snowman is dropped fits
+the note column
+**When** the sheet is written
+**Then** the note cell is `say (hi)`
+**And** it does not end with `...`
+
+**Given** a run of `x` that fits the note column, with a snowman
+inserted in it
+**And** that run plus the width of `.` does not fit the column
+**When** the sheet is written
+**Then** the note cell is that run of `x`
+**And** it does not end with `...`
 
 ### S17 — A character the font cannot draw is skipped
 
@@ -387,7 +428,7 @@ workout false
 
 **Given** a note that is only a snowman
 **When** the sheet is written
-**Then** the note cell is empty, not `-`
+**Then** the note cell has no mark
 **And** the export writes the page
 
 **Given** a note `ab` plus a newline plus `cd`
@@ -520,15 +561,18 @@ directory
 
 **Given** `-log-pdf` and `-chart-pdf` are both set
 **When** the command runs
-**Then** the process exits non-zero and does not start the TUI
+**Then** the process exits non-zero before config is read and
+before a database is opened
+**And** it does not start the TUI
 **And** no log PDF and no chart PDF are written
 **And** an `-o` path is not created
+**And** no config file and no database are created
 **And** standard output has no path
 
 **Given** both flags are set and one month string is `banana`
 **When** the command runs
-**Then** the process still writes no file and does not start the
-TUI
+**Then** the process still writes no file, creates no config
+file and no database, and does not start the TUI
 
 ### S30 — `-o` alone still only starts the TUI
 
@@ -555,14 +599,35 @@ TUI
 **Then** the database still holds 80 kilograms for that day
 **And** it does not hold 176.4
 
-### S33 — A trend error fails the export
+### S33 — A month with no weigh-in is still a sheet
 
-**Given** the only row has no weigh-in, so `ApplyTrend` cannot
-start
+**Given** November 1990 has rows for sleep, steps, workout, and
+notes, and no row has a weigh-in
+**When** `-log-pdf 1990-11` runs
+**Then** the process exits 0 and writes the page
+**And** those sleep, steps, workout, and note cells are printed
+**And** weight, trend, and delta have no mark on every day
+**And** standard output is one line, the path
+
+**Given** a later day in the series is the first weigh-in
+**When** the sheet is written
+**Then** each day before that weigh-in has no mark for trend and
+no mark for delta
+**And** the trend on the first weigh-in is that day's weight,
+rounded to one decimal
+
+### S34 — A duplicate or unsorted series fails the export
+
+**Given** two rows on the same day, or a later day stored before
+an earlier day
 **When** `-log-pdf 1990-11` runs
 **Then** the process exits non-zero and does not start the TUI
 **And** no PDF is written
 **And** standard output has no path
+
+**Given** those same bad days and no weigh-in on either row
+**When** `-log-pdf 1990-11` runs
+**Then** the process still exits non-zero and writes no file
 
 ## Functional requirements
 
@@ -570,7 +635,8 @@ start
     792 points, exits 0, and does not start the TUI. The page is
     a ruled vector table in built-in Helvetica, with no embedded
     image and no embedded font. `[colors]` and `NO_COLOR` do not
-    change it.
+    change it. On a 31-day month, day 31's baseline lies inside
+    that box. Extracting the text `31` does not by itself pass.
 -   **FR2.** The heading is the English month name, a space, the
     four-digit year, a space, and the display-unit token in
     parentheses. The page does not contain the database path, the
@@ -584,39 +650,50 @@ start
     letters of the English weekday name.
 -   **FR4.** The sheet does not stop at today. A later day in the
     named month is still a row, including a weigh-in after today.
--   **FR5.** The command loads the full series and, when it is
-    not empty, runs `ApplyTrend` before building the month. An
+-   **FR5.** The command loads the full series. A duplicate day
+    or an unsorted series fails the export and writes nothing. An
     empty series skips `ApplyTrend` and still writes every day as
-    blank cells. A blank day shows the month sheet's carried
-    trend, including on a day after today. The chart clip is not
-    used. If `ApplyTrend` fails, the export fails and writes
-    nothing.
+    blank cells. A series with no weigh-in also skips
+    `ApplyTrend` and still writes the page, with weight, trend,
+    and delta left unmarked. Otherwise `ApplyTrend` starts at
+    the first weigh-in. Days before that weigh-in have no trend.
+    A later
+    blank day shows the month sheet's carried trend, including on
+    a day after today. The chart clip is not used.
+    `ErrNoTrendStart` does not fail the export.
 -   **FR6.** Weight and trend are the display unit to one
     decimal, the same text the month sheet paints. Stone is that
     single decimal. 80 kg in stone is `12.6`.
 -   **FR7.** Delta is the painted weight cell minus the painted
     trend cell. A positive value has a leading `+`. An exact zero
-    is `0.0`, not `+0.0` or `-0.0`. The cell is `-` when the day
-    has no weigh-in or no trend. 80.0 kg against a 79.9 kg trend,
-    in pounds, is weight `176.4`, trend `176.1`, delta `+0.3`.
+    is `0.0`, not `+0.0` or `-0.0`. The cell has no mark when the
+    day has no weigh-in or no trend. 80.0 kg against a 79.9 kg
+    trend, in pounds, is weight `176.4`, trend `176.1`, and delta
+    `+0.3`.
     A first weigh-in entered as 176.5 lb is weight `176.5`,
     trend `176.6`, delta `-0.1`.
 -   **FR8.** A day with a row prints sleep to one decimal, steps
     as a full integer, and workout as `yes` or `no`, including
     zeros. A missing weigh-in on that row does not blank those
-    three cells. A day with no row prints `-` for sleep, steps,
-    workout, and note.
--   **FR9.** A blank cell is the hyphen-minus `-`. An empty
-    stored note is empty, not `-`.
--   **FR10.** A note that fits the column is printed in full,
-    including parentheses. A longer note is cut on that line and
-    ends with `...`. The tail is not printed elsewhere. The page
-    count stays one. Numeric cells are not cut with an ellipsis.
+    three cells. A day with no row leaves sleep, steps, workout,
+    and note with no mark.
+-   **FR9.** A blank cell has no mark. It is not `-`, not an em
+    dash, and not the word blank. An empty stored note is that
+    same empty cell. A logged zero is still printed.
+-   **FR10.** A note is measured after characters the font cannot
+    draw have been dropped. A remaining note that fits the column
+    is printed in full, including parentheses, and gains no
+    ellipsis. `say (hi)` followed by a snowman, once that
+    snowman is dropped and the rest fits, is `say (hi)`. A
+    remaining note that does not fit is cut on that line and ends
+    with `...`. The tail is not printed elsewhere. The page count
+    stays one. Numeric cells are not cut with an ellipsis.
 -   **FR11.** The font is built-in Helvetica. A character it
-    cannot draw is omitted, not replaced with `.` or `?`. `é` is
-    kept. A snowman is omitted. A note that is only a snowman
-    leaves an empty note cell, and the page is still written. A
-    newline is omitted rather than starting another line.
+    cannot draw is omitted before the width measurement in FR10,
+    not replaced with `.` or `?`. `é` is kept. A snowman is
+    omitted. A note that is only a snowman leaves an empty note
+    cell, and the page is still written. A newline is omitted
+    rather than starting another line.
 -   **FR12.** With no `-o` and no `pdf_dir`, the file is
     `YYYY-MM-log.pdf` in the data directory from the
     PDF-destination spec, mode `0600`, and standard output is one
@@ -634,7 +711,7 @@ start
     destination directory cannot accept the temp file, in which
     case existing bytes are kept and the error names the
     temp-file step; `pdf_dir` is not a usable directory; the
-    series cannot be trended.
+    series is unsorted or contains a duplicate day.
 -   **FR15.** A second export to the same path overwrites that
     file, leaves a single file of that name, mode `0600`, and
     does not write `YYYY-MM-chart.pdf` or a backup.
@@ -642,8 +719,10 @@ start
     does: non-zero, no TUI, no file, no new config, no new
     database, and no path on standard output.
 -   **FR17.** If `-log-pdf` and `-chart-pdf` are both non-empty,
-    the process exits non-zero, writes neither PDF, does not
-    create `-o`, and does not start the TUI.
+    the process exits non-zero before reading config, creating a
+    config file, or opening a database. It writes neither PDF,
+    does not create `-o`, and does not start the TUI. A bad
+    month string does not change that.
 -   **FR18.** `-o` with neither export flag starts the TUI and
     writes no PDF. Absent `-log-pdf`, `-chart-pdf` still writes
     only the chart page, page box 792 by 612 points, and does not
@@ -653,8 +732,9 @@ start
     `-o` line covers both export flags. The config reference
     gains one sentence that the log-sheet PDF uses `pdf_dir`.
     A how-to at `docs/how-to/monthly-log-pdf.md` says how to run
-    the command. The chart how-to stays the chart page. The key
-    reference is unchanged.
+    the command. `docs/how-to/README.md` lists that page beside
+    the chart PDF how-to. The chart how-to stays the chart page.
+    The key reference is unchanged.
 
 ## Out of scope
 
@@ -675,5 +755,7 @@ start
 
 Update the command reference, the `-o` line, and add one sentence
 on `pdf_dir` so the log-sheet file uses the chart's directory.
-Add `docs/how-to/monthly-log-pdf.md` for the command. Do not add
-the command to the chart how-to, and do not document a TUI key.
+Add `docs/how-to/monthly-log-pdf.md` for the command, and list
+that page in `docs/how-to/README.md` beside the chart PDF
+how-to. Do not add the command to the chart how-to, and do not
+document a TUI key.

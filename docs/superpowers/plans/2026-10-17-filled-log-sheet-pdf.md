@@ -6,7 +6,7 @@
 [`filled-log-sheet-pdf.md`](../slices/filled-log-sheet-pdf.md)
 **Follows**:
 [`2026-10-03-pdf-destination.md`](../plans/2026-10-03-pdf-destination.md)
-**Status**: draft
+**Status**: approved
 
 No production code until the spec's scenarios exist as failing
 tests.
@@ -33,12 +33,13 @@ are what keep the page on the sheet.
 | File | Why |
 | --- | --- |
 | `internal/logpdf/logpdf.go` | New package. One concern: paint one filled month as a portrait page. It does not open SQLite, resolve `pdf_dir`, read `[colors]` or `NO_COLOR`, clip at today, or import `internal/tui`, `internal/chartpdf`, or `internal/chartspan`. |
-| `internal/logpdf/logpdf_test.go` | Page box, rules, font, heading, calendar rows, carry, delta, blanks, notes, and the temp-file failure. |
+| `internal/logpdf/logpdf_test.go` | Page box, rules, font, heading, calendar rows including day 31's baseline, carry, a series with no weigh-in, delta, blanks, notes measured after skipped characters, and the temp-file failure. |
 | `cmd/hdtools/main.go` | Flag `-log-pdf`. Empty `-o` joins `YYYY-MM-log.pdf` onto `ResolvePDFDir`. Non-empty `-o` is the file path and does not call the resolver. Both export flags set is an error before config, database, or PDF. Bad `YYYY-MM` fails before those too, same as `-chart-pdf`. Success prints the path. |
-| `cmd/hdtools/main_test.go` | Directory, `-o`, failures, bad month, both flags, `-o` alone, chart flag unchanged, stored kilograms, carry through the command, empty log. |
+| `cmd/hdtools/main_test.go` | Directory, `-o`, failures, bad month, both flags before config and the database, `-o` alone, chart flag unchanged, stored kilograms, carry through the command, empty log, a month with no weigh-in, duplicate day, unsorted days. |
 | `docs/reference/cli.md` | Synopsis and flag table gain `-log-pdf`. The `-o` line covers both exports and still does not say the working directory is the default. Success and failure mention the log sheet. `NO_COLOR` does not grey either PDF; the log sheet is black, and the chart PDF stays in colour. |
 | `docs/reference/config.md` | One sentence on `pdf_dir`: the filled log-sheet PDF uses this same directory. Do not rewrite the rest of the section. |
 | `docs/how-to/monthly-log-pdf.md` | New how-to for the command only. Directory, `-o`, bad month, both flags. No TUI key. Not medical advice and no loss numbers. |
+| `docs/how-to/README.md` | One bullet for that how-to, beside the chart PDF how-to. |
 | `CHANGELOG.md` | When the behaviour ships, one Unreleased bullet. Not in the failing-test step. |
 
 Do not edit `docs/how-to/monthly-chart-pdf.md` or
@@ -88,10 +89,16 @@ does not write them.
 -   Geometry, so 31 rows fit and the note tests are stable.
     Margins 36 pt. Content width 540. Row pitch 18 pt, so the
     heading, the header, and 31 day rows sit on the page with
-    room below. One line per row: no multi-line cell. Column
-    widths, left to right: day 28, weekday 28, weight 48,
+    room below. One line per row: no multi-line cell. Day 31's
+    baseline is inside the media box. A test that only extracts
+    the text `31` does not pass. Do not add a second page. Column
+    widths, left to right: day 28, weekday 36, weight 40,
     trend 48, delta 44, sleep 36, steps 52, workout 36, note the
-    remainder (220). Vertical rules on those boundaries.
+    remainder (220). Weekday is 36 pt because Helvetica 8 draws
+    that word at 31.57 pt, and a 28 pt column crosses into weight.
+    Those 8 pt come from weight. Each header word's drawn end
+    falls before the next vertical rule. Vertical rules sit on
+    the column boundaries.
     A horizontal rule under the header and under each day row.
     Each cell is its own text operation, in that column order,
     so tests read the literals in reading order.
@@ -114,10 +121,11 @@ does not write them.
     `formatDelta`.
 -   A day with a row: sleep `%.1f` (so `0.0` and `8.0`), steps
     `%d` with the full integer, workout `yes` or `no`. A day
-    with no row: sleep, steps, workout, and note are `-`. A row
-    with a nil weight still prints sleep, steps, and workout.
-    The blank mark is ASCII `-` (U+002D), not the TUI em dash.
-    An empty stored note is an empty string, not `-`.
+    with no row: sleep, steps, workout, and note have no text.
+    A row with a nil weight still prints sleep, steps, and
+    workout. A blank cell draws no glyph. It is not `-`, not an
+    em dash, and not the word blank. An empty stored note is
+    that same empty cell. A minus sign on a negative delta stays.
 -   Notes: drop runes the core font cannot draw before measuring.
     Printable ASCII (U+0020 through U+007E) stays. A rune that
     cp1252 maps to a glyph other than `.notdef` stays, encoded
@@ -125,7 +133,7 @@ does not write them.
     stream. Every other rune is omitted, including controls and
     newlines. Do not use fpdf's translator substitution of `.`.
     Do not substitute `?`. If nothing remains, the cell text is
-    empty, not `-`. Then, if the Helvetica width of the remaining
+    empty. Then, if the Helvetica width of the remaining
     note is at most the note column's inner width (column width
     minus 4 pt), print it unchanged. Otherwise print the longest
     rune prefix such that the prefix plus `...` fits that inner
@@ -145,15 +153,24 @@ does not write them.
     mode; umask masks `0755`.
 -   CLI, in order, after flag parse: if both `-log-pdf` and
     `-chart-pdf` are non-empty, return an error that names both
-    flags and do not create config, a database, or a PDF. If
-    only one is set, reject a bad month before config and the
-    database, with `want YYYY-MM` in the error. `-log-pdf` uses
-    the prefix `log-pdf:`, then `run` wraps a later failure as
-    `log pdf:`, parallel to `chart-pdf:` and `chart pdf:`. Load
-    `store.All`. If the slice is empty, skip `ApplyTrend`.
-    Otherwise `ApplyTrend(logs, nil)` and fail the export on
-    error. Empty `-o` is `filepath.Join(ResolvePDFDir(cfg),
-    YYYY-MM-log.pdf)`. Non-empty `-o` is the path unchanged.
+    flags before `config.Ensure` and before opening a database.
+    Do not create config, a database, a PDF, or `-o`. An invalid
+    month does not change that. If only one flag is set, reject
+    a bad month before config and the database, with
+    `want YYYY-MM` in the error. `-log-pdf` uses the prefix
+    `log-pdf:`, then `run` wraps a later failure as `log pdf:`,
+    parallel to `chart-pdf:` and `chart pdf:`. Load `store.All`.
+    If any day is not strictly after the previous day, fail the
+    export. A duplicate day and an unsorted series both fail,
+    including when no row has a weigh-in. If the slice is empty,
+    or no row has a non-nil weight, skip `ApplyTrend`. Otherwise
+    call `ApplyTrend` on the suffix that begins at the first
+    non-nil weight, with a nil carry. Do not pass the leading
+    weightless rows. Do not change `ApplyTrend`. Do not treat
+    `ErrNoTrendStart` as an export failure. Any other
+    `ApplyTrend` error fails the export. Empty `-o` is
+    `filepath.Join(ResolvePDFDir(cfg), YYYY-MM-log.pdf)`.
+    Non-empty `-o` is the path unchanged.
     Success is `fmt.Println` of that path and no TUI. Failure
     prints no path. `-o` flag text must not say the working
     directory is the default; it names both export flags.
@@ -165,17 +182,17 @@ does not write them.
 
 | FR | Tests |
 | --- | --- |
-| FR1 | `TestWriteLogPDFPortraitOnePage`, `TestLogPDFDefaultWritesDataDir` |
+| FR1 | `TestWriteLogPDFPortraitOnePage`, `TestLogPDFDefaultWritesDataDir`, `TestWriteLogPDFCalendarDays` |
 | FR2 | `TestWriteLogPDFHeading`, `TestWriteLogPDFOmitsChrome` |
 | FR3 | `TestWriteLogPDFCalendarDays` |
 | FR4 | `TestWriteLogPDFIncludesDaysAfterToday` |
-| FR5 | `TestWriteLogPDFCarriedTrend`, `TestLogPDFCarryFromEarlierMonth`, `TestWriteLogPDFEmptySeries`, `TestLogPDFEmptyLog`, `TestLogPDFTrendError` |
+| FR5 | `TestWriteLogPDFCarriedTrend`, `TestLogPDFCarryFromEarlierMonth`, `TestWriteLogPDFEmptySeries`, `TestLogPDFEmptyLog`, `TestWriteLogPDFNoWeighIn`, `TestLogPDFNoWeighIn`, `TestLogPDFTrendError` |
 | FR6 | `TestWriteLogPDFStoneOneDecimal` |
 | FR7 | `TestWriteLogPDFDeltaKg`, `TestWriteLogPDFDeltaFromPaintedPounds`, `TestWriteLogPDFFirstWeighInPounds`, `TestWriteLogPDFExactZero`, `TestWriteLogPDFDeltaBlank` |
-| FR8 | `TestWriteLogPDFSleepStepsWorkout`, `TestWriteLogPDFBlankDayDash` |
-| FR9 | `TestWriteLogPDFBlankDayDash`, `TestWriteLogPDFNoteCut` |
-| FR10 | `TestWriteLogPDFNoteCut` |
-| FR11 | `TestWriteLogPDFSkipsUndrawable` |
+| FR8 | `TestWriteLogPDFSleepStepsWorkout`, `TestWriteLogPDFBlankDayEmpty` |
+| FR9 | `TestWriteLogPDFBlankDayEmpty`, `TestWriteLogPDFNoteCut` |
+| FR10 | `TestWriteLogPDFNoteCut`, `TestWriteLogPDFSkipsUndrawable` |
+| FR11 | `TestWriteLogPDFSkipsUndrawable`, `TestWriteLogPDFNoteCut` |
 | FR12 | `TestLogPDFDefaultWritesDataDir` |
 | FR13 | `TestLogPDFDirAbsolute`, `TestLogPDFHomePrefix`, `TestLogPDFRelativeDirFails`, `TestLogPDFNonStringPDFDir`, `TestLogPDFOAbsoluteWins`, `TestLogPDFRelativeOStaysInCwd`, `TestLogPDFDatabasePathDoesNotMovePDF` |
 | FR14 | `TestLogPDFFailureNoCwdCopy`, `TestWriteLogPDFFailedWriteLeavesOriginal`, `TestLogPDFRelativeDirFails`, `TestLogPDFTrendError` |
@@ -197,7 +214,7 @@ when they only touch `t.TempDir`. Build logs with `dailylog.New`
 and set `Trend` in the test when the scenario is about painted
 cells. Do not open SQLite in this package. Copy a small literal
 extractor in the test file. Do not import `internal/chartpdf`.
-A blank cell is the literal `-`. Heading and numbers are their
+A blank cell has no text. Heading and numbers are their
 own literals.
 
 CLI tests follow `TestChartPDFDefaultWritesDataDir`:
@@ -219,19 +236,23 @@ those tests, never the real home. Reuse `wantStdoutLine` and
 -   `TestWriteLogPDFCalendarDays` — S4. November 1990 literals
     include day `1` with `Th` and day `3` with `Sa`, days `1`
     through `30`, and no literal `31`. February 1990 has `28`
-    and no `29`. February 1992 has `29`. Header literals are
-    `day`, `weekday`, `weight`, `trend`, `delta`, `sleep`,
-    `steps`, `workout`, `note`, in that order.
+    and no `29`. February 1992 has `29`. January 1991 has days
+    `1` through `31`, one page, and day 31's text position has
+    its baseline inside the media box (`x` in `[0, 612]`, `y` in
+    `[0, 792]`). Extracting the string `31` is not that oracle.
+    Header literals are `day`, `weekday`, `weight`, `trend`,
+    `delta`, `sleep`, `steps`, `workout`, `note`, in that order.
 -   `TestWriteLogPDFIncludesDaysAfterToday` — S5. `Today` is 10
     November 1990, a weigh-in on the 15th is on the page, and
     day `30` is a row.
 -   `TestWriteLogPDFCarriedTrend` — S6 writer half. An October 31
     log at 80 kg with its trend set, and no November row: day 1
-    trend literal `80.0`, weight and delta literals `-`. With
+    trend literal `80.0`, and no text for weight or delta. With
     `Today` on the 10th and the only November weigh-in that day,
-    day 15's trend is the carry and its weight is `-`.
+    day 15's trend is the carry and its weight has no text.
 -   `TestWriteLogPDFEmptySeries` — S7 writer half. Nil logs:
-    days 1 through 30, value cells `-`, no `(empty month)`.
+    days 1 through 30, value cells have no text, no
+    `(empty month)`.
 -   `TestWriteLogPDFDeltaKg` — S8. 80.5 against trend 80.0 is
     `80.5`, `80.0`, `+0.5`. 79.5 against 80.0 is `-0.5`.
 -   `TestWriteLogPDFDeltaFromPaintedPounds` — S9. Stored 80.0 kg
@@ -243,27 +264,33 @@ those tests, never the real home. Reuse `wantStdoutLine` and
 -   `TestWriteLogPDFExactZero` — S11. Equal painted cells: delta
     literal `0.0`, not `+0.0` or `-0.0`.
 -   `TestWriteLogPDFDeltaBlank` — S12. Carried trend and no
-    weight: delta `-`, trend still the number. A day before the
-    first weigh-in: trend and delta `-`.
+    weight: delta has no text, trend still the number. A day
+    before the first weigh-in: trend and delta have no text.
 -   `TestWriteLogPDFStoneOneDecimal` — S13. 80 kg in `st` is
     weight `12.6`, trend `12.6`, delta `0.0`.
 -   `TestWriteLogPDFSleepStepsWorkout` — S14. Zeros are `0.0`,
     `0`, `no`. 7.5 hours, 100000 steps, workout true are `7.5`,
     `100000`, `yes`, one page. A nil weight with sleep 8 prints
-    weight `-`, sleep `8.0`, steps `100`, workout `no`.
--   `TestWriteLogPDFBlankDayDash` — S15. A day with no row has
-    sleep, steps, workout, and note literals `-`, not `0.0`,
-    `0`, `no`, or empty.
+    no text for weight, sleep `8.0`, steps `100`, workout `no`.
+-   `TestWriteLogPDFBlankDayEmpty` — S15. A day with no row has
+    no text for sleep, steps, workout, or note. Those cells are
+    not `0.0`, `0`, `no`, `-`, or an em dash.
 -   `TestWriteLogPDFNoteCut` — S16. `walk` is `walk` and does not
     gain `...`. `say (hi)` is `say (hi)`. Two hundred `x`
     characters end with `...`, do not contain the whole note,
     and the page count is 1. An empty stored note is an empty
-    literal, not `-`.
+    literal. `say (hi)` plus U+2603 is `say (hi)` and
+    does not contain `...`. A run of `x` that fits, with a
+    snowman inserted so the run plus the width of `.` does not
+    fit, is that run of `x` with no `...`. Drop the snowman
+    before measuring. Measuring the raw note, or counting the
+    snowman as `.`, fails this test.
 -   `TestWriteLogPDFSkipsUndrawable` — S17. `café` contributes
     the byte `0xE9`, not a missing page. `a` + U+2603 + `b` is
     the literal `ab`, not `a.b` or `a?b`. A note that is only
-    U+2603 is an empty literal, not `-`, and the write succeeds.
-    `ab\ncd` is the literal `abcd` on one page.
+    U+2603 has no text, and the write succeeds.
+    `ab\ncd` is the literal `abcd` on one page. The same drop
+    happens before `TestWriteLogPDFNoteCut` measures.
 -   `TestWriteLogPDFFailedWriteLeavesOriginal` — S26 writer
     half. Destination bytes `OLD`, parent mode `0555`. Error
     contains `create temp log`. Bytes stay `OLD`. No
@@ -305,8 +332,9 @@ those tests, never the real home. Reuse `wantStdoutLine` and
     each with `-o`. Non-zero, error contains `want YYYY-MM`, no
     `-o` file, no config, no database, stdout empty.
 -   `TestLogPDFBothFlagsWriteNothing` — S29. Both flags
-    `1990-11`, and a subtest with one flag `banana`. Non-zero,
-    no log PDF, no chart PDF, no `-o` file, no new config or
+    `1990-11`, and a subtest with one flag `banana`. Non-zero
+    before `config.Ensure` and before the database is opened.
+    No log PDF, no chart PDF, no `-o` file, no new config or
     database, stdout empty, `run` returns.
 -   `TestOAloneStartsTUIWritesNothing` — S30. Call `run` in a
     goroutine with only `-o`. Do not use `runCLIOutput` (its
@@ -326,5 +354,19 @@ those tests, never the real home. Reuse `wantStdoutLine` and
     alone.
 -   `TestLogPDFEmptyLog` — S7 command half. No rows. Exit 0, a
     portrait file, day `30` present, no `(empty month)`.
--   `TestLogPDFTrendError` — S33. The only row has a nil weight.
-    Non-zero, no PDF, stdout empty, no TUI.
+-   `TestWriteLogPDFNoWeighIn` — S33 writer half. Every row has a
+    nil weight and trend `0`. Weight, trend, and delta have no
+    text. Sleep, steps, workout, and note still print. A series
+    whose first non-nil weight is not the first row: leading
+    days have no text for trend or delta, and the first
+    weigh-in's trend is that weight rounded to one decimal.
+-   `TestLogPDFNoWeighIn` — S33 command half. Rows with sleep,
+    steps, workout, and a note, and no weigh-in. Exit 0, the
+    page is written, those cells print, weight, trend, and delta
+    have no text, stdout is one path. This is not the TUI load
+    error.
+-   `TestLogPDFTrendError` — S34. Two rows on the same day, and a
+    subtest with a later day stored first. Non-zero, no PDF,
+    stdout empty, no TUI. A further subtest uses the same bad
+    days with nil weights and still writes nothing. A single
+    nil-weight row is not this failure.
