@@ -6,6 +6,7 @@
 
 - `hdtools -log-pdf YYYY-MM` writes one portrait page of the filled
   month (`YYYY-MM-log.pdf`) and exits. A missing cell has no mark.
+  (#116)
 - `scripts/usagecapture` records one branch's grok usage turns into
   a per-PR actuals file. A missing span or token count prints
   instructions and writes no figures. (#112)
