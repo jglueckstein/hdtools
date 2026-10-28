@@ -30,5 +30,15 @@ config is read and before a database is opened. Neither PDF is
 written. An invalid month does not change that.
 
 A month with no weigh-in still prints. The page has no Monthly Loss
-and no Daily Deficit. It is not medical advice. There is no TUI key
-for this page.
+and no Daily Deficit. It is not medical advice.
+
+## From the month sheet
+
+On the month sheet, when no cell is being edited, shift-P writes
+the filled log for the month on screen. `[` and `]` change that
+month first. The file name is `YYYY-MM-log.pdf` in the same
+directory as the command. The status line shows that path. There
+is no path prompt. `-o` is only a command flag.
+
+Idle `p` still starts an edit. Chart `p` still writes only the
+chart PDF.

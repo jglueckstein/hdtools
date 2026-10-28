@@ -152,10 +152,10 @@ func exportLogPDF(store *dailylog.Store, cfg config.Config, monthStr, out string
 	if err != nil {
 		return fmt.Errorf("log-pdf: load logs: %w", err)
 	}
-	if err := rejectUnsorted(logs); err != nil {
+	if err := dailylog.RejectUnsorted(logs); err != nil {
 		return fmt.Errorf("log-pdf: %w", err)
 	}
-	logs, err = trendFromFirstWeighIn(logs)
+	logs, err = dailylog.TrendFromFirstWeighIn(logs)
 	if err != nil {
 		return fmt.Errorf("log-pdf: apply trend: %w", err)
 	}
@@ -177,51 +177,6 @@ func exportLogPDF(store *dailylog.Store, cfg config.Config, monthStr, out string
 	}
 	fmt.Println(out)
 	return nil
-}
-
-// rejectUnsorted fails a duplicate day and a series that goes backwards,
-// including when no row has a weigh-in. ApplyTrend is skipped in that
-// case, so it would not see the duplicate.
-func rejectUnsorted(logs []dailylog.DailyLog) error {
-	for i := 1; i < len(logs); i++ {
-		if logs[i].Day.After(logs[i-1].Day) {
-			continue
-		}
-		if logs[i].Day.Equal(logs[i-1].Day) {
-			return dailylog.ErrDuplicateDay
-		}
-		return dailylog.ErrUnsortedDays
-	}
-	return nil
-}
-
-// trendFromFirstWeighIn leaves leading weightless rows untrended.
-// ErrNoTrendStart is not an export failure: the page still prints.
-func trendFromFirstWeighIn(logs []dailylog.DailyLog) ([]dailylog.DailyLog, error) {
-	start := -1
-	for i := range logs {
-		if logs[i].Weight != nil {
-			start = i
-			break
-		}
-	}
-	if start < 0 {
-		return logs, nil
-	}
-	trended, err := dailylog.ApplyTrend(logs[start:], nil)
-	if err != nil {
-		if errors.Is(err, dailylog.ErrNoTrendStart) {
-			return logs, nil
-		}
-		return nil, fmt.Errorf("trend suffix: %w", err)
-	}
-	if start == 0 {
-		return trended, nil
-	}
-	out := make([]dailylog.DailyLog, 0, len(logs))
-	out = append(out, logs[:start]...)
-	out = append(out, trended...)
-	return out, nil
 }
 
 func exportChartPDF(store *dailylog.Store, cfg config.Config, monthStr, out string) error {

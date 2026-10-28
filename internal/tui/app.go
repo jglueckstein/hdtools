@@ -64,6 +64,7 @@ type App struct {
 	// a second savedMsg from the same edit does not skip a day.
 	monthSaveCancel atomic.Uint64
 	monthSaveEdit   atomic.Uint64
+	logPDF          logPDFGate
 }
 
 type loadedMsg struct {
@@ -166,6 +167,7 @@ func (a *App) placeCursor(logs []dailylog.DailyLog) {
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case loadedMsg:
+		a.clearLogReload()
 		a.placeCursor(msg.logs)
 		a.err = nil
 		return a, nil
@@ -173,6 +175,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// A stale vertical save must not cancel a newer edit or
 		// move the cursor a second time.
 		if msg.guard && !a.verticalSaveCurrent(msg) {
+			a.clearLogSave()
 			return a, nil
 		}
 		a.month.cancelEdit()
@@ -191,10 +194,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.selectDay = msg.day
 		}
 		a.screen = a.afterSave
-		a.status = "saved"
-		a.err = nil
+		a.noteMonthSaved()
 		return a, a.load
 	case loadErrMsg:
+		a.clearLogFlight()
 		// A failed reload must not apply a form-save day to a later
 		// month-cell load (keep-or-closest, not a sticky want).
 		a.selectDay = time.Time{}
@@ -334,11 +337,11 @@ func (a *App) updateMonth(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			a.monthSaveCancel.Add(1)
 			return a, nil
 		case "enter", "down":
-			return a, a.beginVerticalMonthSave(1)
+			return a, a.armLogSave(a.beginVerticalMonthSave(1))
 		case "up":
-			return a, a.beginVerticalMonthSave(-1)
+			return a, a.armLogSave(a.beginVerticalMonthSave(-1))
 		case "tab":
-			return a, a.saveMonthCellAndAdvance
+			return a, a.armLogSave(a.saveMonthCellAndAdvance)
 		case "ctrl+c":
 			return a, tea.Quit
 		}
@@ -350,7 +353,7 @@ func (a *App) updateMonth(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// character starts an edit, or an idle weight cell would open.
 	if spaceBar(msg) {
 		if a.month.col == colWorkout {
-			return a, a.saveMonthCell
+			return a, a.armLogSave(a.saveMonthCell)
 		}
 		return a, nil
 	}
@@ -393,6 +396,9 @@ func (a *App) updateMonth(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case "n":
 		a.openForm(a.month.cursorDay(), screenMonth)
+		return a, nil
+	case "P":
+		a.writeMonthLogPDF()
 		return a, nil
 	default:
 		// len is bytes. é is one character and two bytes, and the

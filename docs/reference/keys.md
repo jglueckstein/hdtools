@@ -8,6 +8,7 @@
 | `c` | list or month (not editing) | monthly chart |
 | `l` | list, month (not editing), or monthly chart | long-term chart |
 | `p` | monthly chart | write this month's PDF in `pdf_dir` or the data directory |
+| `P` | month (not editing) | write this month's filled log PDF |
 | `q` | list, month, or chart | quit |
 | Tab | form | next field |
 | Enter | form | save |
@@ -26,3 +27,7 @@
 | `[` / `]` | long-term chart | previous / next kind |
 
 The selected list row, month cell, or form field is marked with `>`.
+
+Idle `p` on the month sheet still starts an edit. `P` while
+editing is text. Idle `P` writes the filled log PDF for the month
+on screen, including after `[` and `]`.
