@@ -129,6 +129,8 @@
 
 ### Fixed
 
+- `usagecapture` names `mark` or `capture` on an error it passes
+  on. A prompt is still the text asking for a number. (#114)
 - Mark the shipped color-scheme and monthly-chart specs approved.
   Their plans already said approved, and the status lines still
   said draft (#73)

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -315,6 +317,80 @@ func TestApplyRefusesWhenAlreadySupplied(t *testing.T) {
 	if string(got) != body {
 		t.Fatalf("file changed:\n%s", got)
 	}
+}
+
+func TestCmdMarkNamesAWriteFailure(t *testing.T) {
+	root := gitBranchRepo(t, "wrap-test")
+	jsonPath := filepath.Join(root, "usage.json")
+	if err := os.WriteFile(jsonPath, []byte(twoTurns), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	spans := filepath.Join(root, "observability", "costs", "spans")
+	if err := os.MkdirAll(filepath.Dir(spans), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(spans, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	err := cmdMark([]string{"--session", "sess-1", "--usage-json", jsonPath, "--root", root})
+	if err == nil || !strings.Contains(err.Error(), "mark:") || !strings.Contains(err.Error(), "make span dir") {
+		t.Fatalf("err = %v, want mark and make span dir", err)
+	}
+	var need *NeedHuman
+	if errors.As(err, &need) {
+		t.Fatalf("write failure was a prompt: %s", need.Text)
+	}
+}
+
+func TestCmdMarkKeepsAPrompt(t *testing.T) {
+	err := cmdMark([]string{"--nope"})
+	var need *NeedHuman
+	if !errors.As(err, &need) {
+		t.Fatalf("err = %v, want NeedHuman", err)
+	}
+	if !strings.Contains(need.Text, "usage:") {
+		t.Fatalf("prompt = %q", need.Text)
+	}
+}
+
+func TestCmdCaptureNamesAReadFailure(t *testing.T) {
+	root := gitBranchRepo(t, "wrap-test")
+	span := spanPath(root, "wrap-test")
+	if err := os.MkdirAll(span, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	err := cmdCapture([]string{"--root", root})
+	if err == nil || !strings.Contains(err.Error(), "capture:") || !strings.Contains(err.Error(), "read span") {
+		t.Fatalf("err = %v, want capture and read span", err)
+	}
+	var need *NeedHuman
+	if errors.As(err, &need) {
+		t.Fatalf("read failure was a prompt: %s", need.Text)
+	}
+}
+
+func TestCmdCaptureKeepsAMissingSpanPrompt(t *testing.T) {
+	root := gitBranchRepo(t, "wrap-test")
+	err := cmdCapture([]string{"--root", root})
+	var need *NeedHuman
+	if !errors.As(err, &need) {
+		t.Fatalf("err = %v, want NeedHuman", err)
+	}
+	if !strings.Contains(need.Text, "weekly SuperGrok percentage") {
+		t.Fatalf("prompt = %q", need.Text)
+	}
+}
+
+func gitBranchRepo(t *testing.T, branch string) string {
+	t.Helper()
+	root := t.TempDir()
+	cmd := exec.Command("git", "init", "-b", branch)
+	cmd.Dir = root
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
+	return root
 }
 
 func TestCaptureWithoutSpanWritesNothing(t *testing.T) {

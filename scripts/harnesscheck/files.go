@@ -12,6 +12,8 @@ import (
 
 func walkGo(root string, includeTests bool, fn func(path string) error) error {
 	return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		// WalkDir already names the path. Returning that error
+		// unchanged is what stops the walk.
 		if err != nil {
 			return err
 		}

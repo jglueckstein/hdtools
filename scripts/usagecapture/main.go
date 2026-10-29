@@ -65,7 +65,7 @@ still has to choose a number. go run reports that case as exit 1.
 func cmdMark(args []string) error {
 	session, from, jsonPath, root, err := markFlags(args)
 	if err != nil {
-		return err
+		return commandErr("mark", err)
 	}
 	if session == "" {
 		return &NeedHuman{Text: "mark needs the Grok session id.\n\n  go run ./scripts/usagecapture mark --session <session-id>\n\nThe id is the session you are working in. grok usage <session-id> prints it.\nDo not pass the weekly SuperGrok percentage.\n"}
@@ -76,19 +76,19 @@ func cmdMark(args []string) error {
 	}
 	raw, err := loadUsage(session, jsonPath, follow)
 	if err != nil {
-		return err
+		return commandErr("mark", err)
 	}
 	branch, err := currentBranch(root)
 	if err != nil {
-		return err
+		return commandErr("mark", err)
 	}
 	span, err := MarkFromUsage(raw, branch, from)
 	if err != nil {
-		return err
+		return commandErr("mark", err)
 	}
 	path := spanPath(root, branch)
 	if err := WriteSpan(path, span); err != nil {
-		return err
+		return commandErr("mark", err)
 	}
 	fmt.Printf("marked session %s from turn %d\n%s\n", span.SessionID, span.FromTurn, path)
 	return nil
@@ -97,11 +97,11 @@ func cmdMark(args []string) error {
 func cmdCapture(args []string) error {
 	jsonPath, actuals, replace, root, err := captureFlags(args)
 	if err != nil {
-		return err
+		return commandErr("capture", err)
 	}
 	branch, err := currentBranch(root)
 	if err != nil {
-		return err
+		return commandErr("capture", err)
 	}
 	path := spanPath(root, branch)
 	span, err := ReadSpan(path)
@@ -113,23 +113,30 @@ func cmdCapture(args []string) error {
 		if errors.Is(err, os.ErrNotExist) {
 			return &NeedHuman{Text: NoSpanPrompt()}
 		}
-		return err
+		return commandErr("capture", err)
 	}
 	if span.SessionID == "" {
 		return &NeedHuman{Text: "The span file has no session id.\nRun mark --session <session-id> again.\n"}
 	}
 	raw, err := loadUsage(span.SessionID, jsonPath, "go run ./scripts/usagecapture capture --usage-json /tmp/usage.json")
 	if err != nil {
-		return err
+		return commandErr("capture", err)
 	}
 	out, err := Capture(root, path, raw, actuals, replace)
 	if err != nil {
-		return err
+		return commandErr("capture", err)
 	}
 	if out != "" {
 		fmt.Print(out)
 	}
 	return nil
+}
+
+// commandErr names the subcommand on the way out. A prompt is
+// wrapped with %w so main still prints its text. A failure keeps
+// the cause and gains mark or capture.
+func commandErr(name string, err error) error {
+	return fmt.Errorf("%s: %w", name, err)
 }
 
 func unwrap(err error) error {
