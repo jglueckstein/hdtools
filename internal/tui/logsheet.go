@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sync/atomic"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/jglueckstein/hdtools/internal/config"
@@ -30,12 +31,14 @@ import (
 )
 
 // logPDFGate is the in-flight hold for the month-sheet key.
-// save is set when a month-cell save command is returned.
-// reload is set when savedMsg starts the load, until that load
-// is applied or fails. path is the file this key wrote while it
-// is still the status line.
+// save counts month-cell save commands that have not finished.
+// A count, not a boolean, because a stale save must not release
+// a newer one. The command goroutine decrements a drop or a
+// failed save, so the count is atomic. reload is set when
+// savedMsg starts the load, until that load is applied or fails.
+// path is the file this key wrote while it is still the status line.
 type logPDFGate struct {
-	save   bool
+	save   atomic.Uint64
 	reload bool
 	path   string
 }
@@ -43,7 +46,7 @@ type logPDFGate struct {
 // writeMonthLogPDF writes YYYY-MM-log.pdf for the month on screen.
 // The series comes from the store, not from the rows on screen.
 func (a *App) writeMonthLogPDF() {
-	if a.logPDF.save || a.logPDF.reload {
+	if a.logPDF.save.Load() > 0 || a.logPDF.reload {
 		return
 	}
 	logs, err := a.store.All(context.Background())
@@ -93,30 +96,47 @@ func (a *App) failLogPDF(err error) {
 	a.logPDF.path = ""
 }
 
-// armLogSave marks the save when the command is returned. The next
+// armLogSave counts the save when the command is returned. The next
 // key is not ordered behind that command. A dropped or failed save
-// clears the mark here so Update can keep ignoring the drop.
+// releases only itself here, so Update can keep ignoring the drop.
 func (a *App) armLogSave(cmd tea.Cmd) tea.Cmd {
-	a.logPDF.save = true
+	a.logPDF.save.Add(1)
 	return func() tea.Msg {
 		msg := cmd()
 		switch msg.(type) {
 		case monthSaveDroppedMsg, loadErrMsg:
-			a.logPDF.save = false
+			a.decLogSave()
 		}
 		return msg
 	}
 }
 
-// clearLogSave drops a month-cell save that will not reload.
-func (a *App) clearLogSave() {
-	a.logPDF.save = false
+// decLogSave releases one month-cell save. A message that was never
+// armed, or that is delivered twice, does not drive the count negative.
+func (a *App) decLogSave() {
+	for {
+		n := a.logPDF.save.Load()
+		if n == 0 {
+			return
+		}
+		if a.logPDF.save.CompareAndSwap(n, n-1) {
+			return
+		}
+	}
 }
 
-// noteMonthSaved starts the reload. A path this key already showed
+// clearLogSave releases a stale month-cell save that will not reload.
+func (a *App) clearLogSave() {
+	a.decLogSave()
+}
+
+// noteMonthSaved starts the reload. monthCell is false for a form
+// save, which never took a count. A path this key already showed
 // stays on the status line; the load still runs.
-func (a *App) noteMonthSaved() {
-	a.logPDF.save = false
+func (a *App) noteMonthSaved(monthCell bool) {
+	if monthCell {
+		a.decLogSave()
+	}
 	a.logPDF.reload = true
 	a.err = nil
 	if a.logPDF.path != "" && a.status == a.logPDF.path {
@@ -131,9 +151,9 @@ func (a *App) clearLogReload() {
 	a.logPDF.reload = false
 }
 
-// clearLogFlight opens the key after a save or a reload fails.
-// Sticky saved stays until a later write clears it.
+// clearLogFlight opens the key after a reload fails. A failed
+// month-cell save already released its own count. Sticky saved
+// stays until a later write clears it.
 func (a *App) clearLogFlight() {
-	a.logPDF.save = false
 	a.logPDF.reload = false
 }

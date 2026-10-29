@@ -194,7 +194,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.selectDay = msg.day
 		}
 		a.screen = a.afterSave
-		a.noteMonthSaved()
+		a.noteMonthSaved(msg.day.IsZero())
 		return a, a.load
 	case loadErrMsg:
 		a.clearLogFlight()

@@ -652,6 +652,42 @@ func TestMonthShiftPRelativeDataHomeFails(t *testing.T) {
 	assertSameCell(t, app, time.November, day, col)
 }
 
+func TestMonthShiftPDuringNewerSave(t *testing.T) {
+	cwd, dataDir, app := novemberSheet(t)
+	app.month.beginEdit("80.0")
+	_, first := app.Update(tea.KeyPressMsg{Code: tea.KeyDown})
+	if first == nil {
+		t.Fatal("down should start a save")
+	}
+	// The first save finishes while its cancel generation is still
+	// current. Esc then starts a newer save before that result is applied.
+	stale := first()
+	if _, ok := stale.(savedMsg); !ok {
+		t.Fatalf("first save = %T, want savedMsg", stale)
+	}
+	app.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
+	if app.month.editing {
+		t.Fatal("esc left the edit open")
+	}
+	app.month.col = colWorkout
+	_, newer := app.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
+	if newer == nil {
+		t.Fatal("workout space should start a save")
+	}
+	app.Update(stale)
+	status := app.status
+	day, col := app.month.day, app.month.col
+	applyShiftP(t, app)
+	if app.month.editing {
+		t.Fatalf("shift-P started an edit (%q) while a save was in flight", app.month.input.Value())
+	}
+	assertNoPDFFiles(t, cwd, dataDir)
+	if app.status != status {
+		t.Fatalf("status = %q, want %q while a save was in flight", app.status, status)
+	}
+	assertSameCell(t, app, time.November, day, col)
+}
+
 func TestMonthShiftPDuringReload(t *testing.T) {
 	cwd, dataDir := isolatePDFHome(t)
 	app := twoDayApp(t, openStore(t))
