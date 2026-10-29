@@ -4,6 +4,9 @@
 
 ### Added
 
+- Shift-P on the idle month sheet writes that month's filled log
+  PDF (`YYYY-MM-log.pdf`) in the same directory as `-log-pdf`.
+  Idle `p` still edits. (#113)
 - `hdtools -log-pdf YYYY-MM` writes one portrait page of the filled
   month (`YYYY-MM-log.pdf`) and exits. A missing cell has no mark.
   (#116)

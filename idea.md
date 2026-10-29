@@ -134,6 +134,9 @@ monthly charts.
 Change record (filled log-sheet PDF):
 [docs/superpowers/specs/2026-10-17-filled-log-sheet-pdf.md](docs/superpowers/specs/2026-10-17-filled-log-sheet-pdf.md).
 
+Change record (month-sheet shift-P):
+[docs/superpowers/specs/2026-10-28-month-sheet-log-pdf.md](docs/superpowers/specs/2026-10-28-month-sheet-log-pdf.md).
+
 PDF monthly charts are the on-screen monthly chart on paper. CLI
 `-chart-pdf YYYY-MM` and TUI `p` write that picture. Filled log-sheet
 PDFs and long-term PDFs are not in this slice.
