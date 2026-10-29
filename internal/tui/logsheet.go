@@ -12,7 +12,11 @@ package tui
 // the status line alone. The word "saved" is not that mark: a sticky
 // saved after the reload has finished is still a page, and a failed
 // write clears it. Once this key has put a path on the status line,
-// a save result that was already in flight does not cover it.
+// a save that was already armed does not cover it. A month-cell save
+// armed after that path sets the status to saved and clears the path.
+// The file is not rewritten until the next shift-P. [, ], and t clear
+// the path when they land on a different month. The file stays where
+// it was written.
 //
 // This file does not paint, import a PDF library, call the command,
 // or change ApplyTrend. It does not prompt for a path, and -o stays
@@ -23,6 +27,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sync/atomic"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/jglueckstein/hdtools/internal/config"
@@ -34,13 +39,20 @@ import (
 // save counts month-cell save commands that have not finished.
 // A count, not a boolean, because a stale save must not release
 // a newer one. The command goroutine decrements a drop or a
-// failed save, so the count is atomic. reload is set when
+// failed save, so the count is atomic. next stamps each armed
+// save. keepBelow is the highest id already armed when the path
+// was written; a later id is a new edit. reload is set when
 // savedMsg starts the load, until that load is applied or fails.
-// path is the file this key wrote while it is still the status line.
+// path is the file this key wrote, and year/month are the sheet
+// that file belongs to.
 type logPDFGate struct {
-	save   atomic.Uint64
-	reload bool
-	path   string
+	save      atomic.Uint64
+	next      atomic.Uint64
+	keepBelow uint64
+	reload    bool
+	path      string
+	year      int
+	month     time.Month
 }
 
 // writeMonthLogPDF writes YYYY-MM-log.pdf for the month on screen.
@@ -81,9 +93,13 @@ func (a *App) writeMonthLogPDF() {
 		return
 	}
 	a.month.err = ""
+	a.month.holdErr = false
 	a.err = nil
 	a.status = path
 	a.logPDF.path = path
+	a.logPDF.year = a.month.year
+	a.logPDF.month = a.month.month
+	a.logPDF.keepBelow = a.logPDF.next.Load()
 }
 
 // failLogPDF keeps the cause and names this writer. The month view
@@ -91,21 +107,27 @@ func (a *App) writeMonthLogPDF() {
 // the list after Esc and hide the failure here.
 func (a *App) failLogPDF(err error) {
 	a.month.err = fmt.Errorf("write log pdf: %w", err).Error()
+	a.month.holdErr = true
 	a.err = nil
 	a.status = ""
 	a.logPDF.path = ""
+	a.logPDF.keepBelow = 0
 }
 
 // armLogSave counts the save when the command is returned. The next
 // key is not ordered behind that command. A dropped or failed save
 // releases only itself here, so Update can keep ignoring the drop.
 func (a *App) armLogSave(cmd tea.Cmd) tea.Cmd {
+	id := a.logPDF.next.Add(1)
 	a.logPDF.save.Add(1)
 	return func() tea.Msg {
 		msg := cmd()
-		switch msg.(type) {
+		switch m := msg.(type) {
 		case monthSaveDroppedMsg, loadErrMsg:
 			a.decLogSave()
+		case savedMsg:
+			m.id = id
+			msg = m
 		}
 		return msg
 	}
@@ -131,19 +153,65 @@ func (a *App) clearLogSave() {
 }
 
 // noteMonthSaved starts the reload. monthCell is false for a form
-// save, which never took a count. A path this key already showed
-// stays on the status line; the load still runs.
-func (a *App) noteMonthSaved(monthCell bool) {
+// save, which never took a count. A form save leaves a path this
+// key already showed. A month-cell save already armed when the path
+// was written leaves that path up. A month-cell save armed later
+// sets the status to saved and clears the path. This does not
+// rewrite the PDF.
+func (a *App) noteMonthSaved(monthCell bool, saveID uint64) {
 	if monthCell {
 		a.decLogSave()
 	}
 	a.logPDF.reload = true
 	a.err = nil
-	if a.logPDF.path != "" && a.status == a.logPDF.path {
+	if a.keepsLogPath(monthCell, saveID) {
 		return
 	}
 	a.status = "saved"
 	a.logPDF.path = ""
+	a.logPDF.keepBelow = 0
+}
+
+// keepsLogPath reports whether this save result may leave the PDF
+// path on the status line. A form save does. A month-cell save does
+// only when it was armed before the path was written.
+func (a *App) keepsLogPath(monthCell bool, saveID uint64) bool {
+	if a.logPDF.path == "" || a.status != a.logPDF.path {
+		return false
+	}
+	if !monthCell {
+		return true
+	}
+	return saveID != 0 && saveID <= a.logPDF.keepBelow
+}
+
+// stepShownMonth moves off the month on screen. The log path is
+// cleared when the landing month is not the one the file was
+// written for.
+func (a *App) stepShownMonth(prev bool) {
+	if prev {
+		a.month.prevMonth()
+	} else {
+		a.month.nextMonth()
+	}
+	a.noteMonthShown()
+}
+
+// noteMonthShown drops a log path that names a month the sheet is
+// no longer showing. A same-month t keeps it. Arrows do not call
+// this, and the file stays on disk.
+func (a *App) noteMonthShown() {
+	if a.logPDF.path == "" {
+		return
+	}
+	if a.logPDF.year == a.month.year && a.logPDF.month == a.month.month {
+		return
+	}
+	if a.status == a.logPDF.path {
+		a.status = ""
+	}
+	a.logPDF.path = ""
+	a.logPDF.keepBelow = 0
 }
 
 // clearLogReload opens the key again once the reloaded rows are in.
@@ -156,4 +224,7 @@ func (a *App) clearLogReload() {
 // stays until a later write clears it.
 func (a *App) clearLogFlight() {
 	a.logPDF.reload = false
+	// A load error is a failed save or reload, not the export
+	// failure that has to survive typing.
+	a.month.holdErr = false
 }

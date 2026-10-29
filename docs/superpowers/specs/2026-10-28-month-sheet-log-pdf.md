@@ -125,6 +125,22 @@ prints it, and chart `p` still prints only the chart.
     still update the rows. A sticky `saved` left after the
     reload has been applied is not in flight. Decision 6
     still clears that leftover on a failure.
+15. **A log path belongs to the month it was written for.**
+    `[`, `]`, and `t` clear that path when the month they
+    land on is a different month. The status line then does
+    not name the other month's file. A same-month `t` keeps
+    the path. Arrows leave it. The file stays on disk.
+16. **A save started after the path is not the in-flight
+    hold.** The path stays only for a month-cell save that
+    was already in flight when shift-P wrote it. A
+    month-cell save started after that sets the status to
+    `saved` and clears the path. The PDF is not rewritten
+    until the next shift-P.
+17. **An export failure stays through the next edit.** A
+    typed character and a workout save leave `write log pdf`
+    on the month error line. The next shift-P replaces it.
+    Leaving the sheet and opening the month again may clear
+    it with the rest of that visit.
 
 ## Acceptance scenarios
 
@@ -420,6 +436,48 @@ completes
 **Then** the status line is still that PDF path
 **And** the status line does not say `saved`
 
+### S23 — `[` and `]` clear a leftover log path
+
+**Given** shift-P has set the status line to the November
+log path
+**When** `]` is pressed
+**Then** the status line does not name `1990-11-log.pdf`
+**And** that file is still on disk
+**And** the sheet is December 1990
+**And** `[`, after another shift-P on November, does the
+same for the month it leaves
+
+### S24 — `t` clears a log path only when the month changes
+
+**Given** shift-P has set the status line to a month's log
+path
+**And** today is in a different month
+**When** `t` is pressed
+**Then** the status line does not name that file
+**And** the file is still on disk
+**And** the sheet is today's month
+**And** a later `t` that stays in that month keeps the path
+**And** an arrow on the month that was printed leaves the
+path
+
+### S25 — A save started after shift-P clears the path
+
+**Given** shift-P has set the status line to the log PDF
+path
+**When** a workout toggle is started and that save is applied
+**Then** the status line is `saved`
+**And** the status line does not name that PDF
+**And** the PDF file is unchanged
+
+### S26 — An export failure survives the next edit
+
+**Given** `pdf_dir` cannot be used
+**And** shift-P has failed
+**When** a character is typed
+**Then** the month error line still contains `write log pdf`
+**And** a workout save leaves that error in place
+**And** the next shift-P replaces it
+
 ## Functional requirements
 
 -   **FR1.** Idle shift-P on the month sheet writes
@@ -490,10 +548,23 @@ completes
 -   **FR14.** While a month-cell save or its reload is in
     flight, shift-P writes no PDF. When the status is `saved`
     and that reload has not been applied, the status stays
-    `saved`. A save result that arrives after the PDF path is
-    set does not replace that path with `saved`. A sticky
-    `saved` after the reload has been applied is not this
-    hold.
+    `saved`. A save result that was already in flight when
+    the path was set does not replace that path with
+    `saved`. A month-cell save started after the path sets
+    the status to `saved`, clears the path, and does not
+    rewrite the PDF. A sticky `saved` after the reload has
+    been applied is not this hold.
+-   **FR15.** `[`, `]`, and `t` clear a log path when the
+    month they land on is not the month that path was
+    written for. A same-month `t` keeps the path. Arrows
+    leave it. The file stays on disk.
+-   **FR16.** A month-cell save started after shift-P sets
+    the status to `saved` and clears the path. The PDF is
+    not rewritten until the next shift-P.
+-   **FR17.** An export failure stays on the month error
+    line through a typed character and a workout save. The
+    next shift-P replaces it. Opening the month sheet again
+    may clear it.
 
 ## Out of scope
 

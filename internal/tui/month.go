@@ -47,6 +47,9 @@ type monthModel struct {
 	editing bool
 	input   textinput.Model
 	err     string
+	// holdErr keeps an export failure across a cell edit. The next
+	// edit clears a parse error. It does not clear a failed log PDF.
+	holdErr bool
 }
 
 func newMonth(day time.Time) monthModel {
@@ -280,12 +283,22 @@ func (m *monthModel) beginEdit(initial string) {
 	m.input.SetValue(initial)
 	m.input.CursorEnd()
 	m.input.Focus()
-	m.err = ""
+	m.clearCellErr()
 }
 
 func (m *monthModel) cancelEdit() {
 	m.editing = false
 	m.input.Blur()
+	m.clearCellErr()
+}
+
+// clearCellErr drops a parse error so the next edit starts clean.
+// An export failure is not that error: typing the weight they were
+// on does not fix the directory.
+func (m *monthModel) clearCellErr() {
+	if m.holdErr {
+		return
+	}
 	m.err = ""
 }
 

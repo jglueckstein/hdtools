@@ -144,6 +144,9 @@ and it does not grow a second painter.
 | FR12 | `TestMonthHelpNamesLogKey` |
 | FR13 | `docs/reference/keys.md`, `docs/how-to/monthly-log-pdf.md` (no Go test) |
 | FR14 | `TestMonthShiftPDuringReload`, `TestMonthShiftPSaveDoesNotCoverPath` |
+| FR15 | `TestMonthShiftPClearsPathOnOtherMonth` |
+| FR16 | `TestMonthShiftPLaterSaveClearsPath` |
+| FR17 | `TestMonthShiftPErrorSurvivesEdit` |
 
 ## Test list
 
@@ -241,10 +244,21 @@ step.
     result so status is `saved`, do not run the load
     command, then press P. No log PDF. Status is still
     `saved`. Same cell.
--   `TestMonthShiftPSaveDoesNotCoverPath` — S22: after P has
-    set the PDF path, apply a `savedMsg` from a save that
-    was already in flight. Status is still that path and
-    does not say `saved`.
+-   `TestMonthShiftPSaveDoesNotCoverPath` — S22: arm a
+    month-cell save and hold its result, then shift-P
+    writes. Applying that result leaves the PDF path. The
+    status does not say `saved`.
+-   `TestMonthShiftPLaterSaveClearsPath` — S25: after P, a
+    real workout toggle sets the status to `saved`, clears
+    the path, and does not rewrite the PDF.
+-   `TestMonthShiftPClearsPathOnOtherMonth` — S23 and S24:
+    `]`, `[`, and a `t` that leaves the month clear the
+    path and leave the file. A same-month `t` keeps it. An
+    arrow leaves it.
+-   `TestMonthShiftPErrorSurvivesEdit` — S26: a bad
+    `pdf_dir`, then a typed character and a workout save,
+    still shows `write log pdf`. The next shift-P replaces
+    it.
 -   `TestMonthPStartsEditWritesNoPDF` — S10: P's lowercase
     message on weight starts an edit whose text contains
     `p`, and on `colWorkout` it does not start an edit;

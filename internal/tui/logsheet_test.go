@@ -713,18 +713,158 @@ func TestMonthShiftPDuringReload(t *testing.T) {
 }
 
 func TestMonthShiftPSaveDoesNotCoverPath(t *testing.T) {
-	_, dataDir := isolatePDFHome(t)
-	app := twoDayApp(t, openStore(t))
-	openNovemberCell(t, app, 15, colWeight)
+	_, dataDir, app := novemberSheet(t)
 	want := filepath.Join(dataDir, logPDFNovember)
+	app.month.col = colWorkout
+	_, cmd := app.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
+	if cmd == nil {
+		t.Fatal("workout space should start a save")
+	}
+	held := cmd()
+	if _, ok := held.(savedMsg); !ok {
+		t.Fatalf("in-flight save = %T, want savedMsg", held)
+	}
+	if app.logPDF.save.Load() == 0 {
+		t.Fatal("save was not counted")
+	}
+	// Shift-P refuses to write while the count is up. The result is
+	// still unapplied, which is the gap S22 names, so the count is
+	// released here without applying that result.
+	app.decLogSave()
 	applyShiftP(t, app)
-	_, cmd := app.Update(savedMsg{})
-	applyReload(t, app, cmd)
+	if app.status != want {
+		t.Fatalf("status = %q, want %q", app.status, want)
+	}
+	_, reload := app.Update(held)
+	applyReload(t, app, reload)
 	if app.status != want {
 		t.Fatalf("status = %q, want %q", app.status, want)
 	}
 	if strings.Contains(app.status, "saved") {
 		t.Fatalf("status %q says saved", app.status)
+	}
+}
+
+func TestMonthShiftPLaterSaveClearsPath(t *testing.T) {
+	_, dataDir, app := novemberSheet(t)
+	path := filepath.Join(dataDir, logPDFNovember)
+	applyShiftP(t, app)
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read log pdf: %v", err)
+	}
+	app.month.col = colWorkout
+	_, cmd := app.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
+	if cmd == nil {
+		t.Fatal("workout space should start a save")
+	}
+	msg := cmd()
+	if _, ok := msg.(savedMsg); !ok {
+		t.Fatalf("workout save = %T, want savedMsg", msg)
+	}
+	_, reload := app.Update(msg)
+	applyReload(t, app, reload)
+	if app.status != "saved" {
+		t.Fatalf("status = %q, want saved", app.status)
+	}
+	if app.logPDF.path != "" {
+		t.Fatalf("log path = %q, want empty", app.logPDF.path)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read log pdf: %v", err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Fatal("later save rewrote the log pdf")
+	}
+}
+
+func TestMonthShiftPClearsPathOnOtherMonth(t *testing.T) {
+	freezeToday(t, time.Date(1990, 12, 15, 12, 0, 0, 0, time.UTC))
+	_, dataDir, app := novemberSheet(t)
+	nov := filepath.Join(dataDir, logPDFNovember)
+	applyShiftP(t, app)
+	if app.status != nov {
+		t.Fatalf("status = %q, want %q", app.status, nov)
+	}
+	app.Update(tea.KeyPressMsg{Code: tea.KeyDown})
+	if app.status != nov {
+		t.Fatalf("down status = %q, want the November path", app.status)
+	}
+
+	press(app, "]")
+	if app.month.month != time.December || strings.Contains(app.status, logPDFNovember) {
+		t.Fatalf("after ] month %s status %q", app.month.month, app.status)
+	}
+	if _, err := os.Stat(nov); err != nil {
+		t.Fatalf("] removed %s: %v", nov, err)
+	}
+
+	press(app, "[")
+	applyShiftP(t, app)
+	press(app, "[")
+	if app.month.month != time.October || strings.Contains(app.status, logPDFNovember) {
+		t.Fatalf("after [ month %s status %q", app.month.month, app.status)
+	}
+	if _, err := os.Stat(nov); err != nil {
+		t.Fatalf("[ removed %s: %v", nov, err)
+	}
+
+	press(app, "]")
+	applyShiftP(t, app)
+	press(app, "t")
+	dec := filepath.Join(dataDir, logPDFDecember)
+	if app.month.year != 1990 || app.month.month != time.December || strings.Contains(app.status, logPDFNovember) {
+		t.Fatalf("after t month %d %s status %q", app.month.year, app.month.month, app.status)
+	}
+	if _, err := os.Stat(nov); err != nil {
+		t.Fatalf("t removed %s: %v", nov, err)
+	}
+
+	applyShiftP(t, app)
+	if app.status != dec {
+		t.Fatalf("status = %q, want %q", app.status, dec)
+	}
+	press(app, "t")
+	if app.month.month != time.December || app.status != dec {
+		t.Fatalf("same-month t month %s status %q, want December %q", app.month.month, app.status, dec)
+	}
+}
+
+func TestMonthShiftPErrorSurvivesEdit(t *testing.T) {
+	isolatePDFHome(t)
+	app := appWithConfig(t, loadConfigTOML(t, "display_unit = \"kg\"\npdf_dir = \"charts\"\n"))
+	openNovemberCell(t, app, 15, colWeight)
+	applyShiftP(t, app)
+	assertLogWriteError(t, app, "pdf_dir", "must be absolute")
+	press(app, "8")
+	if !app.month.editing {
+		t.Fatal("typed character did not start an edit")
+	}
+	assertLogWriteError(t, app, "pdf_dir")
+	press(app, "esc")
+	app.month.col = colWorkout
+	_, cmd := app.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
+	if cmd == nil {
+		t.Fatal("workout space should start a save")
+	}
+	msg := cmd()
+	if _, ok := msg.(savedMsg); !ok {
+		t.Fatalf("workout save = %T, want savedMsg", msg)
+	}
+	_, reload := app.Update(msg)
+	applyReload(t, app, reload)
+	view := visible(app.View().Content)
+	if !strings.Contains(view, "write log pdf") {
+		t.Fatalf("workout save cleared month error %q", app.month.err)
+	}
+	app.cfg.PDFDir = t.TempDir()
+	applyShiftP(t, app)
+	if strings.Contains(app.month.err, "write log pdf") {
+		t.Fatalf("next shift-P left %q", app.month.err)
+	}
+	if !strings.Contains(app.status, logPDFNovember) {
+		t.Fatalf("status = %q, want %s", app.status, logPDFNovember)
 	}
 }
 

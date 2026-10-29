@@ -8,7 +8,7 @@
 | `c` | list or month (not editing) | monthly chart |
 | `l` | list, month (not editing), or monthly chart | long-term chart |
 | `p` | monthly chart | write this month's PDF in `pdf_dir` or the data directory |
-| `P` | month (not editing) | write this month's filled log PDF |
+| `P` | month (not editing) | write `YYYY-MM-log.pdf` in `pdf_dir` or the data directory |
 | `q` | list, month, or chart | quit |
 | Tab | form | next field |
 | Enter | form | save |

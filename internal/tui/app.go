@@ -82,7 +82,8 @@ type savedMsg struct {
 	origin    time.Time // vertical save: the day captured when the key was handled
 	cancelGen uint64
 	editGen   uint64
-	guard     bool // vertical save: drop the move if Esc or an earlier twin won
+	guard     bool   // vertical save: drop the move if Esc or an earlier twin won
+	id        uint64 // armLogSave's id; 0 if this result was not armed
 }
 
 // DefaultDBPath is $XDG_DATA_HOME/hdtools/hdtools.db.
@@ -194,7 +195,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.selectDay = msg.day
 		}
 		a.screen = a.afterSave
-		a.noteMonthSaved(msg.day.IsZero())
+		a.noteMonthSaved(msg.day.IsZero(), msg.id)
 		return a, a.load
 	case loadErrMsg:
 		a.clearLogFlight()
@@ -378,10 +379,8 @@ func (a *App) updateMonth(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "down":
 		a.month.day++
 		a.month.clamp()
-	case "[":
-		a.month.prevMonth()
-	case "]":
-		a.month.nextMonth()
+	case "[", "]":
+		a.stepShownMonth(msg.String() == "[")
 	case "c":
 		a.openChart()
 		return a, nil
@@ -390,6 +389,7 @@ func (a *App) updateMonth(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case "t":
 		a.month = newMonth(localToday())
+		a.noteMonthShown()
 		return a, nil
 	case "enter":
 		a.openForm(a.month.cursorDay(), screenMonth)
