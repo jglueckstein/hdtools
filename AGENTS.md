@@ -88,6 +88,11 @@ before writing or reviewing code. Do not add style rules here.
 - A zero on-screen loss prints `0.0`. `FitRate`'s unary minus
   turns an exact zero slope into a negative zero, and `%.1f`
   prints `-0.0`.
+- The month-sheet log path names the month it was written for.
+  `[`, `]`, and a `t` that leaves that month clear it. A later
+  month-cell save sets the status to `saved` and does not rewrite
+  the file. `write log pdf` survives the next cell edit. The
+  in-flight hold is a count of armed saves, not a boolean.
 
 ## ARCH_DECISIONS
 

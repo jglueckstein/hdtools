@@ -27,6 +27,7 @@
   test.
 - **Signal**: context
 - **Constraint**: none
+- **Promoted**: 2026-10-29 → AGENTS.md GOTCHAS: "The month-sheet log path names the month it was written for."
 - **Session metadata**:
   - Duration: unknown
   - Model tiers used: unknown
