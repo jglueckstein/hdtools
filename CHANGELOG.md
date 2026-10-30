@@ -129,6 +129,8 @@
 
 ### Fixed
 
+- Remove the unused eight-row Braille bin oracle from the chart
+  tests. The Online picture still reads styled runes.
 - `usagecapture` names `mark` or `capture` on an error it passes
   on. A prompt is still the text asking for a number. (#114)
 - Mark the shipped color-scheme and monthly-chart specs approved.
