@@ -2,12 +2,12 @@
 date: 2026-11-14
 branch: add-reflection-macros-hidden-not-optional
 issue: "#132"
-pr: null
+pr: "#133"
 task_summary: Record why optional food macros were hidden.
 progressed_slice: null
 stages_run: [integration-agent]
 review_cycles: 0
-files_changed: 2
+files_changed: 4
 languages: [markdown]
 tokens_by_stage:
   - stage: integration-agent

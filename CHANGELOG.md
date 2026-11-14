@@ -6,7 +6,7 @@
 
 - A reflection records why food macros were hidden when
   `track_macros` was off. Decision 24 called them optional
-  and then hid the fields, and the gotcha repeated that.
+  and then hid the fields, and the gotcha repeated that. (#133)
 - Weekly garbage collection keeps per-package `go test -cover`
   figures in `observability/gc/`, so the next run can flag a
   drop of more than 5%. (#126)
