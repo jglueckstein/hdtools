@@ -92,7 +92,7 @@ slices:
       the line. This slice is grams only. This is the slice in
       progress.
     file_as_issue: false
-    issue_url: null
+    issue_url: https://github.com/jglueckstein/hdtools/issues/123
     merged_into: null
   - id: S2
     title: Compare that day's calories with an allowance
