@@ -4,6 +4,9 @@
 
 ### Added
 
+- `f` on the daily list opens today's foods. A line stores grams and
+  which food. The four numbers are per 100 g, and editing the food
+  changes every meal date that uses it.
 - Shift-P on the idle month sheet writes that month's filled log
   PDF (`YYYY-MM-log.pdf`) in the same directory as `-log-pdf`.
   Idle `p` still edits. (#113)

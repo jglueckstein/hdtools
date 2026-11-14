@@ -260,15 +260,31 @@ the PDF stay as they are.
 
 The tool should implement the meal planning system described
 [in the Hacker's Diet](https://www.fourmilab.ch/hackdiet/e4/planningmeals.html#Fa147).
+Calories, protein, carbohydrate, and fat are the four numbers
+on a food.
 
-We should have an initial database of foods. We should have protein and
-carbs in addition to calories.
+S1, a day's weighed foods, is the active slice
+([docs/superpowers/specs/2026-10-30-meal-day.md](docs/superpowers/specs/2026-10-30-meal-day.md)).
 
-We should prefer weight over volume measurements. Internally, we should
-try to work consistently with grams. We will support U.S. units.
+A calorie allowance for that day is not this slice. It is not
+the chart's Daily Deficit. An unset allowance shows the four
+totals and the words "no allowance".
 
-Besides the ingredients, we should save groups of ingredients as recipes
-or meals. Then the user can enter 1/4 of this recipe or 245 g of that recipe.
+Volume and density are not this slice. Typed ounces, pounds,
+and volumes become stored grams later, using one
+grams-per-milliliter density when the food has one.
+
+Recipes are not this slice. A recipe is logged as a fraction
+of that recipe or as a gram weight of it.
+
+The starter set is not this slice. The short list of foods and
+two recipes is inserted only when that name is not already
+stored.
+
+Renaming a food and deleting a food are later work. They
+are not this slice. Removing a meal line does not delete
+the food. The recipe slice's rule about an ingredient is
+not that operation.
 
 ## Documentation
 

@@ -22,6 +22,7 @@ import (
 	"github.com/jglueckstein/hdtools/internal/config"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 	"github.com/jglueckstein/hdtools/internal/logpdf"
+	"github.com/jglueckstein/hdtools/internal/meal"
 	"github.com/jglueckstein/hdtools/internal/tui"
 )
 
@@ -113,11 +114,29 @@ func run(args []string) error {
 		return nil
 	}
 
-	p := tea.NewProgram(tui.New(store, path, cfg))
+	// Meals open the file the daily log already created. A missing
+	// file is the daily log's error, and a PDF export has already
+	// returned. A failed open must not leave the log connection up
+	// or start the screen.
+	meals, err := meal.Open(path)
+	if err != nil {
+		closeErr := store.Close()
+		if closeErr != nil {
+			return fmt.Errorf("open meals: %w; close store: %v", err, closeErr)
+		}
+		return fmt.Errorf("open meals: %w", err)
+	}
+	model := tui.New(store, path, cfg)
+	model.UseMeals(meals)
+	p := tea.NewProgram(model)
 	_, runErr := p.Run()
+	mealErr := meals.Close()
 	closeErr := store.Close()
 	if runErr != nil {
 		return fmt.Errorf("run tui: %w", runErr)
+	}
+	if mealErr != nil {
+		return fmt.Errorf("close meals: %w", mealErr)
 	}
 	if closeErr != nil {
 		return fmt.Errorf("close store: %w", closeErr)
