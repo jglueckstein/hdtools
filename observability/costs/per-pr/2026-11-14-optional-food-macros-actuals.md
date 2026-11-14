@@ -2,7 +2,7 @@
 date: 2026-11-14
 branch: optional-food-macros
 issue: "#130"
-pr: null
+pr: "#131"
 task_summary: Show food macro fields when track_macros is off and store a blank macro as zero.
 progressed_slice: null
 stages_run: [integration-agent]
