@@ -36,16 +36,16 @@ before writing or reviewing code. Do not add style rules here.
 - Every harness GC rule is auto-fix false, so findings become issues.
   A same-package unused name is not dead code until a module-wide
   search agrees.
-- On Grok 1.0.46, `spawn_subagent` rejects
-  `ai-literacy-superpowers:<name>` even when the error lists that
-  string as available. Plugin files are `agents/<name>.agent.md`, and
-  the spawn id is `ai-literacy-superpowers:<name>.agent`. Pass that
-  id. The five `.claude/agents/*.md` files (`code-reviewer`,
-  `integration-agent`, `orchestrator`, `spec-writer`, `tdd-agent`)
-  spawn under those short names. If the `.agent` id is itself
-  rejected, the host mapping has changed; use the id the error
-  accepts. Do not edit the installed plugin copy except to re-apply
-  the Stop-hook patch below; a plugin update overwrites it.
+- On Grok 1.0.77, `spawn_subagent` lists
+  `ai-literacy-superpowers:<name>` and rejects that id. The
+  `.agent` suffix is stripped before lookup, so it is not a
+  usable id. Plugin agents whose files are `<name>.md` launch
+  as `plugin:<name>`. Project agents in
+  `.claude/agents/<name>.md` launch under the short name. When
+  the specialist id is rejected, omit `subagent_type` and paste
+  the brief. Do not rename the installed `*.agent.md` files; a
+  plugin update overwrites them. Do not edit the installed
+  plugin copy except to re-apply the Stop-hook patch below.
 - A plugin update restores Stop hooks that Grok rejects. The message
   is `hook reply is not valid JSON: control character (\u0000-\u001F)
   found while parsing a string at line 2 column 0`. Grok parses a
