@@ -196,3 +196,13 @@ its sections names the constraint below that checks it.
 - **Enforcement**: deterministic
 - **Tool**: scripts/check-conventions-bound.sh
 - **Scope**: pr
+
+### Optional form fields stay visible
+
+- **Rule**: When a spec or AGENTS.md calls a form field optional,
+  the form shows that field and a blank answer is valid. The
+  field is absent only where that same text says the field is
+  hidden.
+- **Enforcement**: agent
+- **Tool**: harness-enforcer
+- **Scope**: pr

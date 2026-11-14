@@ -26,6 +26,7 @@
 - **Constraint**: An optional form field stays on the form
   and a blank is valid. Hide a field only by writing that
   it is hidden. (agent)
+- **Promoted**: 2026-11-14 → AGENTS.md GOTCHAS: "Optional on a form field means the field is shown"
 - **Session metadata**:
   - Duration: unknown
   - Model tiers used: unknown

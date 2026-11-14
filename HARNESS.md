@@ -221,6 +221,16 @@ its sections names the constraint below that checks it.
 - **Tool**: scripts/check-conventions-bound.sh
 - **Scope**: pr
 
+### Optional form fields stay visible
+
+- **Rule**: When a spec or AGENTS.md calls a form field optional,
+  the form shows that field and a blank answer is valid. The
+  field is absent only where that same text says the field is
+  hidden.
+- **Enforcement**: agent
+- **Tool**: harness-enforcer
+- **Scope**: pr
+
 ---
 
 ## Garbage Collection
@@ -428,7 +438,7 @@ Run /reservoir for an on-demand read, or /reservoir tune to edit this block.
 <!-- Auto-updated by /harness-audit — do not edit manually -->
 
 Last audit: 2026-10-16
-Constraints enforced: 18/18
+Constraints enforced: 19/19
 Garbage collection active: 8/8
 Drift detected: yes
-<!-- 18/18 counts declared enforcement (0 unverified). 1 agent PR constraint has no CI dispatch: User-facing copy is not medical. harness.yml does not run harness-enforcer. -->
+<!-- 19/19 counts declared enforcement (0 unverified). 2 agent PR constraints have no CI dispatch: User-facing copy is not medical, and Optional form fields stay visible. harness.yml does not run harness-enforcer. -->
