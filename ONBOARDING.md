@@ -150,14 +150,16 @@ green. A red check blocks the merge.
 
 **Reviewed by an agent, not by a CI job today:**
 
-Medical copy is the remaining agent pull-request constraint.
+Two pull-request constraints are agent reviews.
 `harness.yml` does not run harness-enforcer, so a green build
-does not prove it. Still follow it. User-facing copy in the
-TUI, the README, this file, and `idea.md` must not present
+does not prove them. Still follow them. User-facing copy in
+the TUI, the README, this file, and `idea.md` must not present
 hdtools as diagnosing, treating, prescribing, or giving medical
 advice. Paraphrase counts. Trend and meal planning are product
-behaviour, not a violation. The build does not fail on this
-constraint.
+behaviour, not a violation. An optional form field stays on
+the form, and a blank answer is valid. Hide a field only by
+writing that it is hidden. The build does not fail on these
+constraints.
 
 ### On schedule
 

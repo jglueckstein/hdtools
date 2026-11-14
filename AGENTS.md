@@ -102,6 +102,9 @@ before writing or reviewing code. Do not add style rules here.
   protein, carbohydrate, and fat. A blank one is stored as
   zero. True makes the three mandatory, and only then are
   their day totals shown.
+- Optional on a form field means the field is shown and a
+  blank is valid. Hiding the field is a separate decision
+  and is written as hidden.
 
 ## ARCH_DECISIONS
 
