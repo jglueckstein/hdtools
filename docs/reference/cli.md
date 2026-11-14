@@ -15,7 +15,8 @@ hdtools [-db path] [-config path] [-chart-pdf YYYY-MM] [-log-pdf YYYY-MM] [-o pa
 A non-empty flag wins over the environment variable. Missing
 directories are created. A missing config file is created with
 `display_unit = "kg"`. An invalid `display_unit` is a startup error.
-Invalid `[colors]` values are not.
+An invalid `track_macros` is a startup error. Omitted, macros are
+off. Invalid `[colors]` values are not.
 
 A successful `-chart-pdf` or `-log-pdf` prints the path it wrote as
 one line on standard output. A failed export prints no path. If both

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/jglueckstein/hdtools/internal/config"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
 	"github.com/jglueckstein/hdtools/internal/meal"
@@ -56,10 +57,14 @@ func openMealFixture(t *testing.T, cfg config.Config, days ...time.Time) (*App, 
 	return app, store, meals, path
 }
 
+// mealApp runs the scenarios that enter protein, carbohydrate,
+// and fat. The default config leaves track_macros unset.
 func mealApp(t *testing.T, days ...time.Time) (*App, *dailylog.Store, *meal.Store, string) {
 	t.Helper()
 	freezeMealToday(t)
-	return openMealFixture(t, config.Default(), days...)
+	cfg := config.Default()
+	cfg.TrackMacros = true
+	return openMealFixture(t, cfg, days...)
 }
 
 func closeMeal(meals *meal.Store) {
@@ -491,6 +496,7 @@ func TestMealIgnoresListKeys(t *testing.T) {
 	freezeMealToday(t)
 	cfg := config.Default()
 	cfg.PDFDir = pdfDir
+	cfg.TrackMacros = true
 	app, _, _, dbPath := openMealFixture(t, cfg)
 	openMeals(t, app, mealToday)
 	saveNew(app, "Oats", "200", "10", "20", "5", "40")
@@ -663,6 +669,26 @@ func TestMealAddStartsOnTheName(t *testing.T) {
 	assertFocus(t, app, "name")
 	if strings.Contains(view, "Oats") {
 		t.Fatalf("line list still shown: %q", view)
+	}
+}
+
+func TestMealLongNameStaysOnTheLine(t *testing.T) {
+	app, _, _, _ := mealApp(t)
+	openMeals(t, app, mealToday)
+	name := "Pompeian Extra Virgin Olive Oil"
+	press(app, "a", name)
+	line := ""
+	for _, row := range strings.Split(shown(app), "\n") {
+		if strings.Contains(row, "> name") {
+			line = row
+			break
+		}
+	}
+	if line == "" || !strings.Contains(line, name) {
+		t.Fatalf("name scrolled off: %q", line)
+	}
+	if w := lipgloss.Width(line); w > 72 {
+		t.Fatalf("name line is %d columns", w)
 	}
 }
 
@@ -950,7 +976,7 @@ func TestMealDisplayUnitPoundsDoesNotScale(t *testing.T) {
 	}
 	scaled := fmt.Sprintf("%.1f", wrong)
 
-	poundApp, _, _, _ := openMealFixture(t, config.Config{DisplayUnit: units.Pound}, day)
+	poundApp, _, _, _ := openMealFixture(t, config.Config{DisplayUnit: units.Pound, TrackMacros: true}, day)
 	if !strings.Contains(shown(poundApp), pounds) {
 		t.Fatalf("list missing %s: %q", pounds, shown(poundApp))
 	}
@@ -958,7 +984,9 @@ func TestMealDisplayUnitPoundsDoesNotScale(t *testing.T) {
 	saveNew(poundApp, "Oats", "200", "10", "20", "5", "100")
 	poundView := shown(poundApp)
 
-	kgApp, _, _, _ := openMealFixture(t, config.Default(), day)
+	kgCfg := config.Default()
+	kgCfg.TrackMacros = true
+	kgApp, _, _, _ := openMealFixture(t, kgCfg, day)
 	openMeals(t, kgApp, mealToday)
 	saveNew(kgApp, "Oats", "200", "10", "20", "5", "100")
 	kgView := shown(kgApp)
@@ -1169,7 +1197,9 @@ func TestMealReopenShowsTheSameLines(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	next := New(reopened, path, config.Default())
+	reopen := config.Default()
+	reopen.TrackMacros = true
+	next := New(reopened, path, reopen)
 	next.UseMeals(again)
 	if msg := next.load(); msg != nil {
 		next.Update(msg)
@@ -1358,6 +1388,99 @@ func TestMealFormErrorDoesNotFailTheList(t *testing.T) {
 	}
 }
 
+func TestMealTypingClearsTheFormError(t *testing.T) {
+	app, _, _, _ := mealApp(t)
+	openMeals(t, app, mealToday)
+	press(app, "a", "Oil", "tab", "884", "tab", "0", "tab", "0", "tab", "enter")
+	assertFieldError(t, app, "fat", "want a number")
+	press(app, "tab")
+	if strings.Contains(shown(app), "error:") {
+		t.Fatalf("tab left the error up: %q", shown(app))
+	}
+	assertFocus(t, app, "grams")
+	press(app, "enter")
+	assertFieldError(t, app, "fat", "want a number")
+	press(app, "0.3")
+	if strings.Contains(shown(app), "error:") {
+		t.Fatalf("typing left the error up: %q", shown(app))
+	}
+	press(app, "tab", "13", "enter")
+	assertTotals(t, app, "114.9", "0.0", "0.0", "0.0")
+	press(app, "e", "tab", "tab", "tab")
+	assertFieldShows(t, app, "fat per 100 g", "0.3")
+}
+
+func TestMealMacrosOffIsCaloriesAndGrams(t *testing.T) {
+	freezeMealToday(t)
+	app, _, _, _ := openMealFixture(t, config.Default())
+	openMeals(t, app, mealToday)
+	view := shown(app)
+	if !strings.Contains(view, "calories 0.0") {
+		t.Fatalf("totals = %q", view)
+	}
+	for _, word := range []string{"protein", "carbohydrate", "fat"} {
+		if strings.Contains(view, word) {
+			t.Fatalf("default screen shows %s: %q", word, view)
+		}
+	}
+	press(app, "a", "Oil", "tab")
+	assertFocus(t, app, "calories per 100 g")
+	view = shown(app)
+	for _, label := range []string{"protein per 100 g", "carbohydrate per 100 g", "fat per 100 g"} {
+		if strings.Contains(view, label) {
+			t.Fatalf("form asked for %s: %q", label, view)
+		}
+	}
+	press(app, "enter")
+	assertFieldError(t, app, "calories", "want a number")
+	press(app, "884", "tab")
+	assertFocus(t, app, "grams")
+	press(app, "100", "enter")
+	view = shown(app)
+	if !strings.Contains(view, "calories 884.0") {
+		t.Fatalf("calories = %q", view)
+	}
+	for _, word := range []string{"protein", "carbohydrate", "fat"} {
+		if strings.Contains(view, word) {
+			t.Fatalf("saved screen shows %s: %q", word, view)
+		}
+	}
+	press(app, "e")
+	assertFocus(t, app, "calories per 100 g")
+	assertFieldShows(t, app, "calories per 100 g", "884")
+	if strings.Contains(shown(app), "protein") {
+		t.Fatalf("edit asked for macros: %q", shown(app))
+	}
+}
+
+func TestMealMacrosOffKeepsStoredMacros(t *testing.T) {
+	app, _, _, _ := mealApp(t)
+	openMeals(t, app, mealToday)
+	saveNew(app, "Oil", "884", "10", "20", "5", "100")
+	press(app, "esc")
+	app.cfg.TrackMacros = false
+	press(app, "f", "e")
+	if strings.Contains(shown(app), "protein") {
+		t.Fatalf("edit asked for macros: %q", shown(app))
+	}
+	replaceField(app, "442")
+	press(app, "enter")
+	view := shown(app)
+	if !strings.Contains(view, "calories 442.0") || strings.Contains(view, "protein") {
+		t.Fatalf("after calories edit: %q", view)
+	}
+	press(app, "esc")
+	app.cfg.TrackMacros = true
+	press(app, "f", "e")
+	assertFieldShows(t, app, "calories per 100 g", "442")
+	press(app, "tab")
+	assertFieldShows(t, app, "protein per 100 g", "10")
+	press(app, "tab")
+	assertFieldShows(t, app, "carbohydrate per 100 g", "20")
+	press(app, "tab")
+	assertFieldShows(t, app, "fat per 100 g", "5")
+}
+
 func TestMealFoodEditRoundTrip(t *testing.T) {
 	app, _, _, _ := mealApp(t)
 	openMeals(t, app, mealToday)
@@ -1465,6 +1588,11 @@ func TestMealNutrientGrammar(t *testing.T) {
 	assertTotals(t, app, "10.0", "1.0", "1.0", "1.0")
 	press(app, "e")
 	assertFieldShows(t, app, "calories per 100 g", "10")
+	press(app, "esc")
+	saveNew(app, "Oil", "884", "0", "0", "0.3", "100")
+	assertTotals(t, app, "894.0", "1.0", "1.0", "1.3")
+	press(app, "e", "tab", "tab", "tab")
+	assertFieldShows(t, app, "fat per 100 g", "0.3")
 }
 
 func TestMealDocs(t *testing.T) {

@@ -21,6 +21,13 @@ const (
 	mealEditHelp = "enter save   esc cancel   tab next field"
 )
 
+// mealScreenCols is the working width of a meal form line. The
+// name is the only long value, and it has the line to itself.
+// A 24-column box is a month-sheet cell. Using it here left the
+// rest of the line empty, so a name scrolled while the screen
+// still had room. The cursor cell sits outside the value.
+const mealScreenCols = 72
+
 const (
 	mealFieldName = iota
 	mealFieldCal
@@ -64,6 +71,9 @@ type mealModel struct {
 	foodID       int64
 	resolved     string
 	resolvedOK   bool
+	// trackMacros is copied when the screen opens. Protein,
+	// carbohydrate, and fat are asked and totaled only then.
+	trackMacros bool
 }
 
 // UseMeals stores the meal store. It does not open the meal screen.
@@ -76,9 +86,10 @@ func (a *App) UseMeals(store *meal.Store) {
 // can return to that row, including when today has no weight log.
 func (a *App) openMeals() {
 	a.mealUI = mealModel{
-		day:      localToday(),
-		selected: -1,
-		inputs:   newMealInputs(),
+		day:         localToday(),
+		selected:    -1,
+		inputs:      newMealInputs(),
+		trackMacros: a.cfg.TrackMacros,
 	}
 	a.screen = screenMeal
 	a.loadMealDay(true)
@@ -90,11 +101,22 @@ func newMealInputs() []textinput.Model {
 		ti := textinput.New()
 		ti.Prompt = ""
 		ti.CharLimit = 80
+		// A number is short. Padding it out to the line would push
+		// "carbohydrate per 100 g" past an 80-column terminal.
 		ti.SetWidth(24)
+		if i == mealFieldName {
+			ti.SetWidth(mealNameWidth())
+		}
 		quietInput(&ti)
 		inputs[i] = ti
 	}
 	return inputs
+}
+
+// mealNameWidth is the name field's visible columns. The line is
+// the focus mark, the label, a space, the field, and the cursor.
+func mealNameWidth() int {
+	return mealScreenCols - (2 + len(mealFieldLabel[mealFieldName]) + 1 + 1)
 }
 
 func (a *App) loadMealDay(selectFirst bool) {
@@ -193,7 +215,7 @@ func (a *App) mealView() string {
 	fmt.Fprintf(&b, "%s\n\n", p.title.Render("meals "+m.day.Format(time.DateOnly)))
 	if m.mode == mealIdle {
 		a.writeMealLines(&b)
-		writeMealTotals(&b, m.lines)
+		writeMealTotals(&b, m.lines, m.trackMacros)
 		if m.err != "" {
 			fmt.Fprintf(&b, "\n%s\n", p.error.Render("error: "+m.err))
 		}
@@ -221,7 +243,7 @@ func (a *App) writeMealLines(b *strings.Builder) {
 	}
 }
 
-func writeMealTotals(b *strings.Builder, lines []meal.Line) {
+func writeMealTotals(b *strings.Builder, lines []meal.Line, trackMacros bool) {
 	var cal, pro, carb, fat float64
 	for _, line := range lines {
 		cal += line.Calories * line.Grams / 100
@@ -230,6 +252,9 @@ func writeMealTotals(b *strings.Builder, lines []meal.Line) {
 		fat += line.Fat * line.Grams / 100
 	}
 	fmt.Fprintf(b, "calories %s\n", formatTenth(cal))
+	if !trackMacros {
+		return
+	}
 	fmt.Fprintf(b, "protein %s\n", formatTenth(pro))
 	fmt.Fprintf(b, "carbohydrate %s\n", formatTenth(carb))
 	fmt.Fprintf(b, "fat %s\n", formatTenth(fat))

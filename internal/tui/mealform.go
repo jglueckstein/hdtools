@@ -73,7 +73,13 @@ func (a *App) updateMealForm(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		a.submitMealForm()
 		return a, nil
-	case "tab":
+	}
+	// Tab and a typed character answer the refused Enter. The
+	// message stays through a weight-log reload, which does not
+	// come through here, and comes back if the next Enter is
+	// still refused.
+	a.mealUI.err = ""
+	if msg.String() == "tab" {
 		a.tabMealForm()
 		return a, nil
 	}
@@ -142,12 +148,18 @@ func (a *App) resolveMealName() {
 func (m mealModel) activeFields() []int {
 	switch m.mode {
 	case mealEditFood:
+		if !m.trackMacros {
+			return []int{mealFieldCal}
+		}
 		return []int{mealFieldCal, mealFieldPro, mealFieldCarb, mealFieldFat}
 	case mealEditGrams:
 		return []int{mealFieldGrams}
 	default:
 		if m.known {
 			return []int{mealFieldName, mealFieldGrams}
+		}
+		if !m.trackMacros {
+			return []int{mealFieldName, mealFieldCal, mealFieldGrams}
 		}
 		return []int{mealFieldName, mealFieldCal, mealFieldPro, mealFieldCarb, mealFieldFat, mealFieldGrams}
 	}
@@ -206,11 +218,8 @@ func (a *App) submitMealAdd() {
 		a.finishMealSave(true)
 		return
 	}
-	nums, field, err := parseMealNutrients(m.inputs[mealFieldCal:mealFieldGrams])
+	nums, err := a.parseFoodNumbers([3]float64{})
 	if err != nil {
-		m.err = mealNutrientName[field] + ": " + err.Error()
-		m.focus = mealFieldCal + field
-		m.focusMeal()
 		return
 	}
 	grams, err := parseMealGrams(m.inputs[mealFieldGrams].Value())
@@ -246,15 +255,12 @@ func (a *App) submitMealGrams() {
 
 func (a *App) submitMealFood() {
 	m := &a.mealUI
-	nums, field, err := parseMealNutrients(m.inputs[mealFieldCal:mealFieldGrams])
+	line := m.lines[m.selected]
+	nums, err := a.parseFoodNumbers([3]float64{line.Protein, line.Carbohydrate, line.Fat})
 	if err != nil {
-		m.err = mealNutrientName[field] + ": " + err.Error()
-		m.focus = mealFieldCal + field
-		m.focusMeal()
 		return
 	}
-	id := m.lines[m.selected].FoodID
-	if err := a.meals.UpdateFood(id, nums[0], nums[1], nums[2], nums[3]); err != nil {
+	if err := a.meals.UpdateFood(line.FoodID, nums[0], nums[1], nums[2], nums[3]); err != nil {
 		m.err = err.Error()
 		return
 	}
@@ -275,6 +281,32 @@ func (a *App) finishMealSave(selectNew bool) {
 	if keep >= 0 && keep < len(a.mealUI.lines) {
 		a.mealUI.selected = keep
 	}
+}
+
+// parseFoodNumbers reads the nutrient fields that are on screen.
+// Without macros, calories are the only one, and keep is the
+// stored protein, carbohydrate, and fat so a calories edit does
+// not wipe them. An error is already on the form.
+func (a *App) parseFoodNumbers(keep [3]float64) ([4]float64, error) {
+	m := &a.mealUI
+	if !m.trackMacros {
+		v, err := parseMealNutrient(m.inputs[mealFieldCal].Value())
+		if err != nil {
+			m.err = "calories: " + err.Error()
+			m.focus = mealFieldCal
+			m.focusMeal()
+			return [4]float64{}, err
+		}
+		return [4]float64{v, keep[0], keep[1], keep[2]}, nil
+	}
+	nums, field, err := parseMealNutrients(m.inputs[mealFieldCal:mealFieldGrams])
+	if err != nil {
+		m.err = mealNutrientName[field] + ": " + err.Error()
+		m.focus = mealFieldCal + field
+		m.focusMeal()
+		return [4]float64{}, err
+	}
+	return nums, nil
 }
 
 func parseMealGrams(raw string) (float64, error) {

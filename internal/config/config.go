@@ -9,7 +9,10 @@
 //
 // [colors] is a sparse overlay of valid roles; invalid values fall back
 // silently so a typo cannot keep someone out of the log. Invalid
-// display_unit still fails. pdf_dir is a directory for chart PDFs:
+// display_unit still fails. track_macros omitted is false, so a log
+// that does not track protein, carbohydrate, and fat stays that way.
+// A value that is not true or false fails the load. pdf_dir is a
+// directory for chart PDFs:
 // absolute, or a leading ~/ for the home directory. Any other relative
 // value fails the export, and a non-string value does not fail Load,
 // because a bad directory cannot store pounds as kilograms. This
@@ -43,6 +46,9 @@ type Config struct {
 	// Colors is the sparse overlay of valid [colors] roles. Omitted roles
 	// use the TUI built-in default. Load fills this from the file.
 	Colors map[string]string `toml:"colors,omitempty"`
+	// TrackMacros asks for protein, carbohydrate, and fat per 100 g.
+	// Omitted is false. Calories are asked either way.
+	TrackMacros bool `toml:"track_macros,omitempty"`
 	// pdfDirBad is set when pdf_dir was present and not a string.
 	// It is not a file field: Write must not persist it.
 	pdfDirBad bool
@@ -150,6 +156,7 @@ func Load(path string) (Config, error) {
 		DisplayUnit string `toml:"display_unit"`
 		Colors      any    `toml:"colors"`
 		PDFDir      any    `toml:"pdf_dir"`
+		TrackMacros any    `toml:"track_macros"`
 	}
 	if err := toml.Unmarshal(data, &raw); err != nil {
 		return Config{}, fmt.Errorf("parse config %s: %w", path, err)
@@ -163,6 +170,13 @@ func Load(path string) (Config, error) {
 		cfg.DisplayUnit = u
 	}
 	cfg.Colors = parseColorOverlay(raw.Colors)
+	switch v := raw.TrackMacros.(type) {
+	case nil:
+	case bool:
+		cfg.TrackMacros = v
+	default:
+		return Config{}, fmt.Errorf("config %s: track_macros must be true or false", path)
+	}
 	switch v := raw.PDFDir.(type) {
 	case nil:
 	case string:

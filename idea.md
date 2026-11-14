@@ -260,8 +260,10 @@ the PDF stay as they are.
 
 The tool should implement the meal planning system described
 [in the Hacker's Diet](https://www.fourmilab.ch/hackdiet/e4/planningmeals.html#Fa147).
-Calories, protein, carbohydrate, and fat are the four numbers
-on a food.
+Calories are per 100 g on every food. Protein, carbohydrate,
+and fat are tracked when `track_macros` is true in
+`config.toml`. Omitted, they are not asked for and their
+totals are not shown.
 
 S1, a day's weighed foods, is the active slice
 ([docs/superpowers/specs/2026-10-30-meal-day.md](docs/superpowers/specs/2026-10-30-meal-day.md)).

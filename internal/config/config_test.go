@@ -412,6 +412,63 @@ func TestResolvePDFDirWrapsChosenError(t *testing.T) {
 	}
 }
 
+func TestTrackMacrosOmittedIsFalse(t *testing.T) {
+	t.Parallel()
+	path := writeTOML(t, "display_unit = \"kg\"\n")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.TrackMacros {
+		t.Fatal("omitted track_macros was true")
+	}
+}
+
+func TestTrackMacrosRoundTrip(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := Write(path, Config{DisplayUnit: units.Kilogram, TrackMacros: true}); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.TrackMacros {
+		t.Fatal("track_macros did not round-trip")
+	}
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), "track_macros") {
+		t.Fatalf("file omitted the flag: %s", body)
+	}
+}
+
+func TestTrackMacrosRejectsANonBool(t *testing.T) {
+	t.Parallel()
+	path := writeTOML(t, "display_unit = \"kg\"\ntrack_macros = \"yes\"\n")
+	if _, err := Load(path); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestEnsureOmitsTrackMacros(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := Ensure(path); err != nil {
+		t.Fatal(err)
+	}
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(body), "track_macros") {
+		t.Fatalf("first-run file contains track_macros: %s", body)
+	}
+}
+
 func TestPDFDirNonStringStillLoads(t *testing.T) {
 	t.Parallel()
 	path := writeTOML(t, "display_unit = \"kg\"\npdf_dir = 3\n")
