@@ -2,7 +2,7 @@
 date: 2026-11-14
 branch: promote-spawn-gotcha
 issue: "#128"
-pr: null
+pr: "#129"
 task_summary: Replace the Grok spawn gotcha so agents omit the rejected specialist id.
 progressed_slice: null
 stages_run: [integration-agent]
