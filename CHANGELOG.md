@@ -7,7 +7,7 @@
 - `f` on the daily list opens today's foods. A line stores grams and
   which food. Calories are per 100 g. Protein, carbohydrate, and fat
   are included when `track_macros` is true, and editing the food
-  changes every meal date that uses it.
+  changes every meal date that uses it. (#123)
 - Shift-P on the idle month sheet writes that month's filled log
   PDF (`YYYY-MM-log.pdf`) in the same directory as `-log-pdf`.
   Idle `p` still edits. (#113)

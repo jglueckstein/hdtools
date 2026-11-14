@@ -2,7 +2,7 @@
 date: 2026-11-14
 branch: spec/meal-day
 issue: "#123"
-pr: null
+pr: "#124"
 task_summary: Log today's foods in grams, with calories per 100 g and optional macros.
 progressed_slice: S1
 stages_run: [spec-writer, tdd-agent, implementer]
