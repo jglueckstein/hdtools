@@ -1410,7 +1410,7 @@ func TestMealTypingClearsTheFormError(t *testing.T) {
 	assertFieldShows(t, app, "fat per 100 g", "0.3")
 }
 
-func TestMealMacrosOffIsCaloriesAndGrams(t *testing.T) {
+func TestMealMacrosOffShowsOptionalFields(t *testing.T) {
 	freezeMealToday(t)
 	app, _, _, _ := openMealFixture(t, config.Default())
 	openMeals(t, app, mealToday)
@@ -1427,15 +1427,18 @@ func TestMealMacrosOffIsCaloriesAndGrams(t *testing.T) {
 	assertFocus(t, app, "calories per 100 g")
 	view = shown(app)
 	for _, label := range []string{"protein per 100 g", "carbohydrate per 100 g", "fat per 100 g"} {
-		if strings.Contains(view, label) {
-			t.Fatalf("form asked for %s: %q", label, view)
+		if !strings.Contains(view, label) {
+			t.Fatalf("form hid %s: %q", label, view)
 		}
 	}
 	press(app, "enter")
 	assertFieldError(t, app, "calories", "want a number")
 	press(app, "884", "tab")
-	assertFocus(t, app, "grams")
-	press(app, "100", "enter")
+	assertFocus(t, app, "protein per 100 g")
+	press(app, "12.5", "tab", "tab", "no", "enter")
+	assertFieldError(t, app, "fat", "want a number")
+	replaceField(app, "")
+	press(app, "tab", "100", "enter")
 	view = shown(app)
 	if !strings.Contains(view, "calories 884.0") {
 		t.Fatalf("calories = %q", view)
@@ -1448,9 +1451,12 @@ func TestMealMacrosOffIsCaloriesAndGrams(t *testing.T) {
 	press(app, "e")
 	assertFocus(t, app, "calories per 100 g")
 	assertFieldShows(t, app, "calories per 100 g", "884")
-	if strings.Contains(shown(app), "protein") {
-		t.Fatalf("edit asked for macros: %q", shown(app))
-	}
+	press(app, "tab")
+	assertFieldShows(t, app, "protein per 100 g", "12.5")
+	press(app, "tab")
+	assertFieldShows(t, app, "carbohydrate per 100 g", "0")
+	press(app, "tab")
+	assertFieldShows(t, app, "fat per 100 g", "0")
 }
 
 func TestMealMacrosOffKeepsStoredMacros(t *testing.T) {
@@ -1459,10 +1465,13 @@ func TestMealMacrosOffKeepsStoredMacros(t *testing.T) {
 	saveNew(app, "Oil", "884", "10", "20", "5", "100")
 	press(app, "esc")
 	app.cfg.TrackMacros = false
-	press(app, "f", "e")
-	if strings.Contains(shown(app), "protein") {
-		t.Fatalf("edit asked for macros: %q", shown(app))
-	}
+	press(app, "f", "e", "tab")
+	assertFieldShows(t, app, "protein per 100 g", "10")
+	press(app, "tab")
+	assertFieldShows(t, app, "carbohydrate per 100 g", "20")
+	press(app, "tab")
+	assertFieldShows(t, app, "fat per 100 g", "5")
+	press(app, "tab")
 	replaceField(app, "442")
 	press(app, "enter")
 	view := shown(app)

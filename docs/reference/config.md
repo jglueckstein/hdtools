@@ -19,13 +19,15 @@ Any other value fails the load. Storage is always kilograms.
 
 ## `track_macros`
 
-Optional. `true` asks for protein, carbohydrate, and fat per
-100 g on a new food and on a food edit, shows those totals,
-and refuses a blank one. Zero is allowed. Omitted or `false`
-leaves those fields and totals off. Calories per 100 g are
-asked either way. Any other value fails the load. The
-first-run file does not contain this key. Turning it off
-does not erase macros already stored.
+Optional. The food form asks for protein, carbohydrate,
+and fat per 100 g on a new food and on a food edit either
+way. `true` shows those day totals and refuses a blank
+macro. Zero is allowed. Omitted or `false` still shows the
+fields, stores a blank macro as zero, and leaves the day
+totals off. Calories per 100 g are required either way.
+Any other value fails the load. The first-run file does
+not contain this key. Turning it off does not erase macros
+already stored.
 
 ## `pdf_dir`
 

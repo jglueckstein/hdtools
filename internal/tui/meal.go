@@ -71,8 +71,10 @@ type mealModel struct {
 	foodID       int64
 	resolved     string
 	resolvedOK   bool
-	// trackMacros is copied when the screen opens. Protein,
-	// carbohydrate, and fat are asked and totaled only then.
+	// trackMacros is copied when the screen opens. True makes
+	// protein, carbohydrate, and fat mandatory and shows their
+	// day totals. False still shows the fields. A blank one
+	// then stores zero, and the day totals stay off.
 	trackMacros bool
 }
 
