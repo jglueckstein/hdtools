@@ -6,7 +6,7 @@
 
 - Weekly garbage collection keeps per-package `go test -cover`
   figures in `observability/gc/`, so the next run can flag a
-  drop of more than 5%. (#125)
+  drop of more than 5%. (#126)
 - `f` on the daily list opens today's foods. A line stores grams and
   which food. Calories are per 100 g. Protein, carbohydrate, and fat
   are included when `track_macros` is true, and editing the food

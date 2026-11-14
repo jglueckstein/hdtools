@@ -2,7 +2,7 @@
 date: 2026-11-14
 branch: gc-coverage-baseline
 issue: "#125"
-pr: null
+pr: "#126"
 task_summary: Save the 2026-11-13 per-package coverage figures so the weekly GC rule can flag a drop.
 progressed_slice: null
 stages_run: [integration-agent]
