@@ -93,6 +93,13 @@ before writing or reviewing code. Do not add style rules here.
   month-cell save sets the status to `saved` and does not rewrite
   the file. `write log pdf` survives the next cell edit. The
   in-flight hold is a count of armed saves, not a boolean.
+- The meal name field is a 72-column line. The label and the
+  cursor count toward that width. It is not the month-cell
+  width.
+- A refused Enter on the meal form clears on Tab or the next
+  typed character. That error survives a weight-log reload.
+- `track_macros` defaults off, so only calories are asked
+  unless it is true.
 
 ## ARCH_DECISIONS
 

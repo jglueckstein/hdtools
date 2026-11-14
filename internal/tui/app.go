@@ -1,11 +1,13 @@
-// Package tui is the screen: list, day form, monthly sheet, and charts.
+// Package tui is the screen: list, day form, monthly sheet, charts,
+// and one day's foods.
 //
-// It owns Bubble Tea state and talks to dailylog.Store but never opens
-// SQLite or imports database/sql, so tests inject a file and a later
-// remote database can reuse the same Model. Missing days are
-// dailylog.ErrNotFound. Meal planning is out of scope. Monthly chart
-// PDF export goes through internal/chartpdf; this package must not
-// import a PDF library.
+// It owns Bubble Tea state and talks to dailylog.Store and meal.Store
+// but never opens SQLite or imports database/sql, so tests inject a
+// file and a later remote database can reuse the same Model. Missing
+// days are dailylog.ErrNotFound. The meal screen does not convert
+// display units or set an allowance. Monthly chart PDF export goes
+// through internal/chartpdf; this package must not import a PDF
+// library.
 //
 // Color comes from a palette built at New from config.toml and NO_COLOR.
 // Column geometry lives in layout.go so headers stay over numbers after
@@ -15,15 +17,13 @@ package tui
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strings"
 	"sync/atomic"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/jglueckstein/hdtools/internal/config"
 	"github.com/jglueckstein/hdtools/internal/dailylog"
-	"github.com/jglueckstein/hdtools/internal/units"
+	"github.com/jglueckstein/hdtools/internal/meal"
 )
 
 type screen int
@@ -34,6 +34,7 @@ const (
 	screenMonth
 	screenChart
 	screenLong
+	screenMeal
 )
 
 // App is the root Bubble Tea model: a log list, a day form, a monthly
@@ -65,6 +66,10 @@ type App struct {
 	monthSaveCancel atomic.Uint64
 	monthSaveEdit   atomic.Uint64
 	logPDF          logPDFGate
+	// meals is nil when the tables were not opened. f then stays
+	// on the list instead of painting an empty meal day.
+	meals  *meal.Store
+	mealUI mealModel
 }
 
 type loadedMsg struct {
@@ -191,10 +196,14 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.monthSaveEdit.Add(1)
 			}
 		}
-		if !msg.day.IsZero() {
-			a.selectDay = msg.day
+		// An in-flight weight-log save still reloads. It must not
+		// take the meal screen or the list row Esc returns to.
+		if a.screen != screenMeal {
+			if !msg.day.IsZero() {
+				a.selectDay = msg.day
+			}
+			a.screen = a.afterSave
 		}
-		a.screen = a.afterSave
 		a.noteMonthSaved(msg.day.IsZero(), msg.id)
 		return a, a.load
 	case loadErrMsg:
@@ -210,6 +219,12 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.screen == screenMonth {
 			a.month.err = msg.err.Error()
 			a.err = nil
+			return a, nil
+		}
+		if a.screen == screenMeal {
+			// The parse error belongs to the form or the month
+			// sheet that started the save. Storing it on the list
+			// would make Esc offer only quit.
 			return a, nil
 		}
 		a.err = msg.err
@@ -229,6 +244,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a.updateChart(msg)
 		case screenLong:
 			return a.updateLong(msg)
+		case screenMeal:
+			return a.updateMeal(msg)
 		default:
 			return a.updateList(msg)
 		}
@@ -257,6 +274,14 @@ func (a *App) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case "l":
 		a.openLong()
+		return a, nil
+	case "f":
+		// Month, chart, and the day form never reach this case.
+		// Their f is still an edit, a no-op, or a typed letter.
+		if a.meals == nil {
+			return a, nil
+		}
+		a.openMeals()
 		return a, nil
 	case "enter":
 		if len(a.logs) == 0 {
@@ -410,7 +435,8 @@ func (a *App) updateMonth(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
-// View renders the list, the day form, the month sheet, or a chart.
+// View renders the list, the day form, the month sheet, a chart, or
+// the meal screen.
 // Content is that text. Colour in it may stay full fidelity; the
 // program writer downsamples once.
 func (a *App) View() tea.View {
@@ -424,76 +450,9 @@ func (a *App) View() tea.View {
 		return tea.NewView(a.chartView())
 	case screenLong:
 		return tea.NewView(a.longView())
+	case screenMeal:
+		return tea.NewView(a.mealView())
 	default:
 		return tea.NewView(a.listView())
 	}
-}
-
-func (a *App) listView() string {
-	p := a.pal
-	var b strings.Builder
-	fmt.Fprintf(&b, "%s\n", p.title.Render(fmt.Sprintf("hdtools — daily log  (weight %s)", a.cfg.DisplayUnit)))
-	fmt.Fprintf(&b, "%s\n\n", p.muted.Render("db: "+a.dbPath))
-	if a.err != nil {
-		fmt.Fprintf(&b, "%s\n\n%s\n", p.error.Render("error: "+a.err.Error()), p.help.Render("q quit"))
-		return b.String()
-	}
-	if len(a.logs) == 0 {
-		fmt.Fprintf(&b, "%s\n\n%s\n", p.muted.Render("(no entries yet)"), p.help.Render("n new day   m month   l long   t today   q quit"))
-		return b.String()
-	}
-	fmt.Fprintf(&b, "%s\n", p.header.Render(listHeader()))
-	for i, log := range a.logs {
-		mark := "  "
-		if i == a.cursor {
-			mark = "> "
-		}
-		weight := "—"
-		trend := "—"
-		if log.Weight != nil {
-			w, err := units.FromKG(*log.Weight, a.cfg.DisplayUnit)
-			if err == nil {
-				weight = fmt.Sprintf("%.1f", w)
-			}
-		}
-		if t, err := units.FromKG(log.Trend, a.cfg.DisplayUnit); err == nil && (log.Weight != nil || log.Trend != 0) {
-			trend = fmt.Sprintf("%.1f", t)
-		}
-		workout := "no"
-		if log.Workout {
-			workout = "yes"
-		}
-		selected := i == a.cursor
-		showTrend := log.Weight != nil || log.Trend != 0
-		delta := formatDelta(log.Weight, log.Trend, showTrend, a.cfg.DisplayUnit)
-		var weightCell, trendCell, deltaCell string
-		if selected && p.selectionFG {
-			weightCell = visPad(weight, wWeight, true)
-			trendCell = visPad(trend, wTrend, true)
-			deltaCell = visPad(delta, wDelta, true)
-		} else {
-			weightCell = visPad(p.weight.Render(weight), wWeight, true)
-			trendCell = visPad(p.trend.Render(trend), wTrend, true)
-			deltaCell = styleDelta(delta, p)
-		}
-		line := visPad(mark, wMark, false) + joinCols(
-			visPad(log.Day.Format("2006-01-02"), wDate, false),
-			weightCell,
-			trendCell,
-			deltaCell,
-			visPad(fmt.Sprintf("%.1f", log.SleepHours), wSleep, true),
-			visPad(fmt.Sprintf("%d", log.Steps), wSteps, true),
-			visPad(workout, wWorkout, false),
-			log.Note,
-		)
-		if selected {
-			line = p.selected.Render(line)
-		}
-		fmt.Fprintf(&b, "%s\n", line)
-	}
-	if a.status != "" {
-		fmt.Fprintf(&b, "\n%s\n", p.status.Render(a.status))
-	}
-	fmt.Fprintf(&b, "\n%s\n", p.help.Render("n new   enter edit   m month   c chart   l long   t today   q quit"))
-	return b.String()
 }

@@ -9,3 +9,4 @@ Recipes for a job you already know you want to do.
 *   [Export a monthly chart PDF](monthly-chart-pdf.md)
 *   [Export a filled monthly log sheet](monthly-log-pdf.md)
 *   [Open a long-term chart](long-term-chart.md)
+*   [Log a day's foods](meal-day.md)
