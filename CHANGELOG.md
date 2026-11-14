@@ -87,6 +87,10 @@
 
 ### Changed
 
+- The food form asks for protein, carbohydrate, and fat even
+  when `track_macros` is off. A blank one is stored as zero.
+  True still refuses a blank, and only then are the day totals
+  shown. (#131)
 - AGENTS.md records that Grok 1.0.77 lists
   `ai-literacy-superpowers:<name>` and rejects it. Omit
   `subagent_type` and paste the brief. (#129)

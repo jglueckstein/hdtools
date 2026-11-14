@@ -261,9 +261,13 @@ the PDF stay as they are.
 The tool should implement the meal planning system described
 [in the Hacker's Diet](https://www.fourmilab.ch/hackdiet/e4/planningmeals.html#Fa147).
 Calories are per 100 g on every food. Protein, carbohydrate,
-and fat are tracked when `track_macros` is true in
-`config.toml`. Omitted, they are not asked for and their
-totals are not shown.
+and fat are on the food form either way. `track_macros` true
+in `config.toml` makes the three mandatory. False or omitted
+still shows them, and a blank one is stored as zero. Their
+day totals are shown only when `track_macros` is true.
+
+Change record:
+[docs/superpowers/specs/2026-11-14-optional-food-macros.md](docs/superpowers/specs/2026-11-14-optional-food-macros.md).
 
 S1, a day's weighed foods, is the active slice
 ([docs/superpowers/specs/2026-10-30-meal-day.md](docs/superpowers/specs/2026-10-30-meal-day.md)).

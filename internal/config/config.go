@@ -9,8 +9,9 @@
 //
 // [colors] is a sparse overlay of valid roles; invalid values fall back
 // silently so a typo cannot keep someone out of the log. Invalid
-// display_unit still fails. track_macros omitted is false, so a log
-// that does not track protein, carbohydrate, and fat stays that way.
+// display_unit still fails. track_macros omitted is false, so the
+// day totals for protein, carbohydrate, and fat stay off. The food
+// form still shows those fields, and a blank one stores zero.
 // A value that is not true or false fails the load. pdf_dir is a
 // directory for chart PDFs:
 // absolute, or a leading ~/ for the home directory. Any other relative

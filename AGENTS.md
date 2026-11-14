@@ -98,8 +98,10 @@ before writing or reviewing code. Do not add style rules here.
   width.
 - A refused Enter on the meal form clears on Tab or the next
   typed character. That error survives a weight-log reload.
-- `track_macros` defaults off, so only calories are asked
-  unless it is true.
+- `track_macros` defaults off. The food form still asks for
+  protein, carbohydrate, and fat. A blank one is stored as
+  zero. True makes the three mandatory, and only then are
+  their day totals shown.
 
 ## ARCH_DECISIONS
 

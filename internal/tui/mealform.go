@@ -7,13 +7,11 @@ package tui
 // meal date and does not scale grams by the display unit.
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
-	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 )
 
@@ -149,18 +147,12 @@ func (a *App) resolveMealName() {
 func (m mealModel) activeFields() []int {
 	switch m.mode {
 	case mealEditFood:
-		if !m.trackMacros {
-			return []int{mealFieldCal}
-		}
 		return []int{mealFieldCal, mealFieldPro, mealFieldCarb, mealFieldFat}
 	case mealEditGrams:
 		return []int{mealFieldGrams}
 	default:
 		if m.known {
 			return []int{mealFieldName, mealFieldGrams}
-		}
-		if !m.trackMacros {
-			return []int{mealFieldName, mealFieldCal, mealFieldGrams}
 		}
 		return []int{mealFieldName, mealFieldCal, mealFieldPro, mealFieldCarb, mealFieldFat, mealFieldGrams}
 	}
@@ -219,7 +211,7 @@ func (a *App) submitMealAdd() {
 		a.finishMealSave(true)
 		return
 	}
-	nums, err := a.parseFoodNumbers([3]float64{})
+	nums, err := a.parseFoodNumbers()
 	if err != nil {
 		return
 	}
@@ -257,7 +249,7 @@ func (a *App) submitMealGrams() {
 func (a *App) submitMealFood() {
 	m := &a.mealUI
 	line := m.lines[m.selected]
-	nums, err := a.parseFoodNumbers([3]float64{line.Protein, line.Carbohydrate, line.Fat})
+	nums, err := a.parseFoodNumbers()
 	if err != nil {
 		return
 	}
@@ -284,34 +276,35 @@ func (a *App) finishMealSave(selectNew bool) {
 	}
 }
 
-// parseFoodNumbers reads the nutrient fields that are on screen.
-// Without macros, calories are the only one, and keep is the
-// stored protein, carbohydrate, and fat so a calories edit does
-// not wipe them. An error is already on the form.
-func (a *App) parseFoodNumbers(keep [3]float64) ([4]float64, error) {
+// parseFoodNumbers reads calories and the three macros. Calories
+// are always required. A blank macro is zero only when tracking
+// is off; the edit form prefills stored numbers, so leaving them
+// keeps those numbers and clearing one stores zero. An error is
+// already on the form.
+func (a *App) parseFoodNumbers() ([4]float64, error) {
 	m := &a.mealUI
-	if !m.trackMacros {
-		v, err := parseMealNutrient(m.inputs[mealFieldCal].Value())
-		if err != nil {
-			m.err = "calories: " + err.Error()
-			m.focus = mealFieldCal
-			m.focusMeal()
-			return [4]float64{}, fmt.Errorf("calories: %w", err)
-		}
-		return [4]float64{v, keep[0], keep[1], keep[2]}, nil
-	}
-	nums, field, err := parseMealNutrients(m.inputs[mealFieldCal:mealFieldGrams])
+	cal, err := parseMealNutrient(m.inputs[mealFieldCal].Value())
 	if err != nil {
-		// The form keeps the nutrient sentence. The returned
-		// error names the field for the caller that only checks it.
-		shown := err.Error()
-		if inner := errors.Unwrap(err); inner != nil {
-			shown = inner.Error()
-		}
-		m.err = mealNutrientName[field] + ": " + shown
-		m.focus = mealFieldCal + field
+		m.err = "calories: " + err.Error()
+		m.focus = mealFieldCal
 		m.focusMeal()
-		return [4]float64{}, fmt.Errorf("%s: %w", mealNutrientName[field], err)
+		return [4]float64{}, fmt.Errorf("calories: %w", err)
+	}
+	nums := [4]float64{cal}
+	for i, field := range []int{mealFieldPro, mealFieldCarb, mealFieldFat} {
+		raw := strings.TrimSpace(m.inputs[field].Value())
+		if raw == "" && !m.trackMacros {
+			continue
+		}
+		v, err := parseMealNutrient(raw)
+		if err != nil {
+			shown := err.Error()
+			m.err = mealNutrientName[i+1] + ": " + shown
+			m.focus = field
+			m.focusMeal()
+			return [4]float64{}, fmt.Errorf("%s: %w", mealNutrientName[i+1], err)
+		}
+		nums[i+1] = v
 	}
 	return nums, nil
 }
@@ -322,18 +315,6 @@ func parseMealGrams(raw string) (float64, error) {
 		return 0, fmt.Errorf("grams: want a number greater than zero")
 	}
 	return v, nil
-}
-
-func parseMealNutrients(inputs []textinput.Model) ([4]float64, int, error) {
-	var nums [4]float64
-	for i, input := range inputs {
-		v, err := parseMealNutrient(input.Value())
-		if err != nil {
-			return nums, i, fmt.Errorf("parse meal nutrient: %w", err)
-		}
-		nums[i] = v
-	}
-	return nums, 0, nil
 }
 
 func parseMealNutrient(raw string) (float64, error) {
