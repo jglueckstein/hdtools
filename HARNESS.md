@@ -315,7 +315,8 @@ its sections names the constraint below that checks it.
 ### Test coverage per package
 
 - **What it checks**: Whether `go test -cover` per package has declined
-  more than 5% since the last GC snapshot, or a package has no tests
+  more than 5% since the last GC snapshot, or a package has no tests.
+  The latest `observability/gc/YYYY-MM-DD.md` is that snapshot.
 - **Frequency**: weekly
 - **Enforcement**: agent
 - **Tool**: harness-gc agent (go test -coverprofile=cover.out ./... && go tool cover -func=cover.out)
