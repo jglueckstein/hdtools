@@ -27,6 +27,7 @@
   until the next edit clears it.
 - **Signal**: context
 - **Constraint**: none
+- **Promoted**: 2026-11-13 → AGENTS.md GOTCHAS: "The meal name field is a 72-column line."
 - **Session metadata**:
   - Duration: unknown
   - Model tiers used: unknown
