@@ -25,6 +25,7 @@
   brief.
 - **Signal**: workflow
 - **Constraint**: none
+- **Promoted**: 2026-11-14 → AGENTS.md GOTCHAS: "omit `subagent_type` and paste"
 - **Session metadata**:
   - Duration: unknown
   - Model tiers used: unknown
