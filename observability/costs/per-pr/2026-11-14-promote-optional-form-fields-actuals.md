@@ -2,7 +2,7 @@
 date: 2026-11-14
 branch: promote-optional-form-fields
 issue: "#134"
-pr: null
+pr: "#135"
 task_summary: Record that an optional form field stays shown and a blank is valid.
 progressed_slice: null
 stages_run: [integration-agent]

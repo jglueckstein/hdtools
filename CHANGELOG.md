@@ -93,7 +93,7 @@
 - AGENTS.md records that an optional form field stays shown
   and a blank is valid. Hiding the field is a separate
   decision. The same rule is an agent pull-request
-  constraint.
+  constraint. (#135)
 - The food form asks for protein, carbohydrate, and fat even
   when `track_macros` is off. A blank one is stored as zero.
   True still refuses a blank, and only then are the day totals
