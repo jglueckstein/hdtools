@@ -87,6 +87,9 @@
 
 ### Changed
 
+- AGENTS.md records that Grok 1.0.77 lists
+  `ai-literacy-superpowers:<name>` and rejects it. Omit
+  `subagent_type` and paste the brief. (#128)
 - AGENTS.md records how to re-apply the Stop-hook JSON patch after
   a plugin update: `printf '%s'` instead of `echo -e`, and `date -d`
   before macOS `date -j`. (#118)
