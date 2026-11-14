@@ -7,6 +7,7 @@ package tui
 // meal date and does not scale grams by the display unit.
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -295,16 +296,22 @@ func (a *App) parseFoodNumbers(keep [3]float64) ([4]float64, error) {
 			m.err = "calories: " + err.Error()
 			m.focus = mealFieldCal
 			m.focusMeal()
-			return [4]float64{}, err
+			return [4]float64{}, fmt.Errorf("calories: %w", err)
 		}
 		return [4]float64{v, keep[0], keep[1], keep[2]}, nil
 	}
 	nums, field, err := parseMealNutrients(m.inputs[mealFieldCal:mealFieldGrams])
 	if err != nil {
-		m.err = mealNutrientName[field] + ": " + err.Error()
+		// The form keeps the nutrient sentence. The returned
+		// error names the field for the caller that only checks it.
+		shown := err.Error()
+		if inner := errors.Unwrap(err); inner != nil {
+			shown = inner.Error()
+		}
+		m.err = mealNutrientName[field] + ": " + shown
 		m.focus = mealFieldCal + field
 		m.focusMeal()
-		return [4]float64{}, err
+		return [4]float64{}, fmt.Errorf("%s: %w", mealNutrientName[field], err)
 	}
 	return nums, nil
 }
@@ -322,7 +329,7 @@ func parseMealNutrients(inputs []textinput.Model) ([4]float64, int, error) {
 	for i, input := range inputs {
 		v, err := parseMealNutrient(input.Value())
 		if err != nil {
-			return nums, i, err
+			return nums, i, fmt.Errorf("parse meal nutrient: %w", err)
 		}
 		nums[i] = v
 	}
