@@ -2,7 +2,7 @@
 date: 2026-11-20
 branch: harness-health-2026-11-20
 issue: "#138"
-pr: null
+pr: "#139"
 task_summary: Record the 2026-11-20 harness health snapshot and mark the badge Healthy.
 progressed_slice: null
 stages_run: [implementer]
