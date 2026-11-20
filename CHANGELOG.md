@@ -90,6 +90,8 @@
 
 ### Changed
 
+- Harness health snapshot for 2026-11-20. Nineteen of nineteen
+  constraints are enforced, and the health badge is Healthy.
 - AGENTS.md records that an optional form field stays shown
   and a blank is valid. Hiding the field is a separate
   decision. The same rule is an agent pull-request
