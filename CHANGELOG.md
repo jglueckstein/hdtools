@@ -151,7 +151,7 @@
 ### Fixed
 
 - The README harness badge says 19/19 enforced. The drift
-  mark stays.
+  mark stays. (#136)
 - Remove the unused eight-row Braille bin oracle from the chart
   tests. The Online picture still reads styled runes. (#115)
 - `usagecapture` names `mark` or `capture` on an error it passes

@@ -2,7 +2,7 @@
 date: 2026-11-20
 branch: harness-badge-count
 issue: "#136"
-pr: null
+pr: "#137"
 task_summary: Show 19/19 on the README harness badge and save the GC coverage snapshot.
 progressed_slice: null
 stages_run: [implementer]
