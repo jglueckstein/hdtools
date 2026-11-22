@@ -7,7 +7,7 @@
 - `b` on the meal screen stores one calorie allowance for that
   meal date. The idle screen shows `no allowance`, or `remaining`
   as that allowance minus the unrounded calorie total. It is not
-  the chart's Daily Deficit.
+  the chart's Daily Deficit. (#140)
 - A reflection records why food macros were hidden when
   `track_macros` was off. Decision 24 called them optional
   and then hid the fields, and the gotcha repeated that. (#133)
