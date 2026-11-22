@@ -19,5 +19,15 @@ the line and keeps the food.
 Grams are the food's mass. They are not body weight. `display_unit`
 does not scale them.
 
-An allowance, a volume, a recipe, and a starter set are later
-slices. Renaming a food and deleting a food are later work.
+`b` edits that day's calorie allowance. Enter saves it. Esc
+cancels and writes nothing. A blank field clears it. The idle
+screen shows `no allowance` when none is set. Otherwise it shows
+remaining calories: the allowance minus the unrounded calorie
+total, shown to one decimal the same way as the calorie line.
+An allowance of 2.5 against a total of 1.25 shows 1.2. That
+allowance is not the chart's Daily Deficit and not a key in
+`config.toml`. `display_unit` does not scale it. Protein,
+carbohydrate, and fat have no allowance.
+
+A volume, a recipe, and a starter set are later work. Renaming
+a food and deleting a food are later work.

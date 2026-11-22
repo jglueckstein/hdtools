@@ -266,15 +266,20 @@ in `config.toml` makes the three mandatory. False or omitted
 still shows them, and a blank one is stored as zero. Their
 day totals are shown only when `track_macros` is true.
 
-Change record:
+Change record (optional food macros):
 [docs/superpowers/specs/2026-11-14-optional-food-macros.md](docs/superpowers/specs/2026-11-14-optional-food-macros.md).
 
-S1, a day's weighed foods, is the active slice
+S1, a day's weighed foods, has landed
 ([docs/superpowers/specs/2026-10-30-meal-day.md](docs/superpowers/specs/2026-10-30-meal-day.md)).
 
-A calorie allowance for that day is not this slice. It is not
-the chart's Daily Deficit. An unset allowance shows the four
-totals and the words "no allowance".
+S2, a calorie allowance for one meal date, is the active
+slice
+([docs/superpowers/specs/2026-11-20-meal-allowance.md](docs/superpowers/specs/2026-11-20-meal-allowance.md),
+[#140](https://github.com/jglueckstein/hdtools/issues/140)).
+The allowance is not the chart's Daily Deficit. An unset
+allowance shows the calorie total and the words "no
+allowance". Protein, carbohydrate, and fat do not gain
+allowances. Their day totals stay as they are.
 
 Volume and density are not this slice. Typed ounces, pounds,
 and volumes become stored grams later, using one

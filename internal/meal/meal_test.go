@@ -79,7 +79,7 @@ func TestMealMigrationKeepsDailyLog(t *testing.T) {
 		t.Fatalf("daily_log columns = %v, want %v", gotCols, wantCols)
 	}
 	tables := userTables(t, db)
-	wantTables := []string{"daily_log", "food", "meal_line"}
+	wantTables := []string{"daily_log", "food", "meal_allowance", "meal_line"}
 	if !sameStrings(tables, wantTables) {
 		t.Fatalf("tables = %v, want %v", tables, wantTables)
 	}

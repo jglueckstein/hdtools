@@ -1,12 +1,14 @@
 // Package meal is one day's foods in the same SQLite file as the
 // daily log. A line stores grams and which food, not a copy of the
 // four per-100 g numbers, so editing the food changes every day
-// that uses it.
+// that uses it. The same file holds one calorie allowance per
+// civil date. No row means that date has none. A stored zero is
+// an allowance of zero, not an empty day.
 //
 // Open does not create the database. The daily log owns that file,
 // including mode 0600, and a missing path must stay missing. This
-// package does not draw a screen, convert display units, set an
-// allowance, or store a density or a recipe.
+// package does not draw a screen, convert display units, or store
+// a density or a recipe.
 package meal
 
 import (
@@ -18,10 +20,11 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// Store is the food and meal_line tables in the daily-log file.
-// A nil Store is what the TUI holds when those tables are not open.
-// One connection keeps the foreign-key pragma on: the pool would
-// otherwise open a second connection that had not run it.
+// Store is the food, meal_line, and meal_allowance tables in the
+// daily-log file. A nil Store is what the TUI holds when those
+// tables are not open. One connection keeps the foreign-key pragma
+// on: the pool would otherwise open a second connection that had
+// not run it.
 type Store struct {
 	db *sql.DB
 }
@@ -106,6 +109,10 @@ CREATE TABLE IF NOT EXISTS meal_line (
 	day TEXT NOT NULL,
 	food_id INTEGER NOT NULL REFERENCES food(id),
 	grams REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS meal_allowance (
+	day TEXT PRIMARY KEY,
+	calories REAL NOT NULL
 );`
 	if _, err := s.db.Exec(schema); err != nil {
 		return fmt.Errorf("migrate meals: %w", err)
@@ -219,6 +226,44 @@ UPDATE food SET calories = ?, protein = ?, carbohydrate = ?, fat = ? WHERE id = 
 func (s *Store) DeleteLine(id int64) error {
 	if _, err := s.db.Exec(`DELETE FROM meal_line WHERE id = ?`, id); err != nil {
 		return fmt.Errorf("delete meal line: %w", err)
+	}
+	return nil
+}
+
+// Allowance reads the calorie number stored for day. The bool is
+// false when that date has no row, including when the number would
+// have been zero. A stored zero returns true and 0. day is
+// YYYY-MM-DD, the same string a meal line uses.
+func (s *Store) Allowance(day string) (float64, bool, error) {
+	var calories float64
+	err := s.db.QueryRow(`SELECT calories FROM meal_allowance WHERE day = ?`, day).Scan(&calories)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, fmt.Errorf("read allowance %s: %w", day, err)
+	}
+	return calories, true, nil
+}
+
+// SetAllowance stores calories for day, replacing a number already
+// there. Zero is a real allowance. The row does not require a
+// weight-log day or a meal line.
+func (s *Store) SetAllowance(day string, calories float64) error {
+	const q = `
+INSERT INTO meal_allowance (day, calories) VALUES (?, ?)
+ON CONFLICT(day) DO UPDATE SET calories = excluded.calories`
+	if _, err := s.db.Exec(q, day, calories); err != nil {
+		return fmt.Errorf("set allowance %s: %w", day, err)
+	}
+	return nil
+}
+
+// ClearAllowance removes the row for day. A date with no row is
+// already clear, and deleting it is not an error.
+func (s *Store) ClearAllowance(day string) error {
+	if _, err := s.db.Exec(`DELETE FROM meal_allowance WHERE day = ?`, day); err != nil {
+		return fmt.Errorf("clear allowance %s: %w", day, err)
 	}
 	return nil
 }

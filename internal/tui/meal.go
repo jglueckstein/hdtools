@@ -3,11 +3,14 @@ package tui
 // The meal screen is one day's foods, not a weight-log column. A
 // line keeps grams and which food, so the four per-100 g numbers
 // live on the food and an edit shows up on every date that uses it.
-// This file does not convert display units, set an allowance, or
-// accept a volume. A nil meal store leaves f on the daily list.
+// The same date can hold one calorie allowance. Remaining is that
+// number minus the unrounded calorie total. This file does not
+// convert display units and does not accept a volume. A nil meal
+// store leaves f on the daily list.
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,8 +20,9 @@ import (
 )
 
 const (
-	mealIdleHelp = "a add   enter grams   e food   x remove   [ ] day   esc list   q quit"
-	mealEditHelp = "enter save   esc cancel   tab next field"
+	mealIdleHelp      = "a add   enter grams   e food   x remove   b allowance   [ ] day   esc list   q quit"
+	mealEditHelp      = "enter save   esc cancel   tab next field"
+	mealAllowanceHelp = "enter save   esc cancel"
 )
 
 // mealScreenCols is the working width of a meal form line. The
@@ -56,6 +60,9 @@ const (
 	mealAdd
 	mealEditGrams
 	mealEditFood
+	// mealAllowance is the one field b opens. Keys are text.
+	// Enter writes or clears the number. Esc writes nothing.
+	mealAllowance
 )
 
 type mealModel struct {
@@ -76,6 +83,20 @@ type mealModel struct {
 	// day totals. False still shows the fields. A blank one
 	// then stores zero, and the day totals stay off.
 	trackMacros bool
+	// allowance is the number stored for this meal date.
+	// allowanceSet is false when that date has no row. A stored
+	// zero is set, so a false bool is not remaining 0.0.
+	allowance    float64
+	allowanceSet bool
+	// allowanceInput is not one of the six food fields. Tab on
+	// the food form still walks those, and this field has no
+	// next field of its own.
+	allowanceInput textinput.Model
+	// allowanceEscList is set when a weight-log reload finishes
+	// while this field is open. Esc then returns to the daily
+	// list. Closing the field before that reload returns to the
+	// idle meal screen.
+	allowanceEscList bool
 }
 
 // UseMeals stores the meal store. It does not open the meal screen.
@@ -88,10 +109,11 @@ func (a *App) UseMeals(store *meal.Store) {
 // can return to that row, including when today has no weight log.
 func (a *App) openMeals() {
 	a.mealUI = mealModel{
-		day:         localToday(),
-		selected:    -1,
-		inputs:      newMealInputs(),
-		trackMacros: a.cfg.TrackMacros,
+		day:            localToday(),
+		selected:       -1,
+		inputs:         newMealInputs(),
+		trackMacros:    a.cfg.TrackMacros,
+		allowanceInput: newAllowanceInput(),
 	}
 	a.screen = screenMeal
 	a.loadMealDay(true)
@@ -115,6 +137,15 @@ func newMealInputs() []textinput.Model {
 	return inputs
 }
 
+func newAllowanceInput() textinput.Model {
+	ti := textinput.New()
+	ti.Prompt = ""
+	ti.CharLimit = 80
+	ti.SetWidth(24)
+	quietInput(&ti)
+	return ti
+}
+
 // mealNameWidth is the name field's visible columns. The line is
 // the focus mark, the label, a space, the field, and the cursor.
 func mealNameWidth() int {
@@ -134,6 +165,7 @@ func (a *App) loadMealDay(selectFirst bool) {
 	}
 	a.mealUI.lines = lines
 	a.mealUI.err = ""
+	a.loadMealAllowance()
 	if selectFirst || a.mealUI.selected >= len(lines) {
 		if len(lines) == 0 {
 			a.mealUI.selected = -1
@@ -149,6 +181,9 @@ func (a *App) updateMeal(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// ctrl+c quits from a field too. Idle q is the only other quit.
 	if msg.String() == "ctrl+c" {
 		return a, tea.Quit
+	}
+	if a.mealUI.mode == mealAllowance {
+		return a.updateMealAllowance(msg)
 	}
 	if a.mealUI.mode != mealIdle {
 		return a.updateMealForm(msg)
@@ -175,6 +210,8 @@ func (a *App) updateMeal(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		a.moveMealLine(-1)
 	case "down":
 		a.moveMealLine(1)
+	case "b":
+		a.beginMealAllowance()
 	}
 	return a, nil
 }
@@ -215,9 +252,14 @@ func (a *App) mealView() string {
 	m := a.mealUI
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s\n\n", p.title.Render("meals "+m.day.Format(time.DateOnly)))
+	if m.mode == mealAllowance {
+		a.writeMealAllowance(&b)
+		return b.String()
+	}
 	if m.mode == mealIdle {
 		a.writeMealLines(&b)
-		writeMealTotals(&b, m.lines, m.trackMacros)
+		cal := writeMealTotals(&b, m.lines, m.trackMacros)
+		writeMealComparison(&b, m.allowanceSet, m.allowance, cal)
 		if m.err != "" {
 			fmt.Fprintf(&b, "\n%s\n", p.error.Render("error: "+m.err))
 		}
@@ -245,7 +287,7 @@ func (a *App) writeMealLines(b *strings.Builder) {
 	}
 }
 
-func writeMealTotals(b *strings.Builder, lines []meal.Line, trackMacros bool) {
+func writeMealTotals(b *strings.Builder, lines []meal.Line, trackMacros bool) float64 {
 	var cal, pro, carb, fat float64
 	for _, line := range lines {
 		cal += line.Calories * line.Grams / 100
@@ -255,11 +297,23 @@ func writeMealTotals(b *strings.Builder, lines []meal.Line, trackMacros bool) {
 	}
 	fmt.Fprintf(b, "calories %s\n", formatTenth(cal))
 	if !trackMacros {
-		return
+		return cal
 	}
 	fmt.Fprintf(b, "protein %s\n", formatTenth(pro))
 	fmt.Fprintf(b, "carbohydrate %s\n", formatTenth(carb))
 	fmt.Fprintf(b, "fat %s\n", formatTenth(fat))
+	return cal
+}
+
+// writeMealComparison paints the idle line under the totals. Unset
+// is the words, not a remaining of zero. Set subtracts the unrounded
+// calorie total once, then the same tenth the calorie line uses.
+func writeMealComparison(b *strings.Builder, set bool, allowance, calories float64) {
+	if !set {
+		fmt.Fprintln(b, "no allowance")
+		return
+	}
+	fmt.Fprintf(b, "remaining %s\n", formatTenth(allowance-calories))
 }
 
 func (a *App) writeMealForm(b *strings.Builder) {
@@ -287,4 +341,133 @@ func formatTenth(v float64) string {
 		return "0.0"
 	}
 	return s
+}
+
+// loadMealAllowance reads this date's row. A missing row is unset.
+// It does not copy another date and it does not invent a zero.
+func (a *App) loadMealAllowance() {
+	a.mealUI.allowance = 0
+	a.mealUI.allowanceSet = false
+	if a.meals == nil {
+		return
+	}
+	cal, ok, err := a.meals.Allowance(a.mealUI.day.Format(time.DateOnly))
+	if err != nil {
+		a.mealUI.err = err.Error()
+		return
+	}
+	if !ok {
+		return
+	}
+	a.mealUI.allowance = cal
+	a.mealUI.allowanceSet = true
+}
+
+// beginMealAllowance replaces the idle body with one field. Unset
+// opens empty. Set opens on the stored number, not on a tenth.
+func (a *App) beginMealAllowance() {
+	m := &a.mealUI
+	m.mode = mealAllowance
+	m.err = ""
+	m.allowanceEscList = false
+	if m.allowanceSet {
+		m.allowanceInput.SetValue(strconv.FormatFloat(m.allowance, 'f', -1, 64))
+	} else {
+		m.allowanceInput.SetValue("")
+	}
+	m.allowanceInput.CursorEnd()
+	m.allowanceInput.Focus()
+}
+
+func (a *App) updateMealAllowance(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		a.cancelMealAllowance()
+		return a, nil
+	case "enter":
+		a.submitMealAllowance()
+		return a, nil
+	}
+	// The next typed character answers a refused Enter. Tab stays
+	// on this field: it does not save, cancel, or walk anywhere.
+	a.mealUI.err = ""
+	var cmd tea.Cmd
+	a.mealUI.allowanceInput, cmd = a.mealUI.allowanceInput.Update(msg)
+	return a, cmd
+}
+
+func (a *App) cancelMealAllowance() {
+	// The reload that landed while this field was open is the
+	// Esc that returns to the list. Any other Esc only drops
+	// the field.
+	if a.mealUI.allowanceEscList {
+		a.mealUI.allowanceEscList = false
+		a.mealUI.mode = mealIdle
+		a.mealUI.err = ""
+		a.screen = screenList
+		return
+	}
+	a.mealUI.mode = mealIdle
+	a.mealUI.err = ""
+}
+
+func (a *App) submitMealAllowance() {
+	m := &a.mealUI
+	if a.meals == nil {
+		m.err = "allowance: meals are not open"
+		return
+	}
+	calories, clear, err := parseAllowance(m.allowanceInput.Value())
+	if err != nil {
+		m.err = err.Error()
+		return
+	}
+	day := m.day.Format(time.DateOnly)
+	if clear {
+		err = a.meals.ClearAllowance(day)
+	} else {
+		err = a.meals.SetAllowance(day, calories)
+	}
+	if err != nil {
+		m.err = err.Error()
+		return
+	}
+	m.mode = mealIdle
+	m.allowanceEscList = false
+	a.loadMealDay(false)
+}
+
+func (a *App) writeMealAllowance(b *strings.Builder) {
+	m := a.mealUI
+	p := a.pal
+	fmt.Fprintf(b, "> %s %s\n", p.focusLabel.Render("allowance"), m.allowanceInput.View())
+	if m.err != "" {
+		fmt.Fprintf(b, "\n%s\n", p.error.Render("error: "+m.err))
+	}
+	fmt.Fprintf(b, "\n%s\n", p.help.Render(mealAllowanceHelp))
+}
+
+// parseAllowance trims, then either clears or accepts one
+// non-negative decimal. A leading minus is refused before the
+// grammar, so -0 is not stored as zero. Blank is a clear, which
+// is the opposite of a food number.
+func parseAllowance(raw string) (float64, bool, error) {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return 0, true, nil
+	}
+	// A minus anywhere is the negative refusal. The field opens
+	// on the stored number, so typing -1 produces 500-1, and -0
+	// must not be stored as zero.
+	if strings.Contains(s, "-") {
+		return 0, false, fmt.Errorf("allowance: want a number that is not negative")
+	}
+	if !mealDecimalText(s) {
+		return 0, false, fmt.Errorf("allowance: want a number")
+	}
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, false, fmt.Errorf("allowance: want a number")
+	}
+	return v, false, nil
 }
