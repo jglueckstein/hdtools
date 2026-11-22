@@ -20,7 +20,7 @@ const (
 	mealToday    = "1990-11-10"
 	listHelp     = "n new   enter edit   m month   c chart   l long   f meal   t today   q quit"
 	emptyHelp    = "n new day   m month   l long   f meal   t today   q quit"
-	mealHelp     = "a add   enter grams   e food   x remove   [ ] day   esc list   q quit"
+	mealHelp     = "a add   enter grams   e food   x remove   b allowance   [ ] day   esc list   q quit"
 	mealFormHelp = "enter save   esc cancel   tab next field"
 )
 
@@ -635,8 +635,11 @@ func TestMealEmptyDateIsZero(t *testing.T) {
 	assertTotals(t, app, "0.0", "0.0", "0.0", "0.0")
 	assertNoSelection(t, app)
 	view := shown(app)
-	if strings.Contains(view, "no allowance") {
-		t.Fatalf("allowance copy shown: %q", view)
+	if !strings.Contains(view, "no allowance") {
+		t.Fatalf("missing no allowance: %q", view)
+	}
+	if strings.Contains(view, "remaining") {
+		t.Fatalf("remaining shown: %q", view)
 	}
 	if strings.Contains(view, "Oats") {
 		t.Fatalf("starter name shown: %q", view)

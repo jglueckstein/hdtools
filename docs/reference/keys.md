@@ -30,6 +30,7 @@
 | Enter | meal | edit grams of the selected line |
 | `e` | meal | edit that food; saving changes every meal date that uses it |
 | `x` | meal | remove the selected line |
+| `b` | meal | that day's calorie allowance |
 | `[` / `]` | meal | previous / next meal day |
 | `Up`, `Down` | meal | move the selected line |
 | Tab | meal form | next field |

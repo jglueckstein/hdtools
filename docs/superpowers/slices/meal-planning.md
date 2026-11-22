@@ -21,7 +21,7 @@ task_slug: meal-planning
 date: 2026-10-30
 carpaccio_model: grok-4.7
 inseparable: false
-progressed_slice: S1
+progressed_slice: S2
 slices:
   - id: S1
     title: Open a day's weighed foods from the list with f
@@ -89,8 +89,7 @@ slices:
       per 100 g. A line stores the food, so editing that food
       updates every day that uses it. On that screen, a adds a
       line, Enter edits grams, e edits the food, and x removes
-      the line. This slice is grams only. This is the slice in
-      progress.
+      the line. This slice is grams only. S1 has landed.
     file_as_issue: false
     issue_url: https://github.com/jglueckstein/hdtools/issues/123
     merged_into: null
@@ -141,7 +140,7 @@ slices:
       under it. The chart's Daily Deficit stays the chart's
       number. This slice waits until S1 has landed.
     file_as_issue: true
-    issue_url: null
+    issue_url: https://github.com/jglueckstein/hdtools/issues/140
     merged_into: null
   - id: S3
     title: Turn typed US amounts into stored grams

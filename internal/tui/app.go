@@ -176,6 +176,12 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.clearLogReload()
 		a.placeCursor(msg.logs)
 		a.err = nil
+		// A weight-log reload that finishes while the allowance
+		// field is open leaves the refusal up. The Esc after
+		// that reload returns to the daily list.
+		if a.screen == screenMeal && a.mealUI.mode == mealAllowance {
+			a.mealUI.allowanceEscList = true
+		}
 		return a, nil
 	case savedMsg:
 		// A stale vertical save must not cancel a newer edit or
