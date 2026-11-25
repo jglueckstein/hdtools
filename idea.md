@@ -272,8 +272,7 @@ Change record (optional food macros):
 S1, a day's weighed foods, has landed
 ([docs/superpowers/specs/2026-10-30-meal-day.md](docs/superpowers/specs/2026-10-30-meal-day.md)).
 
-S2, a calorie allowance for one meal date, is the active
-slice
+S2, a calorie allowance for one meal date, has landed
 ([docs/superpowers/specs/2026-11-20-meal-allowance.md](docs/superpowers/specs/2026-11-20-meal-allowance.md),
 [#140](https://github.com/jglueckstein/hdtools/issues/140)).
 The allowance is not the chart's Daily Deficit. An unset
@@ -281,9 +280,13 @@ allowance shows the calorie total and the words "no
 allowance". Protein, carbohydrate, and fat do not gain
 allowances. Their day totals stay as they are.
 
-Volume and density are not this slice. Typed ounces, pounds,
-and volumes become stored grams later, using one
-grams-per-milliliter density when the food has one.
+S3, typed ounces, pounds, and volumes stored as grams, is
+the active slice
+([docs/superpowers/specs/2026-11-24-typed-food-amounts.md](docs/superpowers/specs/2026-11-24-typed-food-amounts.md)).
+The amount field takes the accepted tokens. Volume uses
+one grams-per-milliliter density when the food has one.
+A food with no density still accepts weight. Changing
+the density does not rewrite grams already stored.
 
 Recipes are not this slice. A recipe is logged as a fraction
 of that recipe or as a gram weight of it.
