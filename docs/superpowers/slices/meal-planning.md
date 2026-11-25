@@ -21,7 +21,7 @@ task_slug: meal-planning
 date: 2026-10-30
 carpaccio_model: grok-4.7
 inseparable: false
-progressed_slice: S2
+progressed_slice: S3
 slices:
   - id: S1
     title: Open a day's weighed foods from the list with f
